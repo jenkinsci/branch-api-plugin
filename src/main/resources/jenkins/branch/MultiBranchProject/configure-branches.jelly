@@ -1,0 +1,70 @@
+<!--
+ ~ The MIT License
+ ~
+ ~ Copyright (c) 2011-2013, CloudBees, Inc., Stephen Connolly.
+ ~
+ ~ Permission is hereby granted, free of charge, to any person obtaining a copy
+ ~ of this software and associated documentation files (the "Software"), to deal
+ ~ in the Software without restriction, including without limitation the rights
+ ~ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ ~ copies of the Software, and to permit persons to whom the Software is
+ ~ furnished to do so, subject to the following conditions:
+ ~
+ ~ The above copyright notice and this permission notice shall be included in
+ ~ all copies or substantial portions of the Software.
+ ~
+ ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ ~ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ ~ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ ~ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ ~ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ ~ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ ~ THE SOFTWARE.
+ -->
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:p="/lib/hudson/project">
+  <f:section title="${%Branch Sources}">
+  <f:block>
+    <j:local>
+      <f:repeatable var="instance" field="sources" >
+        <table width="100%">
+          <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true"/>
+          <f:entry>
+            <div align="right">
+              <f:repeatableDeleteButton/>
+            </div>
+          </f:entry>
+        </table>
+      </f:repeatable>
+    </j:local>
+  </f:block>
+    <!--<f:block>-->
+      <!--<f:hetero-list name="factories" hasHeader="true"-->
+                     <!--descriptors="${descriptor.getSCMSourceDescriptors(true)}"-->
+                     <!--items="${it.factories}"-->
+                     <!--addCaption="${%Add branch(s)}"/>-->
+    <!--</f:block>-->
+  </f:section>
+  <f:section title="${%Branch Retention Strategy}">
+    <j:set var="deadBranchStrategyDescriptors" value="${descriptor.deadBranchStrategyDescriptors}"/>
+    <f:block>
+    <j:choose>
+      <j:when test="${deadBranchStrategyDescriptors.size()==1}">
+        <j:scope>
+            <table name="deadBranchStrategy" width="100%">
+              <j:set var="descriptor" value="${deadBranchStrategyDescriptors.get(0)}"/>
+              <j:set var="instance" value="${it.deadBranchStrategy}"/>
+              <f:invisibleEntry>
+                <input type="hidden" name="stapler-class" value="${descriptor.clazz.name}"/>
+              </f:invisibleEntry>
+              <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true"/>
+            </table>
+        </j:scope>
+      </j:when>
+      <j:otherwise>
+          <f:hetero-radio field="deadBranchStrategy" descriptors="${deadBranchStrategyDescriptors}"/>
+      </j:otherwise>
+    </j:choose>
+    </f:block>
+  </f:section>
+</j:jelly>

@@ -1,0 +1,49 @@
+<!--
+ ~ The MIT License
+ ~
+ ~ Copyright (c) 2013, CloudBees, Inc.
+ ~
+ ~ Permission is hereby granted, free of charge, to any person obtaining a copy
+ ~ of this software and associated documentation files (the "Software"), to deal
+ ~ in the Software without restriction, including without limitation the rights
+ ~ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ ~ copies of the Software, and to permit persons to whom the Software is
+ ~ furnished to do so, subject to the following conditions:
+ ~
+ ~ The above copyright notice and this permission notice shall be included in
+ ~ all copies or substantial portions of the Software.
+ ~
+ ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ ~ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ ~ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ ~ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ ~ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ ~ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ ~ THE SOFTWARE.
+ -->
+<div>
+    Indicates that the branch contains code changes from authors who do not otherwise have the write access
+    to the repository.
+
+    <p>
+    Such code can contain malicious changes, so this flag serves as a signal to allow other plugins in Jenkins to
+    set up a higher degree of isolation to protect the build infrastructure, as well as disabling activities
+    with side-effect, such as deploying to a server.
+
+    <p>
+    Some examples of where the trusted vs non-trusted distinction becomes important:
+
+<ul>
+<li>
+    Github pull requests should be non-trusted as they can be created by <em>any</em> user</li>
+<li>
+    A Subversion branching structure such as <tt>trunk, branches, tags, sandbox</tt> would probably have
+    <tt>trunk, branches, tags</tt> as trusted and <tt> sandbox</tt> as untrusted where the Subversion permissions
+    give any authenticated user write access to <tt>sandbox</tt> but allow the project team to commit to all four
+    locations
+<li>
+    In a closed source code development where only employees and contractors work on the code,
+    no branch needs to be marked as non-trusted because every commit comes from a known set of people.
+</ul>
+    
+</div>
