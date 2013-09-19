@@ -23,6 +23,7 @@
  -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <!-- todo there are UI glitches with this and it looks not as nice as it should look -->
   <f:dropdownDescriptorSelector field="source" title="Source"/>
   <f:dropdownDescriptorSelector field="strategy" title="Properties"/>
 </j:jelly>
