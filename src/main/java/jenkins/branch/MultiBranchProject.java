@@ -667,32 +667,48 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 String branchName = head.getName();
                 branchNames.add(branchName);
                 P project = lostBranches.remove(branchName);
+                boolean needSave;
                 Branch branch = newBranch(source, head);
                 if (project == null) {
+                    needSave = true;
                     project = factory.newInstance(branch);
                     items.put(branchName, project);
-                    project.onCreatedFromScratch();
+                    if (project.getConfigFile().exists()) {
+                        try {
+                            project.getConfigFile().unmarshal(project);
+                            project.onLoad(MultiBranchProject.this, branchName);
+                        } catch (IOException e) {
+                            e.printStackTrace(listener.error("Could not load old configuration of " + branchName));
+                        }
+                    } else {
+                        project.onCreatedFromScratch();
+                    }
                     scheduleBuilds.put(project, revision);
                 } else {
+                    needSave = !branch.equals(factory.getBranch(project));
                     project = factory.setBranch(project, branch);
                     items.put(branch.getName(), project);
                     if (revision.isDeterministic()) {
                         SCMRevision lastBuild = getProjectFactory().getRevision(project);
                         if (!revision.equals(lastBuild)) {
+                            needSave = true;
                             scheduleBuilds.put(project, revision);
                         }
                     } else {
                         // fall back to polling when we have a non-deterministic revision/hash.
                         PollingResult pollingResult = project.poll(listener);
                         if (pollingResult.hasChanges()) {
+                            needSave = true;
                             scheduleBuilds.put(project, revision);
                         }
                     }
                 }
-                try {
-                    project.save();
-                } catch (IOException e) {
-                    // ignore
+                if (needSave) {
+                    try {
+                        project.save();
+                    } catch (IOException e) {
+                        e.printStackTrace(listener.error("Could not save changed to " + branchName));
+                    }
                 }
             }
         };
