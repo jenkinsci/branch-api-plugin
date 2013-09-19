@@ -923,76 +923,79 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      */
     @RequirePOST
     @SuppressWarnings({"unused", "unchecked"}) // URL binding for stapler
-    public synchronized void doConfigSubmit(StaplerRequest req, StaplerResponse rsp)
+    public void doConfigSubmit(StaplerRequest req, StaplerResponse rsp)
             throws IOException, ServletException, Descriptor.FormException {
         checkPermission(CONFIGURE);
 
-        description = req.getParameter("description");
+        boolean reindex = false;
+        synchronized (this) {
+            description = req.getParameter("description");
 
-        try {
-            JSONObject json = req.getSubmittedForm();
+            try {
+                JSONObject json = req.getSubmittedForm();
 
-            setDisplayName(json.optString("displayNameOrNull"));
+                setDisplayName(json.optString("displayNameOrNull"));
 
-            Set<String> oldSourceIds = new HashSet<String>();
-            for (SCMSource source : getSCMSources()) {
-                oldSourceIds.add(source.getId());
-            }
-            sources.replaceBy(req.bindJSONToList(BranchSource.class, json.opt("sources")));
-            for (SCMSource scmSource : getSCMSources()) {
-                scmSource.setOwner(this);
-            }
-
-            deadBranchStrategy =
-                    req.bindJSON(DeadBranchStrategy.class, json.getJSONObject("deadBranchStrategy"));
-            deadBranchStrategy.setOwner(this);
-
-            setProjectFactory(req.bindJSON(BranchProjectFactory.class, json.getJSONObject("projectFactory")));
-
-            submit(req, rsp);
-
-            for (Trigger t : triggers) {
-                t.stop();
-            }
-            triggers = buildDescribable(req, req.getSubmittedForm(), Trigger.for_(this));
-            for (Trigger t : triggers) {
-                t.start(this, true);
-            }
-
-            save();
-            ItemListener.fireOnUpdated(this);
-            Set<String> newSourceIds = new HashSet<String>();
-            for (SCMSource source : getSCMSources()) {
-                newSourceIds.add(source.getId());
-            }
-            if (!newSourceIds.equals(oldSourceIds)) {
-                scheduleBuild();
-            }
-
-            String newName = req.getParameter("name");
-            final ProjectNamingStrategy namingStrategy = Jenkins.getInstance().getProjectNamingStrategy();
-            if (newName != null && !newName.equals(name)) {
-                // check this error early to avoid HTTP response splitting.
-                Jenkins.checkGoodName(newName);
-                namingStrategy.checkName(newName);
-                rsp.sendRedirect("rename?newName=" + URLEncoder.encode(newName, "UTF-8"));
-            } else {
-                if (namingStrategy.isForceExistingJobs()) {
-                    namingStrategy.checkName(name);
+                Set<String> oldSourceIds = new HashSet<String>();
+                for (SCMSource source : getSCMSources()) {
+                    oldSourceIds.add(source.getId());
                 }
-                FormApply.success(".").generateResponse(req, rsp, null);
-            }
-            doIndexingSubmit(new TimeDuration(0));
-        } catch (JSONException e) {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
-            pw.println("Failed to parse form data. Please report this problem as a bug");
-            pw.println("JSON=" + req.getSubmittedForm());
-            pw.println();
-            e.printStackTrace(pw);
+                sources.replaceBy(req.bindJSONToList(BranchSource.class, json.opt("sources")));
+                for (SCMSource scmSource : getSCMSources()) {
+                    scmSource.setOwner(this);
+                }
 
-            rsp.setStatus(SC_BAD_REQUEST);
-            sendError(sw.toString(), req, rsp, true);
+                deadBranchStrategy =
+                        req.bindJSON(DeadBranchStrategy.class, json.getJSONObject("deadBranchStrategy"));
+                deadBranchStrategy.setOwner(this);
+
+                setProjectFactory(req.bindJSON(BranchProjectFactory.class, json.getJSONObject("projectFactory")));
+
+                submit(req, rsp);
+
+                for (Trigger t : triggers) {
+                    t.stop();
+                }
+                triggers = buildDescribable(req, req.getSubmittedForm(), Trigger.for_(this));
+                for (Trigger t : triggers) {
+                    t.start(this, true);
+                }
+
+                save();
+                ItemListener.fireOnUpdated(this);
+                Set<String> newSourceIds = new HashSet<String>();
+                for (SCMSource source : getSCMSources()) {
+                    newSourceIds.add(source.getId());
+                }
+                reindex = !newSourceIds.equals(oldSourceIds);
+
+                String newName = req.getParameter("name");
+                final ProjectNamingStrategy namingStrategy = Jenkins.getInstance().getProjectNamingStrategy();
+                if (newName != null && !newName.equals(name)) {
+                    // check this error early to avoid HTTP response splitting.
+                    Jenkins.checkGoodName(newName);
+                    namingStrategy.checkName(newName);
+                    rsp.sendRedirect("rename?newName=" + URLEncoder.encode(newName, "UTF-8"));
+                } else {
+                    if (namingStrategy.isForceExistingJobs()) {
+                        namingStrategy.checkName(name);
+                    }
+                    FormApply.success(".").generateResponse(req, rsp, null);
+                }
+            } catch (JSONException e) {
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                pw.println("Failed to parse form data. Please report this problem as a bug");
+                pw.println("JSON=" + req.getSubmittedForm());
+                pw.println();
+                e.printStackTrace(pw);
+
+                rsp.setStatus(SC_BAD_REQUEST);
+                sendError(sw.toString(), req, rsp, true);
+            }
+        }
+        if (reindex) {
+            scheduleBuild();
         }
     }
 
