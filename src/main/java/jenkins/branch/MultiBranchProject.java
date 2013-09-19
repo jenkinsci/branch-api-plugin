@@ -671,14 +671,11 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 if (project == null) {
                     project = factory.newInstance(branch);
                     items.put(branchName, project);
-                    try {
-                        project.onLoad(MultiBranchProject.this, branchName);
-                    } catch (IOException e) {
-                        // ignore
-                    }
+                    project.onCreatedFromScratch();
                     scheduleBuilds.put(project, revision);
                 } else {
-                    items.put(branch.getName(), factory.setBranch(project, branch));
+                    project = factory.setBranch(project, branch);
+                    items.put(branch.getName(), project);
                     if (revision.isDeterministic()) {
                         SCMRevision lastBuild = getProjectFactory().getRevision(project);
                         if (!revision.equals(lastBuild)) {
@@ -691,6 +688,11 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                             scheduleBuilds.put(project, revision);
                         }
                     }
+                }
+                try {
+                    project.save();
+                } catch (IOException e) {
+                    // ignore
                 }
             }
         };
