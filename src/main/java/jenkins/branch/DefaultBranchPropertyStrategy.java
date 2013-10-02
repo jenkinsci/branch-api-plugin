@@ -30,6 +30,7 @@ import jenkins.scm.api.SCMHead;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -53,8 +54,8 @@ public class DefaultBranchPropertyStrategy extends BranchPropertyStrategy {
      * @param properties the properties.
      */
     @DataBoundConstructor
-    public DefaultBranchPropertyStrategy(@CheckForNull List<BranchProperty> properties) {
-        this.properties = properties == null ? Collections.<BranchProperty>emptyList() : properties;
+    public DefaultBranchPropertyStrategy(@CheckForNull BranchProperty[] props) {
+        this.properties = props == null ? Collections.<BranchProperty>emptyList() : Arrays.asList(props);
     }
 
     /**
@@ -64,7 +65,7 @@ public class DefaultBranchPropertyStrategy extends BranchPropertyStrategy {
      */
     @NonNull
     @SuppressWarnings("unused")// by stapler
-    public List<BranchProperty> getProperties() {
+    public List<BranchProperty> getProps() {
         return properties;
     }
 
