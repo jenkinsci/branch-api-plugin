@@ -35,12 +35,8 @@
       </table>
     </td>
   </tr>
-  <tr>
-    <td colspan="3">
-      <table width="100%">
-        <f:dropdownDescriptorSelector field="strategy" title="Property strategy"
-                                    descriptors="${descriptor.propertyStrategyDescriptors(it,sourceDescriptor)}"/>
-      </table>
-    </td>
-  </tr>
+  <f:block>
+    <f:dropdownDescriptorSelector field="strategy" title="Property strategy"
+                                  descriptors="${descriptor.propertyStrategyDescriptors(it,sourceDescriptor)}"/>
+  </f:block>
 </j:jelly>
