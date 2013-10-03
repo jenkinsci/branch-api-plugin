@@ -23,6 +23,7 @@
  */
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.tasks.BuildWrapper;
@@ -57,8 +58,9 @@ public class UntrustedBranchProperty extends BranchProperty {
     /**
      * {@inheritDoc}
      */
+    @NonNull
     @Override
-    public Map<Descriptor<Publisher>, Publisher> configurePublishers(Map<Descriptor<Publisher>, Publisher> publishers) {
+    public Map<Descriptor<Publisher>, Publisher> configurePublishers(@NonNull Map<Descriptor<Publisher>, Publisher> publishers) {
         // TODO allow white-listing of publishers
         return new HashMap<Descriptor<Publisher>, Publisher>();
     }
@@ -66,8 +68,9 @@ public class UntrustedBranchProperty extends BranchProperty {
     /**
      * {@inheritDoc}
      */
+    @NonNull
     @Override
-    public Map<Descriptor<BuildWrapper>, BuildWrapper> configureBuildWrappers(Map<Descriptor<BuildWrapper>,
+    public Map<Descriptor<BuildWrapper>, BuildWrapper> configureBuildWrappers(@NonNull Map<Descriptor<BuildWrapper>,
             BuildWrapper> wrappers) {
         // TODO add a build wrapper that puts the execution in a "secured" context.
         return super.configureBuildWrappers(wrappers);

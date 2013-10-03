@@ -23,10 +23,12 @@
  */
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.JobProperty;
+import hudson.model.Run;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.Publisher;
 
@@ -50,7 +52,9 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
      * @param publishers the proposed {@link Publisher}s.
      * @return the resulting {@link Publisher}s.
      */
-    public Map<Descriptor<Publisher>, Publisher> configurePublishers(Map<Descriptor<Publisher>, Publisher> publishers) {
+    @NonNull
+    public Map<Descriptor<Publisher>, Publisher> configurePublishers(
+            @NonNull Map<Descriptor<Publisher>, Publisher> publishers) {
         return publishers;
     }
 
@@ -61,8 +65,9 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
      * @param wrappers the proposed {@link BuildWrapper}s.
      * @return the resulting {@link BuildWrapper}s.
      */
+    @NonNull
     public Map<Descriptor<BuildWrapper>, BuildWrapper> configureBuildWrappers(
-            Map<Descriptor<BuildWrapper>, BuildWrapper> wrappers) {
+            @NonNull Map<Descriptor<BuildWrapper>, BuildWrapper> wrappers) {
         return wrappers;
     }
 
@@ -73,14 +78,38 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
      * @param properties the proposed {@link JobProperty}s.
      * @return the resulting {@link JobProperty}s.
      */
+    @NonNull
     public <JobT extends Job<?, ?>> List<JobProperty<? super JobT>> configureJobProperties(
-            List<JobProperty<? super JobT>> properties) {
+            @NonNull List<JobProperty<? super JobT>> properties) {
         return properties;
+    }
+
+    /**
+     * This method is an extension point whereby a {@link BranchProperty} can apply final tweaks to the job
+     * for the branch specific project. Implementations should try to obey the following rules:
+     * <ul>
+     * <li>Don't trigger a save of the job</li>
+     * <li>Don't try to manipulate the {@link JobProperty} instances in the job, use
+     * {@link #configureJobProperties(List)} instead.</li>
+     * <li>Don't try to manipulate the {@link BuildWrapper} instances in the job, use
+     * {@link #configureBuildWrappers(Map)} instead.</li>
+     * <li>Don't try to manipulate the {@link Publisher} instances in the job, use {@link #configurePublishers(Map)}}
+     * instead.</li>
+     * </ul>
+     * In general, this method should be seen as a final hook for use in those cases where the existing hooks
+     * prove insufficient.
+     *
+     * @param job    the job.
+     * @param <JobT> the type of job.
+     */
+    public <JobT extends Job<JobT, RunT>, RunT extends Run<JobT, RunT>> void configureJob(
+            @NonNull Job<JobT, RunT> job) {
     }
 
     /**
      * {@inheritDoc}
      */
+    @NonNull
     public BranchPropertyDescriptor getDescriptor() {
         return (BranchPropertyDescriptor) super.getDescriptor();
     }

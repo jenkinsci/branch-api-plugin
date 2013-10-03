@@ -28,6 +28,7 @@ import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.JobProperty;
+import hudson.model.Run;
 import hudson.scm.NullSCM;
 import hudson.scm.SCM;
 import hudson.tasks.BuildWrapper;
@@ -188,6 +189,23 @@ public class Branch {
         }
         return jobProperties;
     }
+
+    /**
+     * Takes the supplied job and gives each {@link BranchProperty} the option to apply any final tweaks to the job
+     * configuration that are not exposed by current extension points.
+     *
+     * @param job    the job.
+     * @param <JobT> the type of job.
+     * @param <RunT> the type of run.
+     * @return the job.
+     */
+    public <JobT extends Job<JobT, RunT>, RunT extends Run<JobT, RunT>> JobT configureJob(JobT job) {
+        for (BranchProperty property : branchPropertiesInReverse()) {
+            property.configureJob(job);
+        }
+        return job;
+    }
+
 
     /**
      * Returns {@code true} iff the branch is can be built.
