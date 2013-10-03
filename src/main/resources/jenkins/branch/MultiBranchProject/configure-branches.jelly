@@ -22,28 +22,13 @@
  ~ THE SOFTWARE.
  -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:p="/lib/hudson/project">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:p="/lib/hudson/project" xmlns:branch="/lib/branch-api">
   <f:section title="${%Branch Sources}">
-  <f:block>
-    <j:local>
-      <f:repeatable var="instance" field="sources" >
-        <table width="100%">
-          <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true"/>
-          <f:entry>
-            <div align="right">
-              <f:repeatableDeleteButton/>
-            </div>
-          </f:entry>
-        </table>
-      </f:repeatable>
-    </j:local>
-  </f:block>
-    <!--<f:block>-->
-      <!--<f:hetero-list name="factories" hasHeader="true"-->
-                     <!--descriptors="${descriptor.getSCMSourceDescriptors(true)}"-->
-                     <!--items="${it.factories}"-->
-                     <!--addCaption="${%Add branch(s)}"/>-->
-    <!--</f:block>-->
+    <f:block>
+      <branch:branchSourceSelector field="sources" hasHeader="true"
+                                   sourceDescriptors="${descriptor.getSCMSourceDescriptors(true)}"
+                                   addCaption="${%Add source}" deleteCaption="${%Delete source}"/>
+    </f:block>
   </f:section>
   <f:section title="${%Branch Retention Strategy}">
     <j:set var="deadBranchStrategyDescriptors" value="${descriptor.deadBranchStrategyDescriptors}"/>

@@ -23,11 +23,15 @@
  */
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import jenkins.scm.api.SCMSource;
+import jenkins.scm.api.SCMSourceDescriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
+
+import java.util.List;
 
 /**
  * A source of branches, which consists of a source and a strategy for creating properties of the branches from this
@@ -91,5 +95,19 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
         public String getDisplayName() {
             return "Branch source";
         }
+
+        /**
+         * Gets all the {@link BranchPropertyStrategyDescriptor} instances applicable to the specified project and source.
+         *
+         * @param project          the project
+         * @param sourceDescriptor the source.
+         * @return all the {@link BranchPropertyStrategyDescriptor} instances  applicable to the specified project and
+         *         source.
+         */
+        public List<BranchPropertyStrategyDescriptor> propertyStrategyDescriptors(
+                @NonNull MultiBranchProject project, @NonNull SCMSourceDescriptor sourceDescriptor) {
+            return BranchPropertyStrategyDescriptor.all(project, sourceDescriptor);
+        }
+
     }
 }
