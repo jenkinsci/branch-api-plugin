@@ -51,7 +51,7 @@ public class DefaultBranchPropertyStrategy extends BranchPropertyStrategy {
     /**
      * Stapler's constructor.
      *
-     * @param properties the properties.
+     * @param props the properties.
      */
     @DataBoundConstructor
     public DefaultBranchPropertyStrategy(@CheckForNull BranchProperty[] props) {
@@ -89,7 +89,7 @@ public class DefaultBranchPropertyStrategy extends BranchPropertyStrategy {
          */
         @Override
         public String getDisplayName() {
-            return "Default";
+            return Messages.DefaultBranchPropertyStrategy_DisplayName();
         }
     }
 
