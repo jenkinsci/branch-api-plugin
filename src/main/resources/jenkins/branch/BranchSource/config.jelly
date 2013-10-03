@@ -35,7 +35,7 @@
       </table>
     </td>
   </tr>
-  <tr name="strategy">
+  <tr>
     <td colspan="3">
       <table width="100%">
         <f:dropdownDescriptorSelector field="strategy" title="Property strategy"
