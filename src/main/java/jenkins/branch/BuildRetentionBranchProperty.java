@@ -1,6 +1,7 @@
 package jenkins.branch;
 
 import hudson.Extension;
+import jenkins.model.BuildDiscarder;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -8,8 +9,15 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class BuildRetentionBranchProperty extends BranchProperty {
 
+    private final BuildDiscarder buildDiscarder;
+
     @DataBoundConstructor
-    public BuildRetentionBranchProperty() {
+    public BuildRetentionBranchProperty(BuildDiscarder buildDiscarder) {
+        this.buildDiscarder = buildDiscarder;
+    }
+
+    public BuildDiscarder getBuildDiscarder() {
+        return buildDiscarder;
     }
 
     /**
