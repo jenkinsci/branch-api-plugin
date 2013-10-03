@@ -1,7 +1,7 @@
 <!--
  ~ The MIT License
  ~
- ~ Copyright (c) 2011-2013, CloudBees, Inc., Stephen Connolly.
+ ~ Copyright (c) 2013, CloudBees, Inc.
  ~
  ~ Permission is hereby granted, free of charge, to any person obtaining a copy
  ~ of this software and associated documentation files (the "Software"), to deal
@@ -21,16 +21,8 @@
  ~ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  ~ THE SOFTWARE.
  -->
-<?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <f:entry title="${%Publisher white-list}" help="${descriptor.getHelpFile('publisherWhitelist')}">
-    <j:forEach var="entry" items="${descriptor.getPublisherDescriptors().entrySet()}">
-      <input type="checkbox"
-             name="publisherWhitelist"
-             value="${entry.key}" json="${entry.key}"
-             checked="${instance != null and instance.publisherWhitelist.contains(entry.key) ? 'true' : null}"/>
-        <label class="attach-previous">${entry.value.displayName}</label>
-      <br/>
-    </j:forEach>
-  </f:entry>
-</j:jelly>
+<div>
+  Allow the branch to configure these publishers. You typically will use this: to prevent publishers that
+  could deploy/copy files from running in an untrusted branch; to prevent email notification being used to
+  generate spam; or to prevent untrusted builds from archiving very large artifacts, etc.
+</div>

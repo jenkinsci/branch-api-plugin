@@ -28,9 +28,14 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.Publisher;
+import org.kohsuke.stapler.DataBoundConstructor;
 
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Indicates that the branch contains code changes from authors who do not otherwise have the write access
@@ -55,14 +60,35 @@ import java.util.Map;
  */
 public class UntrustedBranchProperty extends BranchProperty {
 
+    private final Set<String> publisherWhitelist;
+
+    @DataBoundConstructor
+    public UntrustedBranchProperty(String[] publisherWhitelist) {
+        this.publisherWhitelist = publisherWhitelist == null ? Collections.<String>emptySet() : new TreeSet<String>(
+                Arrays.asList(publisherWhitelist));
+    }
+
+    public Set<String> getPublisherWhitelist() {
+        return Collections.unmodifiableSet(publisherWhitelist);
+    }
+
     /**
      * {@inheritDoc}
      */
     @NonNull
     @Override
-    public Map<Descriptor<Publisher>, Publisher> configurePublishers(@NonNull Map<Descriptor<Publisher>, Publisher> publishers) {
-        // TODO allow white-listing of publishers
-        return new HashMap<Descriptor<Publisher>, Publisher>();
+    public Map<Descriptor<Publisher>, Publisher> configurePublishers(
+            @NonNull Map<Descriptor<Publisher>, Publisher> publishers) {
+        Map<Descriptor<Publisher>, Publisher> result = new LinkedHashMap<Descriptor<Publisher>, Publisher>();
+        Set<String> whitelist = getPublisherWhitelist();
+        if (!whitelist.isEmpty()) {
+            for (Map.Entry<Descriptor<Publisher>, Publisher> entry : publishers.entrySet()) {
+                if (whitelist.contains(entry.getKey().clazz.getName())) {
+                    result.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        return result;
     }
 
     /**
@@ -88,6 +114,14 @@ public class UntrustedBranchProperty extends BranchProperty {
         @Override
         public String getDisplayName() {
             return "Untrusted";
+        }
+
+        public Map<String,Descriptor<Publisher>> getPublisherDescriptors() {
+            Map<String,Descriptor<Publisher>> result = new LinkedHashMap<String,Descriptor<Publisher>>();
+            for (Descriptor<Publisher> d: Publisher.all()) {
+                result.put(d.clazz.getName(), d);
+            }
+            return result;
         }
     }
 }
