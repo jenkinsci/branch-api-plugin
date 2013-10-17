@@ -30,6 +30,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
+import hudson.tasks.LogRotator;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -48,7 +49,8 @@ import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
 
 /**
- * The default {@link DeadBranchStrategy}.
+ * The default {@link DeadBranchStrategy}, which trims off jobs for dead branches
+ * by the # of days or the # of jobs (much like {@link LogRotator} works.
  *
  * @author Stephen Connolly
  */
