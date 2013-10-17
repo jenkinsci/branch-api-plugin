@@ -38,6 +38,8 @@ import java.util.Collections;
 /**
  * Special view used when {@link MultiBranchProject} has no branches.
  *
+ * This view shows the UI to guide users to configure and index branches.
+ *
  * @author Kohsuke Kawaguchi
  */
 public class MultiBranchProjectWelcomeView extends View {
