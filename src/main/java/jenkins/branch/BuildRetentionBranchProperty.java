@@ -86,13 +86,6 @@ public class BuildRetentionBranchProperty extends BranchProperty {
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public <JobT extends Job<JobT, RunT>, RunT extends Run<JobT, RunT>> void configureJob(@NonNull Job<JobT, RunT> job) {
-    }
-
-    /**
      * Our {@link hudson.model.Descriptor}.
      */
     @Extension

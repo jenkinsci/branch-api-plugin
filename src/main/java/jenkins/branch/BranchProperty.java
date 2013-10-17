@@ -30,6 +30,9 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Additional information associated with {@link Branch}.
  * <p/>
@@ -71,5 +74,16 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
     @NonNull
     public BranchPropertyDescriptor getDescriptor() {
         return (BranchPropertyDescriptor) super.getDescriptor();
+    }
+
+    /**
+     * Utility helper method that ensures you have an {@link ArrayList} but avoids copying unless required.
+     * @param list the list that may or may not be an {@link ArrayList}.
+     * @param <T> the type of elements in the list.
+     * @return either the supplied {@link List} if it was an {@link ArrayList} or a copy of the supplied list in a
+     * newly created {@link ArrayList}.
+     */
+    protected static <T> ArrayList<T> asArrayList(List<T> list) {
+        return list instanceof ArrayList ? (ArrayList<T>)list : new ArrayList<T>(list);
     }
 }
