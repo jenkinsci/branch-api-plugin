@@ -23,6 +23,7 @@
  */
 package jenkins.branch;
 
+import hudson.ExtensionPoint;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
@@ -36,7 +37,7 @@ import java.util.Map;
  * A strategy for removing {@link Branch} projects after they no longer have a source in their
  * {@link MultiBranchProject}.
  */
-public abstract class DeadBranchStrategy extends AbstractDescribableImpl<DeadBranchStrategy> {
+public abstract class DeadBranchStrategy extends AbstractDescribableImpl<DeadBranchStrategy> implements ExtensionPoint {
 
     /**
      * The owner of this branch source. Branch sources may need to cache information from remote servers and

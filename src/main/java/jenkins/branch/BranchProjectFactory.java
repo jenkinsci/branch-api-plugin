@@ -25,6 +25,7 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.ExtensionPoint;
 import hudson.XmlFile;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
@@ -47,7 +48,7 @@ import java.io.IOException;
  */
 public abstract class BranchProjectFactory<P extends AbstractProject<P, R> & TopLevelItem,
         R extends AbstractBuild<P, R>>
-        extends AbstractDescribableImpl<BranchProjectFactory<?, ?>> implements Saveable {
+        extends AbstractDescribableImpl<BranchProjectFactory<?, ?>> implements Saveable, ExtensionPoint {
 
     /**
      * The owning {@link MultiBranchProject}.

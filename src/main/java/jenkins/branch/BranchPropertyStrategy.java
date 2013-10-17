@@ -24,6 +24,7 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
 import jenkins.scm.api.SCMHead;
 
@@ -34,7 +35,7 @@ import java.util.List;
  *
  * @author Stephen Connolly
  */
-public abstract class BranchPropertyStrategy extends AbstractDescribableImpl<BranchPropertyStrategy> {
+public abstract class BranchPropertyStrategy extends AbstractDescribableImpl<BranchPropertyStrategy> implements ExtensionPoint {
 
     /**
      * Returns the list of properties to be injected into the {@link Branch} for the specified {@link SCMHead}.

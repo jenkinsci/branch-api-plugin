@@ -24,6 +24,7 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.Job;
@@ -43,7 +44,7 @@ import java.util.Map;
  *
  * @author Kohsuke Kawaguchi
  */
-public abstract class BranchProperty extends AbstractDescribableImpl<BranchProperty> {
+public abstract class BranchProperty extends AbstractDescribableImpl<BranchProperty> implements ExtensionPoint {
 
     /**
      * This method is an extension point whereby a {@link BranchProperty} can filter or enhance the set of
