@@ -302,7 +302,8 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
             deadBranchStrategy = new DefaultDeadBranchStrategy();
         }
         deadBranchStrategy.setOwner(this);
-        getProjectFactory().setOwner(this);
+        final BranchProjectFactory<P, R> factory = getProjectFactory();
+        factory.setOwner(this);
         Map<String, Map<String, P>> branchItems = getBranchItems();
         if (getBranchesDir().isDirectory()) {
             for (File branch : getBranchesDir().listFiles(new FileFilter() {
@@ -312,15 +313,16 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
             })) {
                 try {
                     Item item = Items.load(this, branch);
-                    if (getProjectFactory().isProject(item)) {
-                        P project = getProjectFactory().asProject(item);
+                    if (factory.isProject(item)) {
+                        P project = factory.asProject(item);
                         assert project != null;
-                        Branch b = getProjectFactory().getBranch(project);
+                        Branch b = factory.getBranch(project);
                         SCMSource source = getSCMSource(b.getSourceId());
                         if (source == null || source == nullSCMSource) {
                             source = nullSCMSource;
-                            getProjectFactory().setBranch(project, new Branch.Dead(b.getHead(), b.getProperties()));
+                            factory.setBranch(project, new Branch.Dead(b.getHead(), b.getProperties()));
                         }
+                        factory.decorate(project);
                         Map<String, P> projects;
                         projects = branchItems.get(source.getId());
                         if (projects == null) {
@@ -412,8 +414,8 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                     source = nullSCMSource;
                 }
                 for (P project : entry.getValue().values()) {
-                    this.factory.setBranch(project,
-                            newBranch(source, this.factory.getBranch(project).getHead()));
+                    this.factory.decorate(this.factory.setBranch(project,
+                            newBranch(source, this.factory.getBranch(project).getHead())));
                 }
             }
         }
@@ -676,17 +678,19 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                     if (project.getConfigFile().exists()) {
                         try {
                             project.getConfigFile().unmarshal(project);
+                            factory.decorate(project);
                             project.onLoad(MultiBranchProject.this, branchName);
                         } catch (IOException e) {
                             e.printStackTrace(listener.error("Could not load old configuration of " + branchName));
                         }
                     } else {
+                        factory.decorate(project);
                         project.onCreatedFromScratch();
                     }
                     scheduleBuilds.put(project, revision);
                 } else {
                     needSave = !branch.equals(factory.getBranch(project));
-                    project = factory.setBranch(project, branch);
+                    project = factory.decorate(factory.setBranch(project, branch));
                     items.put(branch.getName(), project);
                     if (revision.isDeterministic()) {
                         SCMRevision lastBuild = getProjectFactory().getRevision(project);
@@ -1784,7 +1788,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 for (P project : lostBranches.values()) {
                     Branch b = factory.getBranch(project);
                     if (!(b instanceof Branch.Dead)) {
-                        factory.setBranch(project, new Branch.Dead(b.getHead(), b.getProperties()));
+                        factory.decorate(factory.setBranch(project, new Branch.Dead(b.getHead(), b.getProperties())));
                     }
                 }
                 parent.getBranchItems().put(parent.nullSCMSource.getId(), lostBranches);

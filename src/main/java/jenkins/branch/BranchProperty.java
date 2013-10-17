@@ -23,18 +23,12 @@
  */
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
+import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.Descriptor;
-import hudson.model.Job;
-import hudson.model.JobProperty;
-import hudson.model.Run;
-import hudson.tasks.BuildWrapper;
-import hudson.tasks.Publisher;
-
-import java.util.List;
-import java.util.Map;
+import hudson.model.AbstractProject;
 
 /**
  * Additional information associated with {@link Branch}.
@@ -47,64 +41,28 @@ import java.util.Map;
 public abstract class BranchProperty extends AbstractDescribableImpl<BranchProperty> implements ExtensionPoint {
 
     /**
-     * This method is an extension point whereby a {@link BranchProperty} can filter or enhance the set of
-     * {@link Publisher} to be used by the branch specific project.
-     *
-     * @param publishers the proposed {@link Publisher}s.
-     * @return the resulting {@link Publisher}s.
+     * Returns a {@link ProjectDecorator} for the supplied project instance.
+     * @param project the project instance.
+     * @param <P> the type of project.
+     * @param <B> the type of build of the project.
+     * @return a {@link ProjectDecorator} or {@code null} if none appropriate to this type of project.
      */
-    @NonNull
-    public Map<Descriptor<Publisher>, Publisher> configurePublishers(
-            @NonNull Map<Descriptor<Publisher>, Publisher> publishers) {
-        return publishers;
+    @CheckForNull
+    @SuppressWarnings("unchecked")
+    public final <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(P project) {
+        return (ProjectDecorator<P, B>) decorator(project.getClass());
     }
 
     /**
-     * This method is an extension point whereby a {@link BranchProperty} can filter or enhance the set of
-     * {@link BuildWrapper} to be used by the branch specific project.
-     *
-     * @param wrappers the proposed {@link BuildWrapper}s.
-     * @return the resulting {@link BuildWrapper}s.
+     * Returns a {@link ProjectDecorator} for the specific project type.
+     * @param clazz the project class.
+     * @param <P> the type of project.
+     * @param <B> the type of build of the project.
+     * @return a {@link ProjectDecorator} or {@code null} if none appropriate to this type of project.
      */
-    @NonNull
-    public Map<Descriptor<BuildWrapper>, BuildWrapper> configureBuildWrappers(
-            @NonNull Map<Descriptor<BuildWrapper>, BuildWrapper> wrappers) {
-        return wrappers;
-    }
-
-    /**
-     * This method is an extension point whereby a {@link BranchProperty} can filter or enhance the set of
-     * {@link JobProperty} to be used by the branch specific project.
-     *
-     * @param properties the proposed {@link JobProperty}s.
-     * @return the resulting {@link JobProperty}s.
-     */
-    @NonNull
-    public <JobT extends Job<?, ?>> List<JobProperty<? super JobT>> configureJobProperties(
-            @NonNull List<JobProperty<? super JobT>> properties) {
-        return properties;
-    }
-
-    /**
-     * This method is an extension point whereby a {@link BranchProperty} can apply final tweaks to the job
-     * for the branch specific project. Implementations should try to obey the following rules:
-     * <ul>
-     * <li>Don't trigger a save of the job</li>
-     * <li>Don't try to manipulate the {@link JobProperty} instances in the job, use
-     * {@link #configureJobProperties(List)} instead.</li>
-     * <li>Don't try to manipulate the {@link BuildWrapper} instances in the job, use
-     * {@link #configureBuildWrappers(Map)} instead.</li>
-     * <li>Don't try to manipulate the {@link Publisher} instances in the job, use {@link #configurePublishers(Map)}}
-     * instead.</li>
-     * </ul>
-     * In general, this method should be seen as a final hook for use in those cases where the existing hooks
-     * prove insufficient.
-     *
-     * @param job    the job.
-     * @param <JobT> the type of job.
-     */
-    public <JobT extends Job<JobT, RunT>, RunT extends Run<JobT, RunT>> void configureJob(
-            @NonNull Job<JobT, RunT> job) {
+    @CheckForNull
+    public <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(Class<P> clazz) {
+        return null;
     }
 
     /**

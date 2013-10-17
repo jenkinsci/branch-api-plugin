@@ -26,17 +26,27 @@ package jenkins.branch;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
+import hudson.BulkChange;
 import hudson.XmlFile;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
+import hudson.model.Descriptor;
 import hudson.model.Item;
+import hudson.model.JobProperty;
+import hudson.model.Project;
 import hudson.model.Saveable;
 import hudson.model.TopLevelItem;
+import hudson.tasks.BuildWrapper;
+import hudson.tasks.Publisher;
+import hudson.util.DescribableList;
 import jenkins.scm.api.SCMRevision;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Creates instances of the branch projects for a specific {@link Branch} and also provides some utility methods for
@@ -159,6 +169,64 @@ public abstract class BranchProjectFactory<P extends AbstractProject<P, R> & Top
     public void setRevisionHash(P project, SCMRevision revision) throws IOException {
         XmlFile file = new XmlFile(new File(project.getRootDir(), "scm-revision-hash.xml"));
         file.write(revision);
+    }
+
+    /**
+     * Decorates the project in with all the {@link BranchProperty#decorator(hudson.model.AbstractProject)} instances.
+     * NOTE: This method should suppress saving the project and only affect the in-memory state.
+     * NOTE: Override if the default strategy is not appropriate for the specific project type.
+     *
+     * @param project the project.
+     * @return the project for nicer method chaining
+     */
+    @SuppressWarnings("ConstantConditions")
+    public P decorate(P project) {
+        if (!isProject(project)) {
+            return project;
+        }
+        Branch branch = getBranch(project);
+        // HACK ALERT
+        // ==========
+        // We don't want to trigger a save, so we will do some trickery to inject the new values
+        // it would be better if Core gave us some hooks to do this
+        BulkChange bc = new BulkChange(project);
+        try {
+            List<BranchProperty> properties = new ArrayList<BranchProperty>(branch.getProperties());
+            Collections.sort(properties, DescriptorOrder.reverse(BranchProperty.class));
+            for (BranchProperty property : properties) {
+                ProjectDecorator<P, R> decorator = property.decorator(project);
+                if (decorator != null) {
+                    // if Project then we can feed the publishers and build wrappers
+                    if (project instanceof Project) {
+                        DescribableList<Publisher, Descriptor<Publisher>> publishersList = project.getPublishersList();
+                        DescribableList buildWrappersList = Project.class.cast(project).getBuildWrappersList();
+                        List<Publisher> publishers = decorator.publishers(publishersList.toList());
+                        List<BuildWrapper> buildWrappers = decorator.buildWrappers(buildWrappersList.toList());
+                        publishersList.replaceBy(publishers);
+                        buildWrappersList.replaceBy(buildWrappers);
+                    }
+                    // we can always feed the job properties... but just not as easily as we'd like
+
+                    List<JobProperty<? super P>> jobProperties = decorator.jobProperties(project.getAllProperties());
+                    // HACK: need to replace all properties but no nice method... we will iterate our way through
+                    // both removal and addition
+                    for (JobProperty<? super P> p : project.getAllProperties()) {
+                        project.removeProperty(p);
+                    }
+                    for (JobProperty<? super P> p : jobProperties) {
+                        project.addProperty(p);
+                    }
+
+                    // now apply the final layer
+                    decorator.project(project);
+                }
+            }
+        } catch (IOException e) {
+            // should be safe to ignore as the BulkChange suppresses the save operation.
+        } finally {
+            bc.abort();
+        }
+        return project;
     }
 
 }

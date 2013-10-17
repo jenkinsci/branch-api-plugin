@@ -23,8 +23,6 @@
  */
 package jenkins.branch;
 
-import hudson.DescriptorExtensionList;
-import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.JobProperty;
@@ -33,13 +31,11 @@ import hudson.scm.NullSCM;
 import hudson.scm.SCM;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.Publisher;
-import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.impl.NullSCMSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -149,65 +145,6 @@ public class Branch {
     }
 
     /**
-     * Takes the supplied publishers and gives each {@link BranchProperty} the option to contribute to the result.
-     *
-     * @param publishers the suggested publishers.
-     * @return the configured final publishers.
-     */
-    public Map<Descriptor<Publisher>, Publisher> configurePublishers(
-            Map<Descriptor<Publisher>, Publisher> publishers) {
-        for (BranchProperty property : branchPropertiesInReverse()) {
-            publishers = property.configurePublishers(publishers);
-        }
-        return publishers;
-    }
-
-    /**
-     * Takes the supplied build wrappers and gives each {@link BranchProperty} the option to contribute to the result.
-     *
-     * @param wrappers the suggested build wrappers.
-     * @return the configured final build wrappers.
-     */
-    public Map<Descriptor<BuildWrapper>, BuildWrapper> configureBuildWrappers(
-            Map<Descriptor<BuildWrapper>, BuildWrapper> wrappers) {
-        for (BranchProperty property : branchPropertiesInReverse()) {
-            wrappers = property.configureBuildWrappers(wrappers);
-        }
-        return wrappers;
-    }
-
-    /**
-     * Takes the supplied job properties and gives each {@link BranchProperty} the option to contribute to the result.
-     *
-     * @param jobProperties the suggested job properties.
-     * @return the configured final job properties.
-     */
-    public <JobT extends Job<?, ?>> List<JobProperty<? super JobT>> configureJobProperties(
-            List<JobProperty<? super JobT>> jobProperties) {
-        for (BranchProperty property : branchPropertiesInReverse()) {
-            jobProperties = property.configureJobProperties(jobProperties);
-        }
-        return jobProperties;
-    }
-
-    /**
-     * Takes the supplied job and gives each {@link BranchProperty} the option to apply any final tweaks to the job
-     * configuration that are not exposed by current extension points.
-     *
-     * @param job    the job.
-     * @param <JobT> the type of job.
-     * @param <RunT> the type of run.
-     * @return the job.
-     */
-    public <JobT extends Job<JobT, RunT>, RunT extends Run<JobT, RunT>> JobT configureJob(JobT job) {
-        for (BranchProperty property : branchPropertiesInReverse()) {
-            property.configureJob(job);
-        }
-        return job;
-    }
-
-
-    /**
      * Returns {@code true} iff the branch is can be built.
      *
      * @return {@code true} iff the branch is can be built.
@@ -251,17 +188,6 @@ public class Branch {
     }
 
     /**
-     * Returns the list of branch properties in reverse order.
-     *
-     * @return the list of branch properties in reverse order.
-     */
-    private List<BranchProperty> branchPropertiesInReverse() {
-        List<BranchProperty> properties = new ArrayList<BranchProperty>(this.properties);
-        Collections.sort(properties, DescriptorOrder.reverse(BranchProperty.class));
-        return properties;
-    }
-
-    /**
      * Represents a dead branch.
      */
     public static class Dead extends Branch {
@@ -283,70 +209,4 @@ public class Branch {
         }
     }
 
-    /**
-     * A {@link Comparator} that compares {@link Describable} instances of a specific type based on the order of their
-     * {@link Descriptor}s in {@link Jenkins}'s list of {@link Descriptor}s for that type.
-     *
-     * @param <T> the type of {@link Describable}.
-     */
-    private static class DescriptorOrder<T extends Describable<T>> implements Comparator<T> {
-        /**
-         * The list of {@link Descriptor}s to sort with.
-         */
-        private final DescriptorExtensionList<T, Descriptor<T>> descriptors;
-
-        /**
-         * Returns a {@link Comparator} that matches the order of the corresponding
-         * {@link Jenkins#getDescriptorList(Class)}.
-         *
-         * @param type the type of {@link Describable}.
-         * @param <T>  the type of {@link Describable}.
-         * @return a {@link Comparator}.
-         */
-        public static <T extends Describable<T>> Comparator<T> forward(Class<T> type) {
-            return new DescriptorOrder<T>(type);
-        }
-
-        /**
-         * Returns a {@link Comparator} that reverses the order of the corresponding
-         * {@link Jenkins#getDescriptorList(Class)}.
-         *
-         * @param type the type of {@link Describable}.
-         * @param <T>  the type of {@link Describable}.
-         * @return a {@link Comparator}.
-         */
-        public static <T extends Describable<T>> Comparator<T> reverse(Class<T> type) {
-            return Collections.reverseOrder(forward(type));
-        }
-
-        /**
-         * Constructor.
-         *
-         * @param type the type.
-         */
-        private DescriptorOrder(Class<T> type) {
-            descriptors = Jenkins.getInstance().getDescriptorList(type);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        public int compare(T o1, T o2) {
-            int i1 = o1 == null ? -1 : descriptors.indexOf(o1.getDescriptor());
-            int i2 = o2 == null ? -1 : descriptors.indexOf(o2.getDescriptor());
-            if (i1 == -1) {
-                return i2 == -1 ? 0 : 1;
-            }
-            if (i2 == -1) {
-                return -1;
-            }
-            if (i1 == i2) {
-                return 0;
-            }
-            if (i1 < i2) {
-                return -1;
-            }
-            return 1;
-        }
-    }
 }

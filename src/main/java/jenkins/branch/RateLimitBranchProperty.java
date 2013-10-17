@@ -25,6 +25,8 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -32,12 +34,15 @@ import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
+import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.util.TimeUnit2;
+import jenkins.model.Jenkins;
 import org.jvnet.localizer.ResourceBundleHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 
-import java.util.ArrayList;
+import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -112,16 +117,22 @@ public class RateLimitBranchProperty extends BranchProperty {
         return durationName;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @NonNull
     @Override
-    public <JobT extends Job<?, ?>> List<JobProperty<? super JobT>> configureJobProperties(
-            @NonNull List<JobProperty<? super JobT>> properties) {
-        List<JobProperty<? super JobT>> result = new ArrayList<JobProperty<? super JobT>>(properties);
-        result.add(new JobPropertyImpl(count == 0 ? null : new Throttle(count, durationName)));
-        return result;
+    public <P extends AbstractProject<P, B>, B extends AbstractBuild<P, B>> ProjectDecorator<P, B> decorator(
+            Class<P> jobType) {
+        return new ProjectDecorator<P, B>() {
+            /**
+             * {@inheritDoc}
+             */
+            @NonNull
+            @Override
+            public List<JobProperty<? super P>> jobProperties(
+                    @NonNull List<JobProperty<? super P>> properties) {
+                List<JobProperty<? super P>> result = asArrayList(properties);
+                result.add(new JobPropertyImpl(count == 0 ? null : new Throttle(count, durationName)));
+                return result;
+            }
+        };
     }
 
     /**
@@ -144,12 +155,16 @@ public class RateLimitBranchProperty extends BranchProperty {
          */
         @SuppressWarnings("unused") // by stapler
         public ListBoxModel doFillDurationNameItems() {
-            ListBoxModel result = new ListBoxModel();
-            for (String unit : DURATIONS.keySet()) {
-                result.add(ResourceBundleHolder.get(Messages.class).format("RateLimitBranchProperty.duration." + unit),
-                        unit);
-            }
-            return result;
+            return Jenkins.getInstance().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
+                    .doFillDurationNameItems();
+        }
+
+        /**
+         * Check the count
+         */
+        public FormValidation doCheckCount(@QueryParameter int value, @QueryParameter String durationName) {
+            return Jenkins.getInstance().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
+                    .doCheckCount(value, durationName);
         }
     }
 
@@ -307,6 +322,43 @@ public class RateLimitBranchProperty extends BranchProperty {
                             unit);
                 }
                 return result;
+            }
+
+            /**
+             * Check the count
+             */
+            public FormValidation doCheckCount(@QueryParameter int value, @QueryParameter String durationName) {
+                long duration =
+                        DURATIONS.containsKey(durationName) ? DURATIONS.get(durationName) : TimeUnit2.HOURS.toMillis(1);
+                if (value == 0) {
+                    return FormValidation.ok();
+                }
+                long interval = duration / Math.max(1, value);
+                if (interval < TimeUnit2.SECONDS.toMillis(1)) {
+                    return FormValidation.ok();
+                }
+                if (interval < TimeUnit2.MINUTES.toMillis(1)) {
+                    return FormValidation.ok(
+                            Messages.RateLimitBranchProperty_ApproxSecsBetweenBuilds(
+                                            TimeUnit2.MILLISECONDS.toSeconds(interval)));
+                }
+                if (interval < TimeUnit2.HOURS.toMillis(2)) {
+                    return FormValidation.ok(
+                            Messages.RateLimitBranchProperty_ApproxMinsBetweenBuilds(
+                                            TimeUnit2.MILLISECONDS.toMinutes(interval)));
+                }
+                if (interval < TimeUnit2.DAYS.toMillis(2)) {
+                    return FormValidation.ok(
+                            Messages.RateLimitBranchProperty_ApproxHoursBetweenBuilds(
+                                            TimeUnit2.MILLISECONDS.toHours(interval)));
+                }
+                if (interval < TimeUnit2.DAYS.toMillis(14)) {
+                    return FormValidation.ok(
+                                    Messages.RateLimitBranchProperty_ApproxDaysBetweenBuilds(
+                                            TimeUnit2.MILLISECONDS.toDays(interval)));
+                }
+                return FormValidation.ok(Messages.RateLimitBranchProperty_ApproxWeeksBetweenBuilds(
+                                TimeUnit2.MILLISECONDS.toDays(interval) / 7));
             }
         }
     }

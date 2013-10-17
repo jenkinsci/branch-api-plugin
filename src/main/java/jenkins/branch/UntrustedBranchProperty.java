@@ -25,14 +25,18 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.Publisher;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -72,34 +76,37 @@ public class UntrustedBranchProperty extends BranchProperty {
         return Collections.unmodifiableSet(publisherWhitelist);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @NonNull
     @Override
-    public Map<Descriptor<Publisher>, Publisher> configurePublishers(
-            @NonNull Map<Descriptor<Publisher>, Publisher> publishers) {
-        Map<Descriptor<Publisher>, Publisher> result = new LinkedHashMap<Descriptor<Publisher>, Publisher>();
-        Set<String> whitelist = getPublisherWhitelist();
-        if (!whitelist.isEmpty()) {
-            for (Map.Entry<Descriptor<Publisher>, Publisher> entry : publishers.entrySet()) {
-                if (whitelist.contains(entry.getKey().clazz.getName())) {
-                    result.put(entry.getKey(), entry.getValue());
+    public <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(Class<P> jobType) {
+        return new ProjectDecorator<P, B>() {
+            /**
+             * {@inheritDoc}
+             */
+            @NonNull
+            @Override
+            public List<Publisher> publishers(@NonNull List<Publisher> publishers) {
+                List<Publisher> result = new ArrayList<Publisher>();
+                Set<String> whitelist = getPublisherWhitelist();
+                if (!whitelist.isEmpty()) {
+                    for (Publisher publisher: publishers) {
+                        if (whitelist.contains(publisher.getDescriptor().clazz.getName())) {
+                            result.add(publisher);
+                        }
+                    }
                 }
+                return result;
             }
-        }
-        return result;
-    }
 
-    /**
-     * {@inheritDoc}
-     */
-    @NonNull
-    @Override
-    public Map<Descriptor<BuildWrapper>, BuildWrapper> configureBuildWrappers(@NonNull Map<Descriptor<BuildWrapper>,
-            BuildWrapper> wrappers) {
-        // TODO add a build wrapper that puts the execution in a "secured" context.
-        return super.configureBuildWrappers(wrappers);
+            /**
+             * {@inheritDoc}
+             */
+            @NonNull
+            @Override
+            public List<BuildWrapper> buildWrappers(@NonNull List<BuildWrapper> wrappers) {
+                // TODO add a build wrapper that puts the execution in a "secured" context.
+                return super.buildWrappers(wrappers);
+            }
+        };
     }
 
     /**

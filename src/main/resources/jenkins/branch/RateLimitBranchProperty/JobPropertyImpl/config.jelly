@@ -24,8 +24,8 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <f:optionalBlock title="${%Throttle builds}" field="throttle" checked="${instance.count>0}">
-    <f:entry title="${%Number of builds}" help="${descriptor.getHelpFile('count')}">
-      <f:number name="count" value="${instance.count==0?1:instance.count}" default="1" clazz="positive-number" min="1" step="1" />
+    <f:entry title="${%Number of builds}" field="count">
+      <f:number default="1" clazz="positive-number" min="1" max="1000" step="1" />
     </f:entry>
     <f:entry title="${%Time period}" field="durationName">
       <f:select/>
