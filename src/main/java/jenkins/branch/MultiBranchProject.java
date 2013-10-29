@@ -905,6 +905,30 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
     }
 
     /**
+     * Returns whether the name of this job can be changed by user.
+     */
+    public boolean isNameEditable() {
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if any child job is building or if indexing is in progress.
+     *
+     * @return {@code true} if any child job is building or if indexing is in progress.
+     */
+    public boolean isBuilding() {
+        if (getIndexing().isBuilding()) {
+            return true;
+        }
+        for (P child : getItems()) {
+            if (child.isBuilding()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Handles a POST request to trigger indexing.
      *
      * @throws IOException      if things go wrong.
@@ -1019,6 +1043,36 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
         if (reindex) {
             scheduleBuild();
         }
+    }
+
+    /**
+     * Renames this job.
+     */
+    @RequirePOST
+    public/* not synchronized. see renameTo() */void doDoRename(
+            StaplerRequest req, StaplerResponse rsp) throws IOException,
+            ServletException {
+
+        if (!hasPermission(CONFIGURE)) {
+            // rename is essentially delete followed by a create
+            checkPermission(CREATE);
+            checkPermission(DELETE);
+        }
+
+        String newName = req.getParameter("newName");
+        Jenkins.checkGoodName(newName);
+
+        if (isBuilding()) {
+            // redirect to page explaining that we can't rename now
+            rsp.sendRedirect("rename?newName=" + URLEncoder.encode(newName, "UTF-8"));
+            return;
+        }
+
+        renameTo(newName);
+        // send to the new job page
+        // note we can't use getUrl() because that would pick up old name in the
+        // Ancestor.getUrl()
+        rsp.sendRedirect2("../" + newName);
     }
 
     /**
