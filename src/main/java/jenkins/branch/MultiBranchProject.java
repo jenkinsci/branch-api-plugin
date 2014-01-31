@@ -321,6 +321,12 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                         if (source == null || source == nullSCMSource) {
                             source = nullSCMSource;
                             factory.setBranch(project, new Branch.Dead(b.getHead(), b.getProperties()));
+                        } else {
+                            // Sync the properties with those that the strategy dictates
+                            BranchPropertyStrategy propertyStrategy = getBranchPropertyStrategy(source);
+                            b = new Branch(b.getSourceId(), b.getHead(), b.getScm(),
+                                    propertyStrategy.getPropertiesFor(b.getHead()));
+                            factory.setBranch(project, b);
                         }
                         factory.decorate(project);
                         Map<String, P> projects;
