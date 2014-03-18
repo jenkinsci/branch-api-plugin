@@ -41,8 +41,7 @@
           <f:textarea name="description" value="${it.description}" codemirror-mode="${app.markupFormatter.codeMirrorMode}" codemirror-config="${app.markupFormatter.codeMirrorConfig}" previewEndpoint="/markupFormatter/previewDescription"/>
         </f:entry>
 
-        <!-- job property configurations. This should have been <f:descriptorList> -->
-        <f:descriptorList field="properties" descriptors="${h.getJobPropertyDescriptors(it.getClass())}" forceRowSet="true" />
+        <!-- TODO: we need multi-branch project properties to capture permissions etc at this level -->
 
         <!-- additional entries from derived classes -->
         <st:include page="configure-entries.jelly" />
