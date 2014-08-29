@@ -34,6 +34,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.tools.ant.types.selectors.SelectorUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -203,6 +204,8 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
                 if (name.indexOf('*') == -1 && name.indexOf('?') == -1) {
                     match = name.equalsIgnoreCase(branchName);
                 } else {
+                    name = name.replace('\\', File.separatorChar).replace('/', File.separatorChar);
+                    branchName = branchName.replace('\\', File.separatorChar).replace('/', File.separatorChar);
                     match = SelectorUtils.matchPath(name, branchName, false);
                 }
                 if (invertMatch ? !match : match) {
