@@ -170,7 +170,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
     /**
      * The user supplied branch sources.
      */
-    private final PersistedList<BranchSource> sources = new PersistedList<BranchSource>(this);
+    private /*almost final*/ PersistedList<BranchSource> sources = new PersistedList<BranchSource>(this);
 
     /**
      * The source for dead branches.
@@ -249,6 +249,9 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      * Consolidated initialization code.
      */
     private synchronized void init() {
+        if (sources == null) {
+          sources = new PersistedList<BranchSource>(this);
+        }
         if (nullSCMSource == null) {
             nullSCMSource = new NullSCMSource();
         }
