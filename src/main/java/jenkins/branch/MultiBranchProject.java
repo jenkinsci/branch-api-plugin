@@ -74,7 +74,6 @@ import hudson.scheduler.CronTabList;
 import hudson.scm.PollingResult;
 import hudson.security.ACL;
 import hudson.triggers.SCMTrigger;
-import hudson.triggers.TimerTrigger;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
 import hudson.util.FlushProofOutputStream;
@@ -1862,7 +1861,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                     listener.getLogger().println("Scheduling builds for branches:");
                     for (Map.Entry<P, SCMRevision> entry : scheduleBuilds.entrySet()) {
                         listener.getLogger().println("    " + entry.getKey().getName());
-                        if (entry.getKey().scheduleBuild(0, new TimerTrigger.TimerTriggerCause())) {
+                        if (entry.getKey().scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
                             try {
                                 factory.setRevisionHash(entry.getKey(), entry.getValue());
                             } catch (IOException e) {
