@@ -684,12 +684,12 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 if (project == null) {
                     needSave = true;
                     project = factory.newInstance(branch);
-                    items.put(branchName, project);
+                    items.put(project.getName(), project);
                     if (project.getConfigFile().exists()) {
                         try {
                             project.getConfigFile().unmarshal(project);
                             factory.decorate(project);
-                            project.onLoad(MultiBranchProject.this, branchName);
+                            project.onLoad(MultiBranchProject.this, project.getName());
                         } catch (IOException e) {
                             e.printStackTrace(listener.error("Could not load old configuration of " + branchName));
                         }
@@ -729,10 +729,11 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
         source.fetch(observer, listener);
         for (Iterator<Map.Entry<String, P>> iterator = items.entrySet().iterator(); iterator.hasNext(); ) {
             Map.Entry<String, P> entry = iterator.next();
-            if (branchNames.contains(entry.getKey())) {
+            // Don't assume that the project name is the branch name.
+            if (branchNames.contains(factory.getBranch(entry.getValue()).getName())) {
                 continue;
             }
-            lostBranches.put(entry.getKey(), entry.getValue());
+            lostBranches.put(factory.getBranch(entry.getValue()).getName(), entry.getValue());
             iterator.remove();
         }
         return branchNames;
@@ -1840,27 +1841,36 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 listener.getLogger().println(Messages._MultiBranchProject_IndexingStartedAt(getTime()));
                 listener.started(getCauses());
                 BranchProjectFactory<P, R> factory = parent.getProjectFactory();
+                // Branch Name -> Project
                 Map<String, P> lostBranches = new HashMap<String, P>();
                 for (Map<String, P> branches : parent.getBranchItems().values()) {
-                    lostBranches.putAll(branches);
+                    for (P project : branches.values()) {
+                      lostBranches.put(factory.getBranch(project).getName(), project);
+                    }
                 }
                 Map<P, SCMRevision> scheduleBuilds = new LinkedHashMap<P, SCMRevision>();
                 for (SCMSource source : parent.getSCMSources()) {
                     parent.populateBranchItemsFromSCM(listener, source, factory, lostBranches, scheduleBuilds);
                 }
                 // now add in the dead branches
+                // Translate lostBranches from:
+                //   Branch Name -> Project
+                // to:
+                //   Project Name -> Project
+                Map<String, P> lostBranchesWithProjectNameKey = new HashMap<String, P>();
                 for (P project : lostBranches.values()) {
                     Branch b = factory.getBranch(project);
                     if (!(b instanceof Branch.Dead)) {
                         factory.decorate(factory.setBranch(project, new Branch.Dead(b.getHead(), b.getProperties())));
                     }
+                    lostBranchesWithProjectNameKey.put(project.getName(), project);
                 }
-                parent.getBranchItems().put(parent.nullSCMSource.getId(), lostBranches);
+                parent.getBranchItems().put(parent.nullSCMSource.getId(), lostBranchesWithProjectNameKey);
                 parent.runDeadBranchCleanup(listener);
                 if (!scheduleBuilds.isEmpty()) {
                     listener.getLogger().println("Scheduling builds for branches:");
                     for (Map.Entry<P, SCMRevision> entry : scheduleBuilds.entrySet()) {
-                        listener.getLogger().println("    " + entry.getKey().getName());
+                        listener.getLogger().println("    " + factory.getBranch(entry.getKey()).getName());
                         if (entry.getKey().scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
                             try {
                                 factory.setRevisionHash(entry.getKey(), entry.getValue());
