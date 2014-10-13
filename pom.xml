@@ -33,7 +33,7 @@
   </parent>
 
   <artifactId>branch-api</artifactId>
-  <version>0.2-beta-3</version>
+  <version>0.2-beta-4-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Branch API Plugin</name>
@@ -64,7 +64,7 @@
     <connection>scm:git:git://github.com/jenkinsci/branch-api-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/branch-api-plugin.git</developerConnection>
     <url>http://github.com/jenkinsci/branch-api-plugin</url>
-    <tag>branch-api-0.2-beta-3</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <properties>
