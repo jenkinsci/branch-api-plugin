@@ -24,6 +24,9 @@
 package jenkins.branch;
 
 import hudson.Extension;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import jenkins.scm.api.SCMRevision;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -38,6 +41,13 @@ public class NoTriggerBranchProperty extends BranchProperty {
     @DataBoundConstructor
     @SuppressWarnings("unused") // instantiated by stapler
     public NoTriggerBranchProperty() {
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> boolean shouldSchedule(
+        P project, Branch branch, SCMRevision revision) {
+      return false;
     }
 
     /** Our descriptor */

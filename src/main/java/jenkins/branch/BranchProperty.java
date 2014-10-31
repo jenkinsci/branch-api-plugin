@@ -29,6 +29,7 @@ import hudson.ExtensionPoint;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
+import jenkins.scm.api.SCMRevision;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +55,20 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
     @SuppressWarnings("unchecked")
     public final <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(P project) {
         return (ProjectDecorator<P, B>) decorator(project.getClass());
+    }
+
+    /**
+     * Gives implementations of BranchProperty the change to veto scheduling a build, defaults to true.
+     * @param project the project instance.
+     * @param branch the branch to which this property is applied.
+     * @param revision the latest revision to the branch.
+     * @param <P> the type of project.
+     * @param <B> the type of build of the project.
+     * @return Whether the property should allow the build to be scheduled.
+     */
+    public <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> boolean shouldSchedule(
+        P project, Branch branch, SCMRevision revision) {
+      return true;
     }
 
     /**
