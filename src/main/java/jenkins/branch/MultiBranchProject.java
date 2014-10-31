@@ -1870,8 +1870,21 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 if (!scheduleBuilds.isEmpty()) {
                     listener.getLogger().println("Scheduling builds for branches:");
                     for (Map.Entry<P, SCMRevision> entry : scheduleBuilds.entrySet()) {
-                        listener.getLogger().println("    " + factory.getBranch(entry.getKey()).getName());
-                        if (entry.getKey().scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
+                        Branch branch = factory.getBranch(entry.getKey());
+                        listener.getLogger().println("    " + branch.getName());
+
+                        // Walk the properties of the branch to determine whether any of
+                        // the branch properties want to block it from being scheduled.
+                        boolean blocked = false;
+                        for (BranchProperty property : branch.getProperties()) {
+                            if (!property.shouldSchedule(entry.getKey(), branch, entry.getValue())) {
+                                listener.getLogger().println("This branch's project is not triggered by source "
+                                    + "changes (blocker: " + property.getDescriptor().getDisplayName() + ")");
+                                blocked = true;
+                                break;
+                            }
+                        }
+                        if (!blocked && entry.getKey().scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
                             try {
                                 factory.setRevisionHash(entry.getKey(), entry.getValue());
                             } catch (IOException e) {
