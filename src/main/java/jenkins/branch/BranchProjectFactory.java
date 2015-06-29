@@ -28,13 +28,13 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
 import hudson.BulkChange;
 import hudson.XmlFile;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
 import hudson.model.Item;
+import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.Project;
+import hudson.model.Run;
 import hudson.model.Saveable;
 import hudson.model.TopLevelItem;
 import hudson.tasks.BuildWrapper;
@@ -56,8 +56,8 @@ import java.util.List;
  * @param <R> the type of the builds of the branch projects.
  * @author Stephen Connolly
  */
-public abstract class BranchProjectFactory<P extends AbstractProject<P, R> & TopLevelItem,
-        R extends AbstractBuild<P, R>>
+public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
+        R extends Run<P, R>>
         extends AbstractDescribableImpl<BranchProjectFactory<?, ?>> implements Saveable, ExtensionPoint {
 
     /**
@@ -172,7 +172,7 @@ public abstract class BranchProjectFactory<P extends AbstractProject<P, R> & Top
     }
 
     /**
-     * Decorates the project in with all the {@link BranchProperty#decorator(hudson.model.AbstractProject)} instances.
+     * Decorates the project in with all the {@link BranchProperty#decorator(hudson.model.Job)} instances.
      * NOTE: This method should suppress saving the project and only affect the in-memory state.
      * NOTE: Override if the default strategy is not appropriate for the specific project type.
      *
@@ -198,8 +198,8 @@ public abstract class BranchProjectFactory<P extends AbstractProject<P, R> & Top
                 if (decorator != null) {
                     // if Project then we can feed the publishers and build wrappers
                     if (project instanceof Project) {
-                        DescribableList<Publisher, Descriptor<Publisher>> publishersList = project.getPublishersList();
-                        DescribableList buildWrappersList = Project.class.cast(project).getBuildWrappersList();
+                        DescribableList<Publisher, Descriptor<Publisher>> publishersList = ((Project) project).getPublishersList();
+                        DescribableList buildWrappersList = ((Project) project).getBuildWrappersList();
                         List<Publisher> publishers = decorator.publishers(publishersList.toList());
                         List<BuildWrapper> buildWrappers = decorator.buildWrappers(buildWrappersList.toList());
                         publishersList.replaceBy(publishers);

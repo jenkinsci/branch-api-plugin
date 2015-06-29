@@ -25,9 +25,9 @@ package jenkins.branch;
 
 import antlr.ANTLRException;
 import hudson.Extension;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.model.Item;
+import hudson.model.Job;
+import hudson.model.Run;
 import hudson.model.TopLevelItem;
 import hudson.triggers.TimerTrigger;
 import hudson.triggers.Trigger;
@@ -43,8 +43,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
  *
  * @author Stephen Connolly
  */
-public class IndexAtLeastTrigger<P extends AbstractProject<P, R> & TopLevelItem,
-        R extends AbstractBuild<P, R>> extends Trigger<MultiBranchProject<P, R>> {
+public class IndexAtLeastTrigger<P extends Job<P, R> & TopLevelItem,
+        R extends Run<P, R>> extends Trigger<MultiBranchProject<P, R>> {
 
     /**
      * The interval between successive indexings.

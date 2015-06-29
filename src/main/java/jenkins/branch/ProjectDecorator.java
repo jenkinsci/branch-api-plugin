@@ -1,9 +1,9 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
+import hudson.model.Job;
 import hudson.model.JobProperty;
+import hudson.model.Run;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.Publisher;
 
@@ -17,7 +17,7 @@ import java.util.List;
  * @author Stephen Connolly
  * @since 0.2
  */
-public class ProjectDecorator<P extends AbstractProject<P, B>, B extends AbstractBuild<P, B>> {
+public class ProjectDecorator<P extends Job<P, B>, B extends Run<P, B>> {
 
     /**
      * This method is an extension point whereby a {@link ProjectDecorator} can filter or enhance the set of

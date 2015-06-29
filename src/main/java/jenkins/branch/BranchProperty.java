@@ -26,9 +26,9 @@ package jenkins.branch;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.AbstractProject;
+import hudson.model.Job;
+import hudson.model.Run;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +52,7 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
      */
     @CheckForNull
     @SuppressWarnings("unchecked")
-    public final <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(P project) {
+    public final <P extends Job<P,B>,B extends Run<P,B>> ProjectDecorator<P,B> decorator(P project) {
         return (ProjectDecorator<P, B>) decorator(project.getClass());
     }
 
@@ -64,7 +64,7 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
      * @return a {@link ProjectDecorator} or {@code null} if none appropriate to this type of project.
      */
     @CheckForNull
-    public <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(Class<P> clazz) {
+    public <P extends Job<P,B>,B extends Run<P,B>> ProjectDecorator<P,B> decorator(Class<P> clazz) {
         return null;
     }
 

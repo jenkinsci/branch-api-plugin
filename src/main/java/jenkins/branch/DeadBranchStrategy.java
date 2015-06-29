@@ -24,9 +24,9 @@
 package jenkins.branch;
 
 import hudson.ExtensionPoint;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.AbstractProject;
+import hudson.model.Job;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 
@@ -45,7 +45,7 @@ public abstract class DeadBranchStrategy extends AbstractDescribableImpl<DeadBra
      */
     private transient MultiBranchProject<?, ?> owner;
 
-    public abstract <P extends AbstractProject<P, R> & TopLevelItem, R extends AbstractBuild<P, R>>
+    public abstract <P extends Job<P, R> & TopLevelItem, R extends Run<P, R>>
     void runDeadBranchCleanup(TaskListener listener, Map<String, P> deadBranches) throws IOException,
             InterruptedException;
 

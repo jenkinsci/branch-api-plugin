@@ -31,9 +31,7 @@ import hudson.Extension;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.console.AnnotatedLargeText;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractItem;
-import hudson.model.AbstractProject;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.AsyncPeriodicWork;
@@ -57,6 +55,7 @@ import hudson.model.PeriodicWork;
 import hudson.model.Queue;
 import hudson.model.ResourceList;
 import hudson.model.Result;
+import hudson.model.Run;
 import hudson.model.Saveable;
 import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
@@ -149,6 +148,8 @@ import java.util.zip.GZIPInputStream;
 
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+import jenkins.model.ParameterizedJobMixIn;
+import jenkins.triggers.SCMTriggerItem;
 
 /**
  * Abstract base class for multiple-branch based projects.
@@ -156,8 +157,8 @@ import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
  * @param <P> the project type
  * @param <R> the run type
  */
-public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLevelItem,
-        R extends AbstractBuild<P, R>>
+public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
+        R extends Run<P, R>>
         extends AbstractItem implements TopLevelItem, ItemGroup<P>, Saveable, ViewGroup, StaplerFallback,
         SCMSourceOwner, BuildableItem, Queue.FlyweightTask {
 
@@ -710,10 +711,13 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                         }
                     } else {
                         // fall back to polling when we have a non-deterministic revision/hash.
-                        PollingResult pollingResult = project.poll(listener);
-                        if (pollingResult.hasChanges()) {
-                            needSave = true;
-                            scheduleBuilds.put(project, revision);
+                        SCMTriggerItem scmProject = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
+                        if (scmProject != null) {
+                            PollingResult pollingResult = scmProject.poll(listener);
+                            if (pollingResult.hasChanges()) {
+                                needSave = true;
+                                scheduleBuilds.put(project, revision);
+                            }
                         }
                     }
                 }
@@ -1365,8 +1369,8 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      * @param <P> the type of project that the branch projects consist of.
      * @param <R> the type of runs that the branch projects use.
      */
-    public static class BranchIndexing<P extends AbstractProject<P, R> & TopLevelItem,
-            R extends AbstractBuild<P, R>> extends Actionable implements Queue.Executable, Saveable {
+    public static class BranchIndexing<P extends Job<P, R> & TopLevelItem,
+            R extends Run<P, R>> extends Actionable implements Queue.Executable, Saveable {
 
         /**
          * The parent {@link MultiBranchProject}.
@@ -1870,12 +1874,16 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 if (!scheduleBuilds.isEmpty()) {
                     listener.getLogger().println("Scheduling builds for branches:");
                     for (Map.Entry<P, SCMRevision> entry : scheduleBuilds.entrySet()) {
-                        listener.getLogger().println("    " + factory.getBranch(entry.getKey()).getName());
-                        if (entry.getKey().scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
-                            try {
-                                factory.setRevisionHash(entry.getKey(), entry.getValue());
-                            } catch (IOException e) {
-                                e.printStackTrace(listener.error("Could not update last revision hash"));
+                        final P _project = entry.getKey();
+                        listener.getLogger().println("    " + factory.getBranch(_project).getName());
+                        if (_project instanceof ParameterizedJobMixIn.ParameterizedJob) {
+                            // TODO need a static helper method to schedule a ParameterizedJob
+                            if (new ParameterizedJobMixIn() {@Override protected Job asJob() {return _project;}}.scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
+                                try {
+                                    factory.setRevisionHash(_project, entry.getValue());
+                                } catch (IOException e) {
+                                    e.printStackTrace(listener.error("Could not update last revision hash"));
+                                }
                             }
                         }
                     }
@@ -2017,7 +2025,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      */
     @WithBridgeMethods(Future.class)
     @NonNull
-    public QueueTaskFuture<R> scheduleBuild2(int quietPeriod, Cause c, Action... actions) {
+    public QueueTaskFuture scheduleBuild2(int quietPeriod, Cause c, Action... actions) {
         return scheduleBuild2(quietPeriod, c, Arrays.asList(actions));
     }
 
@@ -2025,7 +2033,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      * {@inheritDoc}
      */
     public void checkAbortPermission() {
-        checkPermission(AbstractProject.ABORT);
+        checkPermission(Item.CANCEL);
     }
 
     /**
@@ -2060,7 +2068,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      * {@inheritDoc}
      */
     public boolean hasAbortPermission() {
-        return hasPermission(AbstractProject.ABORT);
+        return hasPermission(Item.CANCEL);
     }
 
     /**
@@ -2161,7 +2169,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      */
     @SuppressWarnings("unchecked")
     @WithBridgeMethods(Future.class)
-    public QueueTaskFuture<R> scheduleBuild2(int quietPeriod, Cause c, Collection<? extends Action> actions) {
+    public QueueTaskFuture scheduleBuild2(int quietPeriod, Cause c, Collection<? extends Action> actions) {
         if (!isBuildable()) {
             return null;
         }

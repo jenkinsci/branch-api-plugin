@@ -25,9 +25,9 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
+import hudson.model.Job;
+import hudson.model.Run;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.Publisher;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -77,7 +77,7 @@ public class UntrustedBranchProperty extends BranchProperty {
     }
 
     @Override
-    public <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(Class<P> jobType) {
+    public <P extends Job<P,B>,B extends Run<P,B>> ProjectDecorator<P,B> decorator(Class<P> jobType) {
         return new ProjectDecorator<P, B>() {
             /**
              * {@inheritDoc}

@@ -25,8 +25,6 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -42,7 +40,6 @@ import org.jvnet.localizer.ResourceBundleHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
-import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -118,7 +115,7 @@ public class RateLimitBranchProperty extends BranchProperty {
     }
 
     @Override
-    public <P extends AbstractProject<P, B>, B extends AbstractBuild<P, B>> ProjectDecorator<P, B> decorator(
+    public <P extends Job<P, B>, B extends Run<P, B>> ProjectDecorator<P, B> decorator(
             Class<P> jobType) {
         return new ProjectDecorator<P, B>() {
             /**
