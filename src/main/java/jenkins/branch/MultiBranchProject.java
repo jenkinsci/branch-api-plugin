@@ -1669,7 +1669,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         /**
          * Writes the complete log from the start to finish to the {@link OutputStream}.
-         * <p/>
+         * <p>
          * If someone is still writing to the log, this method will not return until the whole log
          * file gets written out.
          */
@@ -1695,8 +1695,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         /**
          * Returns the {@link Cause}s that triggered a build.
-         * <p/>
-         * <p/>
+         * <p>
          * If a build sits in the queue for a long time, multiple build requests made during this period
          * are all rolled up into one build, hence this method may return a list.
          *
@@ -1992,7 +1991,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     /**
      * Schedules a build.
-     * <p/>
+     * <p>
      * Important: the actions should be persistable without outside references (e.g. don't store
      * references to this project). To provide parameters for a parameterized project, add a ParametersAction. If
      * no ParametersAction is provided for such a project, one will be created with the default parameter values.

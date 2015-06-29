@@ -44,12 +44,10 @@ import java.util.TreeSet;
 /**
  * Indicates that the branch contains code changes from authors who do not otherwise have the write access
  * to the repository.
- * <p/>
- * <p/>
+ * <p>
  * Such code can contain malicious changes, so this flag serves as a signal to allow other Jenkins to
  * set up the build isolation to protect the build infrastructure.
- * <p/>
- * <p/>
+ * <p>
  * Some examples of where the trusted vs non-trusted distinction becomes important:
  * <ul>
  * <li>Github pull requests should be non-trusted as they can be created by <em>any</em> user</li>

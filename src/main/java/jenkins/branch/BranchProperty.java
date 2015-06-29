@@ -35,7 +35,7 @@ import java.util.List;
 
 /**
  * Additional information associated with {@link Branch}.
- * <p/>
+ * <p>
  * {@link jenkins.scm.api.SCMSource}s can use properties to convey additional implementation/SCM specific
  * information that's not captured in the base {@link Branch} class.
  *
