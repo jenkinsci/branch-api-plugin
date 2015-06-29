@@ -49,7 +49,7 @@ public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescripto
     @SuppressWarnings("unchecked")
     @NonNull
     public Class<? extends MultiBranchProject> getClazz() {
-        return (Class<? extends MultiBranchProject>) clazz;
+        return clazz.asSubclass(MultiBranchProject.class);
     }
 
     /**
@@ -95,13 +95,13 @@ public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescripto
     public List<BranchProjectFactoryDescriptor> getProjectFactoryDescriptors() {
         List<BranchProjectFactoryDescriptor> result = new ArrayList<BranchProjectFactoryDescriptor>();
         List<BranchProjectFactoryDescriptor> descriptorList =
-                Jenkins.getInstance().getDescriptorList(BranchProjectFactory.class);
+                Jenkins.getActiveInstance().getDescriptorList(BranchProjectFactory.class);
         for (BranchProjectFactoryDescriptor descriptor : descriptorList) {
-            if (descriptor.isApplicable((Class<? extends MultiBranchProject>) clazz)) {
+            if (descriptor.isApplicable(getClazz())) {
                 result.add(descriptor);
             }
         }
-        return descriptorList;
+        return result;
     }
 
     /**
@@ -112,6 +112,6 @@ public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescripto
     @SuppressWarnings({"unused", "unchecked"}) // used by stapler
     @NonNull
     public Descriptor<BranchSource> getBranchSourceDescriptor() {
-        return Jenkins.getInstance().getDescriptorOrDie(BranchSource.class);
+        return Jenkins.getActiveInstance().getDescriptorOrDie(BranchSource.class);
     }
 }

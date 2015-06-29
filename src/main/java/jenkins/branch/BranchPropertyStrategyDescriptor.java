@@ -24,9 +24,8 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.DescriptorExtensionList;
+import hudson.ExtensionList;
 import hudson.model.Descriptor;
-import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -84,8 +83,8 @@ public abstract class BranchPropertyStrategyDescriptor extends Descriptor<Branch
      *
      * @return all the {@link BranchPropertyStrategyDescriptor} instances.
      */
-    public static DescriptorExtensionList<BranchPropertyStrategy, BranchPropertyStrategyDescriptor> all() {
-        return Jenkins.getInstance().getDescriptorList(BranchPropertyStrategy.class);
+    public static List<BranchPropertyStrategyDescriptor> all() {
+        return ExtensionList.lookup(BranchPropertyStrategyDescriptor.class);
     }
 
     /**

@@ -75,7 +75,7 @@ public class DescriptorOrder<T extends Describable<T>> implements Comparator<T> 
      * @param type the type.
      */
     DescriptorOrder(Class<T> type) {
-        descriptors = Jenkins.getInstance().getDescriptorList(type);
+        descriptors = Jenkins.getActiveInstance().getDescriptorList(type);
     }
 
     /**

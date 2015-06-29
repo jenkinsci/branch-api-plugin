@@ -123,7 +123,6 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
-import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -143,8 +142,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
+import javax.annotation.Nonnull;
 
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
@@ -262,22 +261,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         if (views.size() == 0) {
             ListView lv = new ListView("All", this);
             views.add(lv);
-            try {
-                try {// HACK ALERT: ListView doesn't expose us a method to set this as of 1.480 yet,
-                    // so we forcibly do it.
-                    Field f = ListView.class.getDeclaredField("includeRegex");
-                    f.setAccessible(true);
-                    f.set(lv, ".*");
-                    f = ListView.class.getDeclaredField("includePattern");
-                    f.setAccessible(true);
-                    f.set(lv, Pattern.compile(".*"));
-                } catch (Throwable e) {
-                    LOGGER.log(Level.WARNING, "Initial view may be configured incorrectly", e);
-                }
-                lv.save();
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to set up the initial view", e);
-            }
+            lv.setIncludeRegex(".*");
         }
         if (viewsTabBar == null) {
             viewsTabBar = new DefaultViewsTabBar();
@@ -308,12 +292,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         final BranchProjectFactory<P, R> factory = getProjectFactory();
         factory.setOwner(this);
         Map<String, Map<String, P>> branchItems = getBranchItems();
-        if (getBranchesDir().isDirectory()) {
-            for (File branch : getBranchesDir().listFiles(new FileFilter() {
-                public boolean accept(File pathname) {
+        File[] branches = getBranchesDir().listFiles(new FileFilter() {
+                @Override public boolean accept(File pathname) {
                     return pathname.isDirectory() && new File(pathname, "config.xml").isFile();
                 }
-            })) {
+            });
+        if (branches != null) {
+            for (File branch : branches) {
                 try {
                     Item item = Items.load(this, branch);
                     if (factory.isProject(item)) {
@@ -906,7 +891,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @NonNull
     public MultiBranchProjectDescriptor getDescriptor() {
-        return (MultiBranchProjectDescriptor) Jenkins.getInstance().getDescriptorOrDie(getClass());
+        return (MultiBranchProjectDescriptor) Jenkins.getActiveInstance().getDescriptorOrDie(getClass());
     }
 
     /**
@@ -1031,7 +1016,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 reindex = !newSourceIds.equals(oldSourceIds);
 
                 String newName = req.getParameter("name");
-                final ProjectNamingStrategy namingStrategy = Jenkins.getInstance().getProjectNamingStrategy();
+                final ProjectNamingStrategy namingStrategy = Jenkins.getActiveInstance().getProjectNamingStrategy();
                 if (newName != null && !newName.equals(name)) {
                     // check this error early to avoid HTTP response splitting.
                     Jenkins.checkGoodName(newName);
@@ -1343,7 +1328,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          */
         @SuppressWarnings("unused") // API contract
         public static void invoke() {
-            Jenkins.getInstance().getExtensionList(AsyncPeriodicWork.class).get(DeadBranchCleanupThread.class).run();
+            Jenkins.getActiveInstance().getExtensionList(AsyncPeriodicWork.class).get(DeadBranchCleanupThread.class).run();
         }
 
         /**
@@ -1354,9 +1339,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 LOGGER.fine("Disabled. Skipping execution");
                 return;
             }
-
-            for (MultiBranchProject<?, ?> p
-                    : Jenkins.getInstance().getAllItems(MultiBranchProject.class)) {
+            Jenkins j = Jenkins.getInstance();
+            if (j == null) {
+                return;
+            }
+            for (MultiBranchProject<?, ?> p : j.getAllItems(MultiBranchProject.class)) {
                 p.runDeadBranchCleanup(listener);
             }
         }
@@ -1454,9 +1441,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          *
          * @return the parent.
          */
-        @CheckForNull
+        @Nonnull
         public MultiBranchProject<P, R> getParent() {
-            return getProject();
+            if (project == null) {
+                throw new IllegalStateException();
+            }
+            return project;
         }
 
         /**
@@ -1555,10 +1545,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          */
         @SuppressWarnings("unused") // used from jelly pages
         public Node getBuiltOn() {
-            if (builtOn == null || builtOn.equals("")) {
-                return Jenkins.getInstance();
+            Jenkins j = Jenkins.getInstance();
+            if (builtOn == null || builtOn.isEmpty() || j == null) {
+                return j;
             } else {
-                return Jenkins.getInstance().getNode(builtOn);
+                return j.getNode(builtOn);
             }
         }
 
@@ -2107,8 +2098,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 return node;
             }
         }
+        Jenkins j = Jenkins.getInstance();
         // try to run on master if the master will support running.
-        return Jenkins.getInstance().getNumExecutors() > 0 ? Jenkins.getInstance() : null;
+        return j != null && j.getNumExecutors() > 0 ? j : null;
     }
 
     /**
@@ -2180,9 +2172,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             queueActions.add(new CauseAction(c));
         }
 
-        Queue.WaitingItem i = Jenkins.getInstance().getQueue().schedule(this, quietPeriod, queueActions);
+        Jenkins j = Jenkins.getInstance();
+        if (j == null) {
+            return null;
+        }
+        Queue.WaitingItem i = j.getQueue().schedule2(this, quietPeriod, queueActions).getCreateItem();
         if (i != null) {
-            return (QueueTaskFuture) i.getFuture();
+            return i.getFuture();
         }
         return null;
     }
@@ -2226,7 +2222,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          */
         public void doRun() {
             while (new Date().getTime() - cal.getTimeInMillis() > 1000) {
-                LOGGER.fine("cron checking " + DateFormat.getDateTimeInstance().format(cal.getTime()));
+                LOGGER.log(Level.FINE, "cron checking {0}", cal.getTime());
 
                 try {
                     checkTriggers(cal);
@@ -2245,10 +2241,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          */
         public void checkTriggers(final Calendar cal) {
             Jenkins inst = Jenkins.getInstance();
+            if (inst == null) {
+                return;
+            }
 
             for (MultiBranchProject<?, ?> p : inst.getAllItems(MultiBranchProject.class)) {
                 for (Trigger t : p.getTriggers().values()) {
-                    LOGGER.fine("cron checking " + p.getName());
+                    LOGGER.log(Level.FINE, "cron checking {0}", p.getName());
 
                     CronTabList tabs;
                     try {
@@ -2257,7 +2256,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         continue;
                     }
                     if (tabs.check(cal)) {
-                        LOGGER.config("cron triggered " + p.getName());
+                        LOGGER.log(Level.CONFIG, "cron triggered {0}", p.getName());
                         try {
                             t.run();
                         } catch (Throwable e) {
@@ -2299,8 +2298,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * @return number of current indexing tasks.
          */
         public int indexingCount() {
-            int result = indexingCount(Jenkins.getInstance());
-            for (Node n : Jenkins.getInstance().getNodes()) {
+            Jenkins j = Jenkins.getInstance();
+            if (j == null) {
+                return 0;
+            }
+            int result = indexingCount(j);
+            for (Node n : j.getNodes()) {
                 result += indexingCount(n);
             }
             return result;

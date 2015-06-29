@@ -24,9 +24,8 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.DescriptorExtensionList;
+import hudson.ExtensionList;
 import hudson.model.Descriptor;
-import jenkins.model.Jenkins;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,8 +63,8 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
     /**
      * All the registered {@link BranchPropertyDescriptor}s.
      */
-    public static DescriptorExtensionList<BranchProperty, BranchPropertyDescriptor> all() {
-        return Jenkins.getInstance().getDescriptorList(BranchProperty.class);
+    public static List<BranchPropertyDescriptor> all() {
+        return ExtensionList.lookup(BranchPropertyDescriptor.class);
     }
 
     /**
