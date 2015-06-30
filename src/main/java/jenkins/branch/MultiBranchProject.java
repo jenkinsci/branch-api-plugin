@@ -1868,7 +1868,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         listener.getLogger().println("    " + factory.getBranch(_project).getName());
                         if (_project instanceof ParameterizedJobMixIn.ParameterizedJob) {
                             // TODO need a static helper method to schedule a ParameterizedJob
-                            if (new ParameterizedJobMixIn() {@Override protected Job asJob() {return _project;}}.scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
+                            ParameterizedJobMixIn scheduler = new ParameterizedJobMixIn() {@Override protected Job asJob() {return _project;}};
+                            if (scheduler.scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
                                 try {
                                     factory.setRevisionHash(_project, entry.getValue());
                                 } catch (IOException e) {
