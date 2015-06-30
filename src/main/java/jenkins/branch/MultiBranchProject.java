@@ -2152,6 +2152,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         return ACL.SYSTEM;
     }
 
+    @Override public Authentication getDefaultAuthentication(Queue.Item item) {
+        return getDefaultAuthentication();
+    }
+
     /**
      * Schedules a build of this project, and returns a {@link Future} object
      * to wait for the completion of the build.
