@@ -718,11 +718,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         source.fetch(observer, listener);
         for (Iterator<Map.Entry<String, P>> iterator = items.entrySet().iterator(); iterator.hasNext(); ) {
             Map.Entry<String, P> entry = iterator.next();
-            // Don't assume that the project name is the branch name.
-            if (branchNames.contains(factory.getBranch(entry.getValue()).getName())) {
+            P project = entry.getValue();
+            if (!factory.isProject(project)) {
+                listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
                 continue;
             }
-            lostBranches.put(factory.getBranch(entry.getValue()).getName(), entry.getValue());
+            // Don't assume that the project name is the branch name.
+            if (branchNames.contains(factory.getBranch(project).getName())) {
+                continue;
+            }
+            lostBranches.put(factory.getBranch(project).getName(), project);
             iterator.remove();
         }
         return branchNames;
@@ -1839,6 +1844,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 Map<String, P> lostBranches = new HashMap<String, P>();
                 for (Map<String, P> branches : parent.getBranchItems().values()) {
                     for (P project : branches.values()) {
+                      if (!factory.isProject(project)) {
+                          listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
+                          continue;
+                      }
                       lostBranches.put(factory.getBranch(project).getName(), project);
                     }
                 }
@@ -1865,6 +1874,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     listener.getLogger().println("Scheduling builds for branches:");
                     for (Map.Entry<P, SCMRevision> entry : scheduleBuilds.entrySet()) {
                         final P _project = entry.getKey();
+                        if (!factory.isProject(_project)) {
+                            listener.getLogger().println("Detected unsupported subitem " + _project + ", skipping");
+                            continue;
+                        }
                         listener.getLogger().println("    " + factory.getBranch(_project).getName());
                         if (_project instanceof ParameterizedJobMixIn.ParameterizedJob) {
                             // TODO need a static helper method to schedule a ParameterizedJob

@@ -106,7 +106,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
     /**
      * Gets the {@link Branch} that a specific project was configured for.
      *
-     * @param project the project.
+     * @param project the project; should assume {@link #isProject} has already been tested on it
      * @return the {@link Branch} that the project was configured for.
      */
     @NonNull
