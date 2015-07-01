@@ -23,17 +23,11 @@
  -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:p="/lib/hudson/project" xmlns:this="this">
-  <p:config-disableBuild/>
-  <p:config-concurrentBuild />
 
   <st:include page="configure-basic.jelly" optional="true"/>
 
   <f:section title="${%Advanced Project Options}">
     <f:advanced>
-      <p:config-quietPeriod />
-      <p:config-retryCount />
-      <p:config-blockWhenUpstreamBuilding />
-      <p:config-blockWhenDownstreamBuilding />
       <st:include page="configure-advanced.jelly" optional="true" />
       <f:entry title="${%Display Name}" field="displayNameOrNull">
          <f:textbox checkUrl="'${rootURL}/checkDisplayName?displayName='+encodeURIComponent(this.value)+'&amp;jobName='+encodeURIComponent('${h.jsStringEscape(it.name)}')"/>
