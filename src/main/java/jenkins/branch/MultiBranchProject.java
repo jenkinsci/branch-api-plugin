@@ -1549,7 +1549,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * @return {@code null}, for example if the slave that this build run no longer exists.
          */
         @SuppressWarnings("unused") // used from jelly pages
-        public Node getBuiltOn() {
+        public @CheckForNull Node getBuiltOn() {
             Jenkins j = Jenkins.getInstance();
             if (builtOn == null || builtOn.isEmpty() || j == null) {
                 return j;
