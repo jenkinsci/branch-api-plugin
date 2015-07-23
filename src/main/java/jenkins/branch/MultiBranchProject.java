@@ -437,6 +437,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
+     * Offers direct access to the configurable list of branch sources.
+     * Intended for use from scripting and testing.
+     */
+    public @NonNull PersistedList<BranchSource> getSourcesList() {
+        return sources;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @NonNull
