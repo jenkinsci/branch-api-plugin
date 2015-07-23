@@ -25,11 +25,14 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.Build;
 import hudson.model.Descriptor;
 import hudson.model.Job;
+import hudson.model.Project;
 import hudson.model.Run;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.Publisher;
+import java.lang.reflect.Type;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.ArrayList;
@@ -40,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import org.jvnet.tiger_types.Types;
 
 /**
  * Indicates that the branch contains code changes from authors who do not otherwise have the write access
@@ -74,9 +78,7 @@ public class UntrustedBranchProperty extends BranchProperty {
         return Collections.unmodifiableSet(publisherWhitelist);
     }
 
-    @Override
-    public <P extends Job<P,B>,B extends Run<P,B>> ProjectDecorator<P,B> decorator(Class<P> jobType) {
-        return new ProjectDecorator<P, B>() {
+    private class Decorator<P extends Project<P, B>, B extends Build<P, B>> extends ProjectDecorator<P, B> {
             /**
              * {@inheritDoc}
              */
@@ -104,7 +106,15 @@ public class UntrustedBranchProperty extends BranchProperty {
                 // TODO add a build wrapper that puts the execution in a "secured" context.
                 return super.buildWrappers(wrappers);
             }
-        };
+    }
+
+    @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public <P extends Job<P,B>,B extends Run<P,B>> JobDecorator<P,B> jobDecorator(Class<P> jobType) {
+        if (Project.class.isAssignableFrom(jobType)) {
+            return new Decorator/* untypable but safe: <P, B>*/();
+        }
+        return null;
     }
 
     /**
@@ -128,5 +138,17 @@ public class UntrustedBranchProperty extends BranchProperty {
             }
             return result;
         }
+
+        @Override protected boolean isApplicable(MultiBranchProjectDescriptor projectDescriptor) {
+            for (BranchProjectFactoryDescriptor d : projectDescriptor.getProjectFactoryDescriptors()) {
+                Type factoryType = Types.getBaseClass(d.clazz, BranchProjectFactory.class);
+                Type jobType = Types.getTypeArgument(factoryType, 0, /* if using rawtypes, err on the conservative side */ Project.class);
+                if (Project.class.isAssignableFrom(Types.erasure(jobType))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
     }
 }

@@ -27,12 +27,8 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
 import jenkins.scm.api.SCMSourceDescriptor;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.DoNotUse;
-import org.kohsuke.stapler.Stapler;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -106,16 +102,4 @@ public abstract class BranchPropertyStrategyDescriptor extends Descriptor<Branch
         return result;
     }
 
-    /**
-     * Utility stapler binding for {@link BranchPropertyDescriptor#all(MultiBranchProject)}.
-     */
-    @SuppressWarnings("unused") // by stapler
-    @Restricted(DoNotUse.class)
-    public List<BranchPropertyDescriptor> getPropertyDescriptors() {
-        MultiBranchProject project = Stapler.getCurrentRequest().findAncestorObject(
-                MultiBranchProject.class);
-        return project == null
-                ? Collections.<BranchPropertyDescriptor>emptyList()
-                : BranchPropertyDescriptor.all(project);
-    }
 }

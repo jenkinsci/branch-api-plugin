@@ -115,9 +115,9 @@ public class RateLimitBranchProperty extends BranchProperty {
     }
 
     @Override
-    public <P extends Job<P, B>, B extends Run<P, B>> ProjectDecorator<P, B> decorator(
+    public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(
             Class<P> jobType) {
-        return new ProjectDecorator<P, B>() {
+        return new JobDecorator<P, B>() {
             /**
              * {@inheritDoc}
              */
@@ -380,8 +380,8 @@ public class RateLimitBranchProperty extends BranchProperty {
         @Override
         public CauseOfBlockage canRun(Queue.Item item) {
             if (item.task instanceof Job) {
-                Job job = (Job) item.task;
-                JobPropertyImpl property = (JobPropertyImpl) job.getProperty(JobPropertyImpl.class);
+                Job<?,?> job = (Job) item.task;
+                JobPropertyImpl property = job.getProperty(JobPropertyImpl.class);
                 if (property != null) {
                     Run lastBuild = job.getLastBuild();
                     if (lastBuild != null) {

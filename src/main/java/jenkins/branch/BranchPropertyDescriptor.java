@@ -24,11 +24,15 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
+import hudson.model.DescriptorVisibilityFilter;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
 
 /**
  * {@link Descriptor} for {@link BranchProperty}.
@@ -62,6 +66,7 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
 
     /**
      * All the registered {@link BranchPropertyDescriptor}s.
+     * Probably unused.
      */
     public static List<BranchPropertyDescriptor> all() {
         return ExtensionList.lookup(BranchPropertyDescriptor.class);
@@ -69,7 +74,7 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
 
     /**
      * Gets all the {@link BranchPropertyDescriptor} instances applicable to the specified project.
-     *
+     * Probably unused.
      * @param project the project
      * @return all the {@link BranchPropertyDescriptor} instances  applicable to the specified project.
      */
@@ -81,6 +86,26 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
             }
         }
         return result;
+    }
+
+    /**
+     * Ensures that the configuration screen of (for example) {@link DefaultBranchPropertyStrategy} shows only appropriate descriptors.
+     * TODO this trick does not work for {@link NamedExceptionsBranchPropertyStrategy} on initial configuration (i.e., when {@link DefaultBranchPropertyStrategy} was initially selected);
+     * seems {@code filterDescriptors} is not called when {@code instance == null} perhaps?
+     * Or perhaps {@code it == null} when {@code l:renderOnDemand} is in use (supposed to work due to {@code capture} attribute, but…)?
+     */
+    @Restricted(DoNotUse.class)
+    @Extension public static final class Visibility extends DescriptorVisibilityFilter {
+
+        @SuppressWarnings("rawtypes")
+        @Override public boolean filter(Object context, Descriptor descriptor) {
+            if (context instanceof MultiBranchProject && descriptor instanceof BranchPropertyDescriptor) {
+                return ((BranchPropertyDescriptor) descriptor).isApplicable((MultiBranchProject) context);
+            } else {
+                return true;
+            }
+        }
+
     }
 
 }

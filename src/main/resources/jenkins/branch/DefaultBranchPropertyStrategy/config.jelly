@@ -24,7 +24,6 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <f:block>
-    <!-- TODO presumably this ought to be calling BranchPropertyDescriptor.all? Currently it seems that BranchPropertyDescriptor.isApplicable is never called. (Similarly for NamedExceptionsBranchPropertyStrategy.) -->
     <f:repeatableHeteroProperty field="props" hasHeader="true" oneEach="true" honorOrder="true" addCaption="${%Add property}" deleteCaption="${%Delete property}"/>
   </f:block>
 </j:jelly>

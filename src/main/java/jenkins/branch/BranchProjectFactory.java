@@ -179,7 +179,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
      * @param project the project.
      * @return the project for nicer method chaining
      */
-    @SuppressWarnings("ConstantConditions")
+    @SuppressWarnings({"ConstantConditions", "unchecked"})
     public P decorate(P project) {
         if (!isProject(project)) {
             return project;
@@ -194,14 +194,14 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
             List<BranchProperty> properties = new ArrayList<BranchProperty>(branch.getProperties());
             Collections.sort(properties, DescriptorOrder.reverse(BranchProperty.class));
             for (BranchProperty property : properties) {
-                ProjectDecorator<P, R> decorator = property.decorator(project);
+                JobDecorator<P, R> decorator = property.jobDecorator(project.getClass());
                 if (decorator != null) {
                     // if Project then we can feed the publishers and build wrappers
-                    if (project instanceof Project) {
+                    if (project instanceof Project && decorator instanceof ProjectDecorator) {
                         DescribableList<Publisher, Descriptor<Publisher>> publishersList = ((Project) project).getPublishersList();
-                        DescribableList buildWrappersList = ((Project) project).getBuildWrappersList();
-                        List<Publisher> publishers = decorator.publishers(publishersList.toList());
-                        List<BuildWrapper> buildWrappers = decorator.buildWrappers(buildWrappersList.toList());
+                        DescribableList<BuildWrapper, Descriptor<BuildWrapper>> buildWrappersList = ((Project) project).getBuildWrappersList();
+                        List<Publisher> publishers = ((ProjectDecorator) decorator).publishers(publishersList.toList());
+                        List<BuildWrapper> buildWrappers = ((ProjectDecorator) decorator).buildWrappers(buildWrappersList.toList());
                         publishersList.replaceBy(publishers);
                         buildWrappersList.replaceBy(buildWrappers);
                     }

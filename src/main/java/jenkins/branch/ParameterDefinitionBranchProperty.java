@@ -61,11 +61,11 @@ public abstract class ParameterDefinitionBranchProperty extends BranchProperty {
         return true;
     }
 
-    @Override public final <P extends Job<P, B>, B extends Run<P, B>> ProjectDecorator<P, B> decorator(Class<P> clazz) {
+    @Override public final <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
         if (!isApplicable(clazz)) {
             return null;
         }
-        return new ProjectDecorator<P, B>() {
+        return new JobDecorator<P, B>() {
             @NonNull
             @Override
             public List<JobProperty<? super P>> jobProperties(
