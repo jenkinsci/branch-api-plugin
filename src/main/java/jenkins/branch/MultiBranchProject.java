@@ -28,6 +28,7 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.console.AnnotatedLargeText;
@@ -896,7 +897,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @NonNull
     public MultiBranchProjectDescriptor getDescriptor() {
-        return (MultiBranchProjectDescriptor) Jenkins.getActiveInstance().getDescriptorOrDie(getClass());
+        Jenkins j = Jenkins.getInstance();
+        if (j == null) {
+            throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
+        }
+        return (MultiBranchProjectDescriptor) j.getDescriptorOrDie(getClass());
     }
 
     /**
@@ -1021,7 +1026,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 reindex = !newSourceIds.equals(oldSourceIds);
 
                 String newName = req.getParameter("name");
-                final ProjectNamingStrategy namingStrategy = Jenkins.getActiveInstance().getProjectNamingStrategy();
+                Jenkins j = Jenkins.getInstance();
+                if (j == null) {
+                    throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
+                }
+                final ProjectNamingStrategy namingStrategy = j.getProjectNamingStrategy();
                 if (newName != null && !newName.equals(name)) {
                     // check this error early to avoid HTTP response splitting.
                     Jenkins.checkGoodName(newName);
@@ -1333,7 +1342,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          */
         @SuppressWarnings("unused") // API contract
         public static void invoke() {
-            Jenkins.getActiveInstance().getExtensionList(AsyncPeriodicWork.class).get(DeadBranchCleanupThread.class).run();
+            ExtensionList.lookup(AsyncPeriodicWork.class).get(DeadBranchCleanupThread.class).run();
         }
 
         /**
@@ -2165,9 +2174,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         return ACL.SYSTEM;
     }
 
+    /* TODO 1.592+
     @Override public Authentication getDefaultAuthentication(Queue.Item item) {
         return getDefaultAuthentication();
     }
+    */
 
     /**
      * Schedules a build of this project, and returns a {@link Future} object
