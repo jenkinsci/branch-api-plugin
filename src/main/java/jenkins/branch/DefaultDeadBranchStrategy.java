@@ -26,8 +26,8 @@ package jenkins.branch;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
+import hudson.model.Job;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.tasks.LogRotator;
@@ -192,8 +192,8 @@ public class DefaultDeadBranchStrategy extends DeadBranchStrategy {
     /**
      * {@inheritDoc}
      */
-    public <P extends AbstractProject<P, R> & TopLevelItem,
-            R extends AbstractBuild<P, R>> void runDeadBranchCleanup(TaskListener listener,
+    public <P extends Job<P, R> & TopLevelItem,
+            R extends Run<P, R>> void runDeadBranchCleanup(TaskListener listener,
                                                                      Map<String, P> deadBranches)
             throws IOException, InterruptedException {
         final MultiBranchProject<P, R> owner = (MultiBranchProject<P, R>) getOwner();

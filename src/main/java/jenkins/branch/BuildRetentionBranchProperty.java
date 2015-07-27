@@ -3,8 +3,6 @@ package jenkins.branch;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.model.Job;
 import hudson.model.Run;
 import jenkins.model.BuildDiscarder;
@@ -32,8 +30,8 @@ public class BuildRetentionBranchProperty extends BranchProperty {
     }
 
     @Override
-    public <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(Class<P> jobType) {
-        return new ProjectDecorator<P, B>(){
+    public <P extends Job<P,B>,B extends Run<P,B>> JobDecorator<P,B> jobDecorator(Class<P> jobType) {
+        return new JobDecorator<P, B>(){
             @NonNull
             @Override
             public P project(@NonNull final P project) {

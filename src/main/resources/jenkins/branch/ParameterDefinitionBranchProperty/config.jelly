@@ -1,7 +1,7 @@
 <!--
  ~ The MIT License
  ~
- ~ Copyright (c) 2011-2013, CloudBees, Inc., Stephen Connolly.
+ ~ Copyright (c) 2014, CloudBees, Inc.
  ~
  ~ Permission is hereby granted, free of charge, to any person obtaining a copy
  ~ of this software and associated documentation files (the "Software"), to deal
@@ -22,18 +22,8 @@
  ~ THE SOFTWARE.
  -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:p="/lib/hudson/project" xmlns:this="this">
-
-  <st:include page="configure-basic.jelly" optional="true"/>
-
-  <f:section title="${%Advanced Project Options}">
-    <f:advanced>
-      <st:include page="configure-advanced.jelly" optional="true" />
-      <f:entry title="${%Display Name}" field="displayNameOrNull">
-         <f:textbox checkUrl="'${rootURL}/checkDisplayName?displayName='+encodeURIComponent(this.value)+'&amp;jobName='+encodeURIComponent('${h.jsStringEscape(it.name)}')"/>
-      </f:entry>
-
-    </f:advanced>
-  </f:section>
-
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <f:entry title="${%Parameters}">
+    <f:repeatableHeteroProperty hasHeader="true" field="parameterDefinitions" deleteCaption="${%Delete parameter}" addCaption="${%Add parameter}"/>
+  </f:entry>
 </j:jelly>

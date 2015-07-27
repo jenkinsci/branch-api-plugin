@@ -24,6 +24,7 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.ExtensionList;
 import hudson.model.Descriptor;
 import hudson.model.TopLevelItemDescriptor;
 import hudson.scm.SCMDescriptor;
@@ -49,7 +50,7 @@ public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescripto
     @SuppressWarnings("unchecked")
     @NonNull
     public Class<? extends MultiBranchProject> getClazz() {
-        return (Class<? extends MultiBranchProject>) clazz;
+        return clazz.asSubclass(MultiBranchProject.class);
     }
 
     /**
@@ -94,14 +95,12 @@ public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescripto
     @NonNull
     public List<BranchProjectFactoryDescriptor> getProjectFactoryDescriptors() {
         List<BranchProjectFactoryDescriptor> result = new ArrayList<BranchProjectFactoryDescriptor>();
-        List<BranchProjectFactoryDescriptor> descriptorList =
-                Jenkins.getInstance().getDescriptorList(BranchProjectFactory.class);
-        for (BranchProjectFactoryDescriptor descriptor : descriptorList) {
-            if (descriptor.isApplicable((Class<? extends MultiBranchProject>) clazz)) {
+        for (BranchProjectFactoryDescriptor descriptor : ExtensionList.lookup(BranchProjectFactoryDescriptor.class)) {
+            if (descriptor.isApplicable(getClazz())) {
                 result.add(descriptor);
             }
         }
-        return descriptorList;
+        return result;
     }
 
     /**
@@ -112,6 +111,10 @@ public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescripto
     @SuppressWarnings({"unused", "unchecked"}) // used by stapler
     @NonNull
     public Descriptor<BranchSource> getBranchSourceDescriptor() {
-        return Jenkins.getInstance().getDescriptorOrDie(BranchSource.class);
+        Jenkins j = Jenkins.getInstance();
+        if (j == null) {
+            throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
+        }
+        return j.getDescriptorOrDie(BranchSource.class);
     }
 }

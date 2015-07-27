@@ -28,12 +28,11 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.console.AnnotatedLargeText;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractItem;
-import hudson.model.AbstractProject;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.AsyncPeriodicWork;
@@ -57,6 +56,7 @@ import hudson.model.PeriodicWork;
 import hudson.model.Queue;
 import hudson.model.ResourceList;
 import hudson.model.Result;
+import hudson.model.Run;
 import hudson.model.Saveable;
 import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
@@ -124,7 +124,6 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
-import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -144,11 +143,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
+import javax.annotation.Nonnull;
 
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+import jenkins.model.ParameterizedJobMixIn;
+import jenkins.triggers.SCMTriggerItem;
 
 /**
  * Abstract base class for multiple-branch based projects.
@@ -156,8 +157,8 @@ import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
  * @param <P> the project type
  * @param <R> the run type
  */
-public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLevelItem,
-        R extends AbstractBuild<P, R>>
+public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
+        R extends Run<P, R>>
         extends AbstractItem implements TopLevelItem, ItemGroup<P>, Saveable, ViewGroup, StaplerFallback,
         SCMSourceOwner, BuildableItem, Queue.FlyweightTask {
 
@@ -261,22 +262,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
         if (views.size() == 0) {
             ListView lv = new ListView("All", this);
             views.add(lv);
-            try {
-                try {// HACK ALERT: ListView doesn't expose us a method to set this as of 1.480 yet,
-                    // so we forcibly do it.
-                    Field f = ListView.class.getDeclaredField("includeRegex");
-                    f.setAccessible(true);
-                    f.set(lv, ".*");
-                    f = ListView.class.getDeclaredField("includePattern");
-                    f.setAccessible(true);
-                    f.set(lv, Pattern.compile(".*"));
-                } catch (Throwable e) {
-                    LOGGER.log(Level.WARNING, "Initial view may be configured incorrectly", e);
-                }
-                lv.save();
-            } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Failed to set up the initial view", e);
-            }
+            lv.setIncludeRegex(".*");
         }
         if (viewsTabBar == null) {
             viewsTabBar = new DefaultViewsTabBar();
@@ -307,12 +293,14 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
         final BranchProjectFactory<P, R> factory = getProjectFactory();
         factory.setOwner(this);
         Map<String, Map<String, P>> branchItems = getBranchItems();
-        if (getBranchesDir().isDirectory()) {
-            for (File branch : getBranchesDir().listFiles(new FileFilter() {
+        File[] branches = getBranchesDir().listFiles(new FileFilter() {
+                @Override
                 public boolean accept(File pathname) {
                     return pathname.isDirectory() && new File(pathname, "config.xml").isFile();
                 }
-            })) {
+            });
+        if (branches != null) {
+            for (File branch : branches) {
                 try {
                     Item item = Items.load(this, branch);
                     if (factory.isProject(item)) {
@@ -447,6 +435,15 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
     @NonNull
     public List<BranchSource> getSources() {
         return sources.toList();
+    }
+
+    /**
+     * Offers direct access to the configurable list of branch sources.
+     * Intended for use from scripting and testing.
+     */
+    @NonNull
+    public PersistedList<BranchSource> getSourcesList() {
+        return sources;
     }
 
     /**
@@ -710,10 +707,13 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                         }
                     } else {
                         // fall back to polling when we have a non-deterministic revision/hash.
-                        PollingResult pollingResult = project.poll(listener);
-                        if (pollingResult.hasChanges()) {
-                            needSave = true;
-                            scheduleBuilds.put(project, revision);
+                        SCMTriggerItem scmProject = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
+                        if (scmProject != null) {
+                            PollingResult pollingResult = scmProject.poll(listener);
+                            if (pollingResult.hasChanges()) {
+                                needSave = true;
+                                scheduleBuilds.put(project, revision);
+                            }
                         }
                     }
                 }
@@ -729,11 +729,16 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
         source.fetch(observer, listener);
         for (Iterator<Map.Entry<String, P>> iterator = items.entrySet().iterator(); iterator.hasNext(); ) {
             Map.Entry<String, P> entry = iterator.next();
-            // Don't assume that the project name is the branch name.
-            if (branchNames.contains(factory.getBranch(entry.getValue()).getName())) {
+            P project = entry.getValue();
+            if (!factory.isProject(project)) {
+                listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
                 continue;
             }
-            lostBranches.put(factory.getBranch(entry.getValue()).getName(), entry.getValue());
+            // Don't assume that the project name is the branch name.
+            if (branchNames.contains(factory.getBranch(project).getName())) {
+                continue;
+            }
+            lostBranches.put(factory.getBranch(project).getName(), project);
             iterator.remove();
         }
         return branchNames;
@@ -902,7 +907,11 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      */
     @NonNull
     public MultiBranchProjectDescriptor getDescriptor() {
-        return (MultiBranchProjectDescriptor) Jenkins.getInstance().getDescriptorOrDie(getClass());
+        Jenkins j = Jenkins.getInstance();
+        if (j == null) {
+            throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
+        }
+        return (MultiBranchProjectDescriptor) j.getDescriptorOrDie(getClass());
     }
 
     /**
@@ -1027,7 +1036,11 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 reindex = !newSourceIds.equals(oldSourceIds);
 
                 String newName = req.getParameter("name");
-                final ProjectNamingStrategy namingStrategy = Jenkins.getInstance().getProjectNamingStrategy();
+                Jenkins j = Jenkins.getInstance();
+                if (j == null) {
+                    throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
+                }
+                final ProjectNamingStrategy namingStrategy = j.getProjectNamingStrategy();
                 if (newName != null && !newName.equals(name)) {
                     // check this error early to avoid HTTP response splitting.
                     Jenkins.checkGoodName(newName);
@@ -1339,7 +1352,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
          */
         @SuppressWarnings("unused") // API contract
         public static void invoke() {
-            Jenkins.getInstance().getExtensionList(AsyncPeriodicWork.class).get(DeadBranchCleanupThread.class).run();
+            ExtensionList.lookup(AsyncPeriodicWork.class).get(DeadBranchCleanupThread.class).run();
         }
 
         /**
@@ -1350,9 +1363,11 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 LOGGER.fine("Disabled. Skipping execution");
                 return;
             }
-
-            for (MultiBranchProject<?, ?> p
-                    : Jenkins.getInstance().getAllItems(MultiBranchProject.class)) {
+            Jenkins j = Jenkins.getInstance();
+            if (j == null) {
+                return;
+            }
+            for (MultiBranchProject<?, ?> p : j.getAllItems(MultiBranchProject.class)) {
                 p.runDeadBranchCleanup(listener);
             }
         }
@@ -1365,8 +1380,8 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      * @param <P> the type of project that the branch projects consist of.
      * @param <R> the type of runs that the branch projects use.
      */
-    public static class BranchIndexing<P extends AbstractProject<P, R> & TopLevelItem,
-            R extends AbstractBuild<P, R>> extends Actionable implements Queue.Executable, Saveable {
+    public static class BranchIndexing<P extends Job<P, R> & TopLevelItem,
+            R extends Run<P, R>> extends Actionable implements Queue.Executable, Saveable {
 
         /**
          * The parent {@link MultiBranchProject}.
@@ -1450,9 +1465,12 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
          *
          * @return the parent.
          */
-        @CheckForNull
+        @Nonnull
         public MultiBranchProject<P, R> getParent() {
-            return getProject();
+            if (project == null) {
+                throw new IllegalStateException();
+            }
+            return project;
         }
 
         /**
@@ -1550,11 +1568,13 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
          * @return {@code null}, for example if the slave that this build run no longer exists.
          */
         @SuppressWarnings("unused") // used from jelly pages
+        @CheckForNull
         public Node getBuiltOn() {
-            if (builtOn == null || builtOn.equals("")) {
-                return Jenkins.getInstance();
+            Jenkins j = Jenkins.getInstance();
+            if (builtOn == null || builtOn.isEmpty() || j == null) {
+                return j;
             } else {
-                return Jenkins.getInstance().getNode(builtOn);
+                return j.getNode(builtOn);
             }
         }
 
@@ -1674,7 +1694,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
 
         /**
          * Writes the complete log from the start to finish to the {@link OutputStream}.
-         * <p/>
+         * <p>
          * If someone is still writing to the log, this method will not return until the whole log
          * file gets written out.
          */
@@ -1700,8 +1720,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
 
         /**
          * Returns the {@link Cause}s that triggered a build.
-         * <p/>
-         * <p/>
+         * <p>
          * If a build sits in the queue for a long time, multiple build requests made during this period
          * are all rolled up into one build, hence this method may return a list.
          *
@@ -1845,6 +1864,10 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 Map<String, P> lostBranches = new HashMap<String, P>();
                 for (Map<String, P> branches : parent.getBranchItems().values()) {
                     for (P project : branches.values()) {
+                      if (!factory.isProject(project)) {
+                          listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
+                          continue;
+                      }
                       lostBranches.put(factory.getBranch(project).getName(), project);
                     }
                 }
@@ -1870,12 +1893,21 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 if (!scheduleBuilds.isEmpty()) {
                     listener.getLogger().println("Scheduling builds for branches:");
                     for (Map.Entry<P, SCMRevision> entry : scheduleBuilds.entrySet()) {
-                        listener.getLogger().println("    " + factory.getBranch(entry.getKey()).getName());
-                        if (entry.getKey().scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
-                            try {
-                                factory.setRevisionHash(entry.getKey(), entry.getValue());
-                            } catch (IOException e) {
-                                e.printStackTrace(listener.error("Could not update last revision hash"));
+                        final P _project = entry.getKey();
+                        if (!factory.isProject(_project)) {
+                            listener.getLogger().println("Detected unsupported subitem " + _project + ", skipping");
+                            continue;
+                        }
+                        listener.getLogger().println("    " + factory.getBranch(_project).getName());
+                        if (_project instanceof ParameterizedJobMixIn.ParameterizedJob) {
+                            // TODO need a static helper method to schedule a ParameterizedJob
+                            ParameterizedJobMixIn scheduler = new ParameterizedJobMixIn() {@Override protected Job asJob() {return _project;}};
+                            if (scheduler.scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
+                                try {
+                                    factory.setRevisionHash(_project, entry.getValue());
+                                } catch (IOException e) {
+                                    e.printStackTrace(listener.error("Could not update last revision hash"));
+                                }
                             }
                         }
                     }
@@ -1993,7 +2025,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
 
     /**
      * Schedules a build.
-     * <p/>
+     * <p>
      * Important: the actions should be persistable without outside references (e.g. don't store
      * references to this project). To provide parameters for a parameterized project, add a ParametersAction. If
      * no ParametersAction is provided for such a project, one will be created with the default parameter values.
@@ -2017,7 +2049,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      */
     @WithBridgeMethods(Future.class)
     @NonNull
-    public QueueTaskFuture<R> scheduleBuild2(int quietPeriod, Cause c, Action... actions) {
+    public QueueTaskFuture scheduleBuild2(int quietPeriod, Cause c, Action... actions) {
         return scheduleBuild2(quietPeriod, c, Arrays.asList(actions));
     }
 
@@ -2025,7 +2057,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      * {@inheritDoc}
      */
     public void checkAbortPermission() {
-        checkPermission(AbstractProject.ABORT);
+        checkPermission(Item.CANCEL);
     }
 
     /**
@@ -2060,7 +2092,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      * {@inheritDoc}
      */
     public boolean hasAbortPermission() {
-        return hasPermission(AbstractProject.ABORT);
+        return hasPermission(Item.CANCEL);
     }
 
     /**
@@ -2099,8 +2131,9 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                 return node;
             }
         }
+        Jenkins j = Jenkins.getInstance();
         // try to run on master if the master will support running.
-        return Jenkins.getInstance().getNumExecutors() > 0 ? Jenkins.getInstance() : null;
+        return j != null && j.getNumExecutors() > 0 ? j : null;
     }
 
     /**
@@ -2152,6 +2185,13 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
         return ACL.SYSTEM;
     }
 
+    /* TODO 1.592+
+    @Override
+    public Authentication getDefaultAuthentication(Queue.Item item) {
+        return getDefaultAuthentication();
+    }
+    */
+
     /**
      * Schedules a build of this project, and returns a {@link Future} object
      * to wait for the completion of the build.
@@ -2161,7 +2201,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
      */
     @SuppressWarnings("unchecked")
     @WithBridgeMethods(Future.class)
-    public QueueTaskFuture<R> scheduleBuild2(int quietPeriod, Cause c, Collection<? extends Action> actions) {
+    public QueueTaskFuture scheduleBuild2(int quietPeriod, Cause c, Collection<? extends Action> actions) {
         if (!isBuildable()) {
             return null;
         }
@@ -2172,9 +2212,13 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
             queueActions.add(new CauseAction(c));
         }
 
-        Queue.WaitingItem i = Jenkins.getInstance().getQueue().schedule(this, quietPeriod, queueActions);
+        Jenkins j = Jenkins.getInstance();
+        if (j == null) {
+            return null;
+        }
+        Queue.WaitingItem i = j.getQueue().schedule2(this, quietPeriod, queueActions).getCreateItem();
         if (i != null) {
-            return (QueueTaskFuture) i.getFuture();
+            return i.getFuture();
         }
         return null;
     }
@@ -2218,7 +2262,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
          */
         public void doRun() {
             while (new Date().getTime() - cal.getTimeInMillis() > 1000) {
-                LOGGER.fine("cron checking " + DateFormat.getDateTimeInstance().format(cal.getTime()));
+                LOGGER.log(Level.FINE, "cron checking {0}", cal.getTime());
 
                 try {
                     checkTriggers(cal);
@@ -2237,10 +2281,13 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
          */
         public void checkTriggers(final Calendar cal) {
             Jenkins inst = Jenkins.getInstance();
+            if (inst == null) {
+                return;
+            }
 
             for (MultiBranchProject<?, ?> p : inst.getAllItems(MultiBranchProject.class)) {
                 for (Trigger t : p.getTriggers().values()) {
-                    LOGGER.fine("cron checking " + p.getName());
+                    LOGGER.log(Level.FINE, "cron checking {0}", p.getName());
 
                     CronTabList tabs;
                     try {
@@ -2249,7 +2296,7 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
                         continue;
                     }
                     if (tabs.check(cal)) {
-                        LOGGER.config("cron triggered " + p.getName());
+                        LOGGER.log(Level.CONFIG, "cron triggered {0}", p.getName());
                         try {
                             t.run();
                         } catch (Throwable e) {
@@ -2291,8 +2338,12 @@ public abstract class MultiBranchProject<P extends AbstractProject<P, R> & TopLe
          * @return number of current indexing tasks.
          */
         public int indexingCount() {
-            int result = indexingCount(Jenkins.getInstance());
-            for (Node n : Jenkins.getInstance().getNodes()) {
+            Jenkins j = Jenkins.getInstance();
+            if (j == null) {
+                return 0;
+            }
+            int result = indexingCount(j);
+            for (Node n : j.getNodes()) {
                 result += indexingCount(n);
             }
             return result;

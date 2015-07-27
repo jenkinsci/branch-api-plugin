@@ -25,8 +25,6 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -42,7 +40,6 @@ import org.jvnet.localizer.ResourceBundleHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
-import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -118,9 +115,9 @@ public class RateLimitBranchProperty extends BranchProperty {
     }
 
     @Override
-    public <P extends AbstractProject<P, B>, B extends AbstractBuild<P, B>> ProjectDecorator<P, B> decorator(
+    public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(
             Class<P> jobType) {
-        return new ProjectDecorator<P, B>() {
+        return new JobDecorator<P, B>() {
             /**
              * {@inheritDoc}
              */
@@ -155,7 +152,11 @@ public class RateLimitBranchProperty extends BranchProperty {
          */
         @SuppressWarnings("unused") // by stapler
         public ListBoxModel doFillDurationNameItems() {
-            return Jenkins.getInstance().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
+            Jenkins j = Jenkins.getInstance();
+            if (j == null) {
+                throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
+            }
+            return j.getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
                     .doFillDurationNameItems();
         }
 
@@ -163,7 +164,11 @@ public class RateLimitBranchProperty extends BranchProperty {
          * Check the count
          */
         public FormValidation doCheckCount(@QueryParameter int value, @QueryParameter String durationName) {
-            return Jenkins.getInstance().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
+            Jenkins j = Jenkins.getInstance();
+            if (j == null) {
+                throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
+            }
+            return j.getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
                     .doCheckCount(value, durationName);
         }
     }
@@ -375,8 +380,8 @@ public class RateLimitBranchProperty extends BranchProperty {
         @Override
         public CauseOfBlockage canRun(Queue.Item item) {
             if (item.task instanceof Job) {
-                Job job = (Job) item.task;
-                JobPropertyImpl property = (JobPropertyImpl) job.getProperty(JobPropertyImpl.class);
+                Job<?,?> job = (Job) item.task;
+                JobPropertyImpl property = job.getProperty(JobPropertyImpl.class);
                 if (property != null) {
                     Run lastBuild = job.getLastBuild();
                     if (lastBuild != null) {

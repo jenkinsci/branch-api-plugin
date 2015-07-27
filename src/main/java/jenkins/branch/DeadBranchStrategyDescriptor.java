@@ -23,8 +23,8 @@
  */
 package jenkins.branch;
 
+import hudson.ExtensionList;
 import hudson.model.Descriptor;
-import jenkins.model.Jenkins;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,12 +53,9 @@ public abstract class DeadBranchStrategyDescriptor extends Descriptor<DeadBranch
     @SuppressWarnings("unused") // used by stapler
     public static List<DeadBranchStrategyDescriptor> forProject(Class<? extends MultiBranchProject> jobType) {
         List<DeadBranchStrategyDescriptor> result = new ArrayList<DeadBranchStrategyDescriptor>();
-        for (Descriptor<DeadBranchStrategy> d : Jenkins.getInstance().getDescriptorList(DeadBranchStrategy.class)) {
-            if (d instanceof DeadBranchStrategyDescriptor) {
-                DeadBranchStrategyDescriptor descriptor = (DeadBranchStrategyDescriptor) d;
-                if (descriptor.isApplicable(jobType)) {
-                    result.add(descriptor);
-                }
+        for (DeadBranchStrategyDescriptor descriptor : ExtensionList.lookup(DeadBranchStrategyDescriptor.class)) {
+            if (descriptor.isApplicable(jobType)) {
+                result.add(descriptor);
             }
         }
         return result;

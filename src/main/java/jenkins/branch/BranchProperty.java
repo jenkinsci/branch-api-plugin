@@ -26,16 +26,20 @@ package jenkins.branch;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
-import hudson.model.AbstractBuild;
+import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
+import hudson.model.Build;
+import hudson.model.Job;
+import hudson.model.Project;
+import hudson.model.Run;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Additional information associated with {@link Branch}.
- * <p/>
+ * <p>
  * {@link jenkins.scm.api.SCMSource}s can use properties to convey additional implementation/SCM specific
  * information that's not captured in the base {@link Branch} class.
  *
@@ -44,28 +48,41 @@ import java.util.List;
 public abstract class BranchProperty extends AbstractDescribableImpl<BranchProperty> implements ExtensionPoint {
 
     /**
-     * Returns a {@link ProjectDecorator} for the supplied project instance.
-     * @param project the project instance.
-     * @param <P> the type of project.
-     * @param <B> the type of build of the project.
-     * @return a {@link ProjectDecorator} or {@code null} if none appropriate to this type of project.
+     * @deprecated Should have been typed to take {@link Project} and {@link Build} rather than {@link AbstractProject} and {@link AbstractBuild}.
      */
     @CheckForNull
-    @SuppressWarnings("unchecked")
-    public final <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(P project) {
-        return (ProjectDecorator<P, B>) decorator(project.getClass());
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Deprecated
+    public final ProjectDecorator decorator(AbstractProject project) {
+        return decorator(project.getClass());
     }
 
     /**
-     * Returns a {@link ProjectDecorator} for the specific project type.
-     * @param clazz the project class.
-     * @param <P> the type of project.
-     * @param <B> the type of build of the project.
-     * @return a {@link ProjectDecorator} or {@code null} if none appropriate to this type of project.
+     * @deprecated Should have been typed to take {@link Project} and {@link Build} rather than {@link AbstractProject} and {@link AbstractBuild}.
      */
     @CheckForNull
-    public <P extends AbstractProject<P,B>,B extends AbstractBuild<P,B>> ProjectDecorator<P,B> decorator(Class<P> clazz) {
-        return null;
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Deprecated
+    public ProjectDecorator decorator(Class clazz) {
+        JobDecorator d = jobDecorator(clazz);
+        return d instanceof ProjectDecorator ? (ProjectDecorator) d : null;
+    }
+
+    /**
+     * Returns a {@link JobDecorator} for the specific job type.
+     * @param clazz the job class.
+     * @param <P> the type of job.
+     * @param <B> the type of run of the job.
+     * @return a {@link JobDecorator} or {@code null} if none appropriate to this type of job.
+     */
+    @CheckForNull
+    @SuppressWarnings("unchecked")
+    public /*abstract*/ <P extends Job<P,B>,B extends Run<P,B>> JobDecorator<P,B> jobDecorator(Class<P> clazz) {
+        if (Util.isOverridden(BranchProperty.class, getClass(), "decorator", Class.class) && AbstractProject.class.isAssignableFrom(clazz)) {
+            return decorator(clazz);
+        } else {
+            throw new AbstractMethodError("you must implement jobDecorator");
+        }
     }
 
     /**
