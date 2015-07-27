@@ -52,7 +52,8 @@ public abstract class ParameterDefinitionBranchProperty extends BranchProperty {
         return parameterDefinitions;
     }
 
-    @DataBoundSetter public final void setParameterDefinitions(List<ParameterDefinition> parameterDefinitions) {
+    @DataBoundSetter
+    public final void setParameterDefinitions(List<ParameterDefinition> parameterDefinitions) {
         this.parameterDefinitions = parameterDefinitions;
     }
 
@@ -61,7 +62,8 @@ public abstract class ParameterDefinitionBranchProperty extends BranchProperty {
         return true;
     }
 
-    @Override public final <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
+    @Override
+    public final <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
         if (!isApplicable(clazz)) {
             return null;
         }

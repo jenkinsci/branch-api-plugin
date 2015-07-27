@@ -95,10 +95,12 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
      * Or perhaps {@code it == null} when {@code l:renderOnDemand} is in use (supposed to work due to {@code capture} attribute, but…)?
      */
     @Restricted(DoNotUse.class)
-    @Extension public static final class Visibility extends DescriptorVisibilityFilter {
+    @Extension
+    public static final class Visibility extends DescriptorVisibilityFilter {
 
         @SuppressWarnings("rawtypes")
-        @Override public boolean filter(Object context, Descriptor descriptor) {
+        @Override
+        public boolean filter(Object context, Descriptor descriptor) {
             if (context instanceof MultiBranchProject && descriptor instanceof BranchPropertyDescriptor) {
                 return ((BranchPropertyDescriptor) descriptor).isApplicable((MultiBranchProject) context);
             } else {

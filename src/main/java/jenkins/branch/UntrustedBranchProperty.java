@@ -139,7 +139,8 @@ public class UntrustedBranchProperty extends BranchProperty {
             return result;
         }
 
-        @Override protected boolean isApplicable(MultiBranchProjectDescriptor projectDescriptor) {
+        @Override
+        protected boolean isApplicable(MultiBranchProjectDescriptor projectDescriptor) {
             for (BranchProjectFactoryDescriptor d : projectDescriptor.getProjectFactoryDescriptors()) {
                 Type factoryType = Types.getBaseClass(d.clazz, BranchProjectFactory.class);
                 Type jobType = Types.getTypeArgument(factoryType, 0, /* if using rawtypes, err on the conservative side */ Project.class);

@@ -294,7 +294,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         factory.setOwner(this);
         Map<String, Map<String, P>> branchItems = getBranchItems();
         File[] branches = getBranchesDir().listFiles(new FileFilter() {
-                @Override public boolean accept(File pathname) {
+                @Override
+                public boolean accept(File pathname) {
                     return pathname.isDirectory() && new File(pathname, "config.xml").isFile();
                 }
             });
@@ -440,7 +441,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * Offers direct access to the configurable list of branch sources.
      * Intended for use from scripting and testing.
      */
-    public @NonNull PersistedList<BranchSource> getSourcesList() {
+    @NonNull
+    public PersistedList<BranchSource> getSourcesList() {
         return sources;
     }
 
@@ -1566,7 +1568,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * @return {@code null}, for example if the slave that this build run no longer exists.
          */
         @SuppressWarnings("unused") // used from jelly pages
-        public @CheckForNull Node getBuiltOn() {
+        @CheckForNull
+        public Node getBuiltOn() {
             Jenkins j = Jenkins.getInstance();
             if (builtOn == null || builtOn.isEmpty() || j == null) {
                 return j;
@@ -2183,7 +2186,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /* TODO 1.592+
-    @Override public Authentication getDefaultAuthentication(Queue.Item item) {
+    @Override
+    public Authentication getDefaultAuthentication(Queue.Item item) {
         return getDefaultAuthentication();
     }
     */
