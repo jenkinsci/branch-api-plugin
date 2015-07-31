@@ -1435,13 +1435,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         protected String charset;
 
         /**
-         * Name of the slave this project was built on.
-         * Null or "" if built by the master. (null happens when we read old record that didn't have this information.)
-         */
-        @CheckForNull
-        private String builtOn;
-
-        /**
          * Constructor.
          *
          * @param previousIndexing any previous indexing.
@@ -1560,32 +1553,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         @SuppressWarnings("unused") // used from jelly pages
         public String getUrl() {
             return project == null ? null : project.getUrl() + "indexing/";
-        }
-
-        /**
-         * Returns a {@link hudson.model.Slave} on which this build was done.
-         *
-         * @return {@code null}, for example if the slave that this build run no longer exists.
-         */
-        @SuppressWarnings("unused") // used from jelly pages
-        @CheckForNull
-        public Node getBuiltOn() {
-            Jenkins j = Jenkins.getInstance();
-            if (builtOn == null || builtOn.isEmpty() || j == null) {
-                return j;
-            } else {
-                return j.getNode(builtOn);
-            }
-        }
-
-        /**
-         * Returns the name of the slave it was built on; null or "" if built by the master.
-         * (null happens when we read old record that didn't have this information.)
-         */
-        @Exported(name = "builtOn")
-        @SuppressWarnings("unused") // used by Jenkins API
-        public String getBuiltOnStr() {
-            return builtOn;
         }
 
         /**
@@ -1843,14 +1810,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 return;
             }
             this.executor = Executor.currentExecutor();
-            Computer computer = Computer.currentComputer();
-            assert builtOn == null;
-            Charset charset = null;
-            if (computer != null) {
-                builtOn = computer.getName();
-                charset = computer.getDefaultCharset();
-                this.charset = charset.name();
-            }
+            Charset charset = Charset.defaultCharset(); // cf. Jenkins.MasterComputer.getDefaultCharset
+            this.charset = charset.name();
             StreamBuildListener listener = null;
             timestamp = System.currentTimeMillis();
             try {
@@ -2112,28 +2073,20 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * {@inheritDoc}
      */
+    @Override
     public Label getAssignedLabel() {
-        // we can run anywhere
-        return null;
+        Jenkins j = Jenkins.getInstance();
+        if (j == null) {
+            return null;
+        }
+        return j.getSelfLabel();
     }
 
     /**
      * {@inheritDoc}
      */
     public synchronized Node getLastBuiltOn() {
-        BranchIndexing<P, R> indexing = this.indexing;
-        if (indexing != null && Result.NOT_BUILT.equals(indexing.getResult())) {
-            indexing = indexing.previousIndexing;
-        }
-        if (indexing != null) {
-            Node node = indexing.getBuiltOn();
-            if (node != null) {
-                return node;
-            }
-        }
-        Jenkins j = Jenkins.getInstance();
-        // try to run on master if the master will support running.
-        return j != null && j.getNumExecutors() > 0 ? j : null;
+        return Jenkins.getInstance();
     }
 
     /**
