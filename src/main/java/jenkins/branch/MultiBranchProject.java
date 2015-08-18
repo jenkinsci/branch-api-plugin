@@ -1801,6 +1801,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return baseColor.anime();
         }
 
+        @SuppressWarnings("unused") // used from Jelly
+        public String getBuildStatusIconClassName() {
+            return getIconColor().getIconClassName();
+        }
+
         /**
          * {@inheritDoc}
          */
