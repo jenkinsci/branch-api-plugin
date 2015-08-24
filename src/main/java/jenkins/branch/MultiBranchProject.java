@@ -373,7 +373,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
         if (indexing.getTimeInMillis() == 0 && isBuildable()) {
-            scheduleBuild();
+            scheduleBuild(null);
         }
     }
 
@@ -1065,7 +1065,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
         if (reindex) {
-            scheduleBuild();
+            scheduleBuild(null);
         }
     }
 
@@ -1964,6 +1964,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * {@inheritDoc}
      */
+    @Deprecated
+    @Override
     public boolean scheduleBuild() {
         return scheduleBuild(new Cause.LegacyCodeCause());
     }
@@ -1971,6 +1973,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * {@inheritDoc}
      */
+    @Deprecated
+    @Override
     public boolean scheduleBuild(int quietPeriod) {
         return scheduleBuild(quietPeriod, new Cause.LegacyCodeCause());
     }
