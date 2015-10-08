@@ -27,18 +27,15 @@ package jenkins.branch;
 import hudson.ExtensionList;
 import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Items;
-import hudson.model.TaskListener;
 import hudson.model.TopLevelItemDescriptor;
 import hudson.model.View;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
-import jenkins.scm.api.SCMSource;
-import jenkins.scm.api.SCMSourceOwner;
+import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.impl.SingleSCMNavigator;
 import static org.junit.Assert.*;
 import org.junit.Rule;
@@ -81,9 +78,7 @@ public class SpecificDescriptorTest {
     @TestExtension("someNavigatorSomeFactoryInstalled") public static class SomeNavigatorSomeFactoryInstalledDescriptor2 extends OrganizationFolderTest.MockFactoryDescriptor {}
 
     private static class MockNavigator extends SCMNavigator {
-        @Override public Map<String, ? extends List<? extends SCMSource>> discoverSources(SCMSourceOwner context, TaskListener listener) throws IOException, InterruptedException {
-            return Collections.emptyMap();
-        }
+        @Override public void visitSources(SCMSourceObserver observer) throws IOException, InterruptedException {}
     }
     private static abstract class MockNavigatorDescriptor extends SCMNavigatorDescriptor {
         MockNavigatorDescriptor() {

@@ -30,11 +30,11 @@ import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMHead;
-import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceOwner;
@@ -49,10 +49,12 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * Creates a multibranch project for a given set of SCM sources if they seem compatible.
      * @param parent a folder
      * @param name a project name
-     * @param scmSources a set of SCM sources as enumerated by {@link SCMNavigator#discoverSources}
+     * @param scmSources a set of SCM sources as added by {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addSource}
+     * @param attributes a set of metadata attributes as added by {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addAttribute}
+     * @param listener a way of reporting progress
      * @return a new uninitialized multibranch project (do not configure its {@link MultiBranchProject#getSourcesList} or call {@link MultiBranchProject#onCreatedFromScratch}), or null if unrecognized
      */
-    public abstract @CheckForNull MultiBranchProject<?,?> createProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull List<? extends SCMSource> scmSources, @Nonnull TaskListener listener) throws IOException, InterruptedException;
+    public abstract @CheckForNull MultiBranchProject<?,?> createProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, @Nonnull TaskListener listener) throws IOException, InterruptedException;
     
     @Override public MultiBranchProjectFactoryDescriptor getDescriptor() {
         return (MultiBranchProjectFactoryDescriptor) super.getDescriptor();
@@ -79,11 +81,12 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          * Creates a project given that there seems to be a match.
          * @param parent the folder
          * @param name the project name
+         * @param attributes a set of metadata attributes as added by {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addAttribute}
          * @return a new project suitable for {@link #createProject}
          */
-        protected abstract @Nonnull MultiBranchProject<?,?> doCreateProject(@Nonnull ItemGroup<?> parent, @Nonnull String name);
+        protected abstract @Nonnull MultiBranchProject<?,?> doCreateProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull Map<String,Object> attributes);
 
-        @Override public final MultiBranchProject<?,?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, final TaskListener listener) throws IOException, InterruptedException {
+        @Override public final MultiBranchProject<?,?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, final TaskListener listener) throws IOException, InterruptedException {
             for (final SCMSource scmSource : scmSources) {
                 SCMSourceOwner owner = scmSource.getOwner();
                 if (!(owner instanceof SCMSourceOwnerHack)) {
@@ -107,7 +110,7 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
                     throw new AssertionError(x);
                 }
                 if (!empty) {
-                    return doCreateProject(parent, name);
+                    return doCreateProject(parent, name, attributes);
                 }
             }
             return null;

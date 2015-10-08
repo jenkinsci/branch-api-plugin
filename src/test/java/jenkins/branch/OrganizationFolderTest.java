@@ -32,6 +32,7 @@ import hudson.scm.NullSCM;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMSource;
 import org.junit.Test;
@@ -66,7 +67,7 @@ public class OrganizationFolderTest {
 
     public static class MockFactory extends MultiBranchProjectFactory {
         @DataBoundConstructor public MockFactory() {}
-        @Override public MultiBranchProject<?, ?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, TaskListener listener) throws IOException, InterruptedException {
+        @Override public MultiBranchProject<?, ?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String,Object> attributes, TaskListener listener) throws IOException, InterruptedException {
             return null;
         }
     }

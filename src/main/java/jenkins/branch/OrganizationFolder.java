@@ -36,6 +36,7 @@ import hudson.model.TopLevelItemDescriptor;
 import hudson.util.DescribableList;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +49,7 @@ import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
+import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.api.SCMSourceOwner;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -98,50 +100,70 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         projectFactories.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
     }
 
-    @Override protected Map<String,MultiBranchProject<?,?>> computeChildren(TaskListener listener) throws IOException, InterruptedException {
-        Map<String,MultiBranchProject<?,?>> projects = new HashMap<String,MultiBranchProject<?,?>>();
+    @Override protected Map<String,MultiBranchProject<?,?>> computeChildren(final TaskListener listener) throws IOException, InterruptedException {
+        final Map<String,MultiBranchProject<?,?>> projects = new HashMap<String,MultiBranchProject<?,?>>();
         for (SCMNavigator navigator : navigators) {
             if (Thread.interrupted()) {
                 throw new InterruptedException();
             }
             listener.getLogger().format("Consulting %s%n", navigator.getDescriptor().getDisplayName());
-            for (Map.Entry<String,? extends List<? extends SCMSource>> entry : navigator.discoverSources(this, listener).entrySet()) {
-                if (Thread.interrupted()) {
-                    throw new InterruptedException();
+            navigator.visitSources(new SCMSourceObserver() {
+                @Override public SCMSourceOwner getContext() {
+                    return OrganizationFolder.this;
                 }
-                String projectName = entry.getKey();
-                if (projects.containsKey(projectName)) {
-                    listener.error("Will not create duplicate subproject named " + projectName);
-                    continue;
+                @Override public TaskListener getListener() {
+                    return listener;
                 }
-                List<? extends SCMSource> sources = entry.getValue();
-                for (SCMSource source : sources) {
-                    source.setOwner(this);
-                }
-                for (MultiBranchProjectFactory factory : projectFactories) {
-                    MultiBranchProject<?,?> project;
-                    try {
-                        project = factory.createProject(this, projectName, sources, listener);
-                    } catch (InterruptedException x) {
-                        throw x;
-                    } catch (Exception x) {
-                        x.printStackTrace(listener.error("Failed to create a subproject " + projectName));
-                        continue;
+                @Override public SCMSourceObserver.ProjectObserver observe(final String projectName) {
+                    if (projects.containsKey(projectName)) {
+                        throw new IllegalArgumentException("Will not create duplicate subproject named " + projectName);
                     }
-                    if (project != null) {
-                        List<BranchSource> branchSources = project.getSourcesList();
-                        for (SCMSource source : sources) {
-                            // TODO we probably to define a BranchPropertyFactory
-                            branchSources.add(new BranchSource(source, new DefaultBranchPropertyStrategy(new BranchProperty[0])));
+                    return new ProjectObserver() {
+                        List<SCMSource> sources = new ArrayList<SCMSource>();
+                        @Override public void addSource(SCMSource source) {
+                            sources.add(source);
+                            source.setOwner(OrganizationFolder.this);
                         }
-                        projects.put(projectName, project);
-                        project.scheduleBuild(null);
-                        break;
-                    }
+                        @Override public void addAttribute(String key, Object value) throws IllegalArgumentException, ClassCastException {
+                            throw new IllegalArgumentException();
+                        }
+                        @Override public void complete() throws IllegalStateException, InterruptedException {
+                            if (sources == null) {
+                                throw new IllegalStateException();
+                            }
+                            for (MultiBranchProjectFactory factory : projectFactories) {
+                                MultiBranchProject<?, ?> project;
+                                try {
+                                    project = factory.createProject(OrganizationFolder.this, projectName, sources, Collections.<String,Object>emptyMap(), listener);
+                                } catch (InterruptedException x) {
+                                    throw x;
+                                } catch (Exception x) {
+                                    x.printStackTrace(listener.error("Failed to create a subproject " + projectName));
+                                    continue;
+                                }
+                                if (project != null) {
+                                    List<BranchSource> branchSources = project.getSourcesList();
+                                    for (SCMSource source : sources) {
+                                        // TODO we probably need to define a BranchPropertyFactory
+                                        branchSources.add(new BranchSource(source, new DefaultBranchPropertyStrategy(new BranchProperty[0])));
+                                    }
+                                    projects.put(projectName, project);
+                                    break;
+                                }
+                            }
+                        }
+                    };
                 }
-            }
+                @Override public void addAttribute(String key, Object value) throws IllegalArgumentException, ClassCastException {
+                    throw new IllegalArgumentException();
+                }
+            });
         }
         return projects;
+    }
+
+    @Override protected void afterNewItemCreated(MultiBranchProject<?,?> item) {
+        item.scheduleBuild(null);
     }
 
     @Override protected void updateExistingItem(MultiBranchProject<?,?> existing, MultiBranchProject<?,?> replacement) {
