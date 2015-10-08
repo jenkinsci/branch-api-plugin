@@ -49,12 +49,15 @@ import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceOwner;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
 /**
  * A folder-like collection of {@link MultiBranchProject}s, one per repository.
  */
+@Restricted(NoExternalUse.class) // not currently intended as an API
 @SuppressWarnings({"unchecked", "rawtypes"}) // mistakes in various places
 public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<?,?>> implements SCMSourceOwner, MultiBranchProjectFactory.SCMSourceOwnerHack {
 
