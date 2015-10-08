@@ -152,11 +152,7 @@ public class RateLimitBranchProperty extends BranchProperty {
          */
         @SuppressWarnings("unused") // by stapler
         public ListBoxModel doFillDurationNameItems() {
-            Jenkins j = Jenkins.getInstance();
-            if (j == null) {
-                throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
-            }
-            return j.getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
+            return Jenkins.getActiveInstance().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
                     .doFillDurationNameItems();
         }
 
@@ -164,11 +160,7 @@ public class RateLimitBranchProperty extends BranchProperty {
          * Check the count
          */
         public FormValidation doCheckCount(@QueryParameter int value, @QueryParameter String durationName) {
-            Jenkins j = Jenkins.getInstance();
-            if (j == null) {
-                throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
-            }
-            return j.getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
+            return Jenkins.getActiveInstance().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
                     .doCheckCount(value, durationName);
         }
     }

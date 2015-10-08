@@ -907,11 +907,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @NonNull
     public MultiBranchProjectDescriptor getDescriptor() {
-        Jenkins j = Jenkins.getInstance();
-        if (j == null) {
-            throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
-        }
-        return (MultiBranchProjectDescriptor) j.getDescriptorOrDie(getClass());
+        return (MultiBranchProjectDescriptor) Jenkins.getActiveInstance().getDescriptorOrDie(getClass());
     }
 
     /**
@@ -1036,11 +1032,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 reindex = !newSourceIds.equals(oldSourceIds);
 
                 String newName = req.getParameter("name");
-                Jenkins j = Jenkins.getInstance();
-                if (j == null) {
-                    throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
-                }
-                final ProjectNamingStrategy namingStrategy = j.getProjectNamingStrategy();
+                final ProjectNamingStrategy namingStrategy = Jenkins.getActiveInstance().getProjectNamingStrategy();
                 if (newName != null && !newName.equals(name)) {
                     // check this error early to avoid HTTP response splitting.
                     Jenkins.checkGoodName(newName);
@@ -2147,12 +2139,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         return ACL.SYSTEM;
     }
 
-    /* TODO 1.592+
     @Override
     public Authentication getDefaultAuthentication(Queue.Item item) {
         return getDefaultAuthentication();
     }
-    */
 
     /**
      * Schedules a build of this project, and returns a {@link Future} object

@@ -111,10 +111,6 @@ public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescripto
     @SuppressWarnings({"unused", "unchecked"}) // used by stapler
     @NonNull
     public Descriptor<BranchSource> getBranchSourceDescriptor() {
-        Jenkins j = Jenkins.getInstance();
-        if (j == null) {
-            throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
-        }
-        return j.getDescriptorOrDie(BranchSource.class);
+        return Jenkins.getActiveInstance().getDescriptorOrDie(BranchSource.class);
     }
 }
