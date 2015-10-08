@@ -27,6 +27,10 @@ package jenkins.branch;
 import hudson.model.Descriptor;
 import javax.annotation.CheckForNull;
 
+/**
+ * A kind of {@link MultiBranchProjectFactory}.
+ * @since FIXME
+ */
 public abstract class MultiBranchProjectFactoryDescriptor extends Descriptor<MultiBranchProjectFactory> {
 
     protected MultiBranchProjectFactoryDescriptor() {}

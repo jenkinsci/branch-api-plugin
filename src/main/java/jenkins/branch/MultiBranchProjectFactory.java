@@ -26,7 +26,6 @@ package jenkins.branch;
 
 import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.Descriptor;
 import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
 import java.io.IOException;
@@ -42,6 +41,7 @@ import jenkins.scm.api.SCMSourceOwner;
 
 /**
  * Creates {@link MultiBranchProject}s for repositories where recognized.
+ * @since FIXME
  */
 public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<MultiBranchProjectFactory> implements ExtensionPoint {
 
