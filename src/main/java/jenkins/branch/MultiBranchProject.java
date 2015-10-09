@@ -73,6 +73,7 @@ import hudson.model.queue.SubTask;
 import hudson.scheduler.CronTabList;
 import hudson.scm.PollingResult;
 import hudson.security.ACL;
+import hudson.security.Permission;
 import hudson.triggers.SCMTrigger;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
@@ -831,12 +832,33 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * Used in <tt>sidepanel.jelly</tt> to decide whether to display
-     * the config/delete/build links.
+     * Used in {@code tasks-top.jelly} to decide whether to display
+     * the config/delete/build links (subject to specific permission checks).
      */
     @SuppressWarnings("unused")// by jelly
     public boolean isConfigurable() {
         return true;
+    }
+
+    @Override
+    public ACL getACL() {
+        final ACL acl = super.getACL();
+        if (getParent() instanceof OrganizationFolder) {
+            return new ACL() {
+                @Override
+                public boolean hasPermission(Authentication a, Permission permission) {
+                    if (ACL.SYSTEM.equals(a)) {
+                        return true;
+                    } else if (permission == Item.CONFIGURE || permission == Item.DELETE) {
+                        return false;
+                    } else {
+                        return acl.hasPermission(a, permission);
+                    }
+                }
+            };
+        } else {
+            return acl;
+        }
     }
 
     /**
