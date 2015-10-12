@@ -24,6 +24,7 @@
 
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -32,9 +33,7 @@ import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
-import hudson.model.TopLevelItemDescriptor;
 import hudson.util.DescribableList;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,7 +43,6 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.Callable;
 import javax.servlet.ServletException;
-import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMSource;
@@ -171,26 +169,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         existing.getSourcesList().addAll(replacement.getSourcesList());
     }
 
-    @Override public TopLevelItemDescriptor getDescriptor() {
-        return Jenkins.getActiveInstance().getDescriptorByType(DescriptorImpl.class);
-    }
-
-    @Override public String getUrlChildPrefix() {
-        return "job"; // make it look like a folder
-    }
-
-    /**
-     * For URL binding.
-     * @see #getUrlChildPrefix
-     */
-    public MultiBranchProject<?,?> getJob(String name) {
-        return getItem(name);
-    }
-
-    @Override protected File getJobsDir() {
-        return new File(getRootDir(), "jobs");
-    }
-    
     @Override public List<SCMSource> getSCMSources() {
         return Collections.emptyList(); // irrelevant unless onSCMSourceUpdated implemented
     }
@@ -210,6 +188,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         return criteriaTL != null ? criteriaTL.get() : null;
     }
 
+    @SuppressWarnings("SynchronizeOnNonFinalField")
     @Override public <T> T withSCMSourceCriteria(SCMSource source, SCMSourceCriteria criteria, Callable<T> body) throws Exception {
         ThreadLocal<SCMSourceCriteria> criteriaTL;
         synchronized (criteriaBySource) {
@@ -228,15 +207,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
     }
     
-    @Override public String getPronoun() {
-        return super.getPronoun(); // TODO
-    }
-
-    @Extension public static class DescriptorImpl extends TopLevelItemDescriptor {
-
-        @Override public String getDisplayName() {
-            return "Organization Folder";
-        }
+    @Extension public static class DescriptorImpl extends AbstractFolderDescriptor {
 
         @Override public TopLevelItem newInstance(ItemGroup parent, String name) {
             return new OrganizationFolder(parent, name);
