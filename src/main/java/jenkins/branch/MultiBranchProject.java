@@ -31,23 +31,17 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.Util;
 import hudson.XmlFile;
-import hudson.model.Computer;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
-import hudson.model.Executor;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Items;
 import hudson.model.Job;
-import hudson.model.Node;
 import hudson.model.PeriodicWork;
-import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
-import hudson.model.queue.CauseOfBlockage;
-import hudson.model.queue.QueueTaskDispatcher;
 import hudson.scheduler.CronTabList;
 import hudson.scm.PollingResult;
 import hudson.security.ACL;
@@ -897,72 +891,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
 
-    }
-
-    /**
-     * We need to be able to limit concurrent indexing.
-     */
-    @SuppressWarnings("unused") // instantiated by Jenkins
-    @Extension
-    public static class ThrottleIndexingQueueTaskDispatcher extends QueueTaskDispatcher {
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public CauseOfBlockage canRun(Queue.Item item) {
-            if (item.task instanceof MultiBranchProject) {
-                if (indexingCount() > 5) {
-                    // TODO make the limit configurable
-                    return CauseOfBlockage.fromMessage(Messages._MultiBranchProject_MaxConcurrentIndexing());
-                }
-            }
-            return null;
-        }
-
-        /**
-         * Gets the number of current indexing tasks.
-         *
-         * @return number of current indexing tasks.
-         */
-        public int indexingCount() {
-            Jenkins j = Jenkins.getInstance();
-            if (j == null) {
-                return 0;
-            }
-            int result = indexingCount(j);
-            for (Node n : j.getNodes()) {
-                result += indexingCount(n);
-            }
-            return result;
-        }
-
-        /**
-         * Gets the number of current indexing tasks on the specified node.
-         *
-         * @param node the node.
-         * @return number of current indexing tasks on the specified node.
-         */
-        public int indexingCount(@CheckForNull Node node) {
-            int result = 0;
-            @CheckForNull
-            Computer computer = node == null ? null : node.toComputer();
-            if (computer != null) { // not all nodes will have a computer
-                for (Executor e : computer.getExecutors()) {
-                    Queue.Executable executable = e.getCurrentExecutable();
-                    if (executable != null && executable.getParent() instanceof MultiBranchProject) {
-                        result++;
-                    }
-                }
-                for (Executor e : computer.getOneOffExecutors()) {
-                    Queue.Executable executable = e.getCurrentExecutable();
-                    if (executable != null && executable.getParent() instanceof MultiBranchProject) {
-                        result++;
-                    }
-                }
-            }
-            return result;
-        }
     }
 
     /**
