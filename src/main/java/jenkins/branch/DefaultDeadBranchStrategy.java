@@ -37,12 +37,12 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
@@ -94,6 +94,7 @@ public class DefaultDeadBranchStrategy extends DeadBranchStrategy {
     public DefaultDeadBranchStrategy(boolean pruneDeadBranches, @CheckForNull String daysToKeepStr,
                                      @CheckForNull String numToKeepStr) {
         this.pruneDeadBranches = pruneDeadBranches;
+        // TODO in lieu of DeadBranchCleanupThread, introduce a form warning if daysToKeep < IndexAtLeastTrigger.interval
         this.daysToKeep = pruneDeadBranches ? fromString(daysToKeepStr) : -1;
         this.numToKeep = pruneDeadBranches ? fromString(numToKeepStr) : -1;
     }
@@ -193,13 +194,13 @@ public class DefaultDeadBranchStrategy extends DeadBranchStrategy {
      * {@inheritDoc}
      */
     public <P extends Job<P, R> & TopLevelItem,
-            R extends Run<P, R>> void runDeadBranchCleanup(TaskListener listener,
-                                                                     Map<String, P> deadBranches)
+            R extends Run<P, R>> Collection<P> runDeadBranchCleanup(Collection<P> deadBranches, TaskListener listener)
             throws IOException, InterruptedException {
+        List<P> toRemove = new ArrayList<P>();
         final MultiBranchProject<P, R> owner = (MultiBranchProject<P, R>) getOwner();
         LOGGER.log(FINE, "Running the dead branch cleanup for " + owner.getFullDisplayName());
         if (pruneDeadBranches && (numToKeep != -1 || daysToKeep != -1)) {
-            List<P> candidates = new ArrayList<P>(deadBranches.values());
+            List<P> candidates = new ArrayList<P>(deadBranches);
             Collections.sort(candidates, new Comparator<P>() {
                 public int compare(P o1, P o2) {
                     // most recent build first
@@ -229,8 +230,7 @@ public class DefaultDeadBranchStrategy extends DeadBranchStrategy {
                         continue;
                     }
                     LOGGER.log(FINER, project.getFullDisplayName() + " is to be removed");
-                    project.delete();
-                    owner.onDeleted(project);
+                    toRemove.add(project);
                     iterator.remove();
                 }
             }
@@ -246,12 +246,12 @@ public class DefaultDeadBranchStrategy extends DeadBranchStrategy {
                         continue;
                     }
                     LOGGER.log(FINER, project.getFullDisplayName() + " is to be removed");
-                    project.delete();
-                    owner.onDeleted(project);
-                    iterator.remove();
+                    toRemove.add(project);
+                    iterator.remove(); // not actually necessary here, could use a simple for-loop
                 }
             }
         }
+        return toRemove;
     }
 
     /**

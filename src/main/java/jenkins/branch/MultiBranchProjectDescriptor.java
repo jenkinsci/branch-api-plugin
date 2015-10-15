@@ -23,6 +23,7 @@
  */
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
@@ -39,7 +40,7 @@ import java.util.List;
  *
  * @author Stephen Connolly
  */
-public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescriptor {
+public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescriptor {
 
     /**
      * We have to extend {@link TopLevelItemDescriptor} but we want to be able to access {@link #clazz} as a

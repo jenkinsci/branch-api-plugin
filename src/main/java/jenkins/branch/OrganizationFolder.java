@@ -25,6 +25,7 @@
 package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
+import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -34,10 +35,10 @@ import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.util.DescribableList;
+import hudson.util.PersistedList;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -98,8 +99,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         projectFactories.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
     }
 
-    @Override protected Map<String,MultiBranchProject<?,?>> computeChildren(final TaskListener listener) throws IOException, InterruptedException {
-        final Map<String,MultiBranchProject<?,?>> projects = new HashMap<String,MultiBranchProject<?,?>>();
+    @Override protected void computeChildren(final ChildObserver<MultiBranchProject<?,?>> observer, final TaskListener listener) throws IOException, InterruptedException {
         for (SCMNavigator navigator : navigators) {
             if (Thread.interrupted()) {
                 throw new InterruptedException();
@@ -113,21 +113,38 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     return listener;
                 }
                 @Override public SCMSourceObserver.ProjectObserver observe(final String projectName) {
-                    if (projects.containsKey(projectName)) {
-                        throw new IllegalArgumentException("Will not create duplicate subproject named " + projectName);
-                    }
                     return new ProjectObserver() {
                         List<SCMSource> sources = new ArrayList<SCMSource>();
                         @Override public void addSource(SCMSource source) {
                             sources.add(source);
                             source.setOwner(OrganizationFolder.this);
                         }
+                        private List<BranchSource> createBranchSources() {
+                            if (sources == null) {
+                                throw new IllegalStateException();
+                            }
+                            List<BranchSource> branchSources = new ArrayList<BranchSource>();
+                            for (SCMSource source : sources) {
+                                // TODO we probably need to define a BranchPropertyStrategyFactory (cf. JENKINS-22242)
+                                branchSources.add(new BranchSource(source, new DefaultBranchPropertyStrategy(new BranchProperty[0])));
+                            }
+                            sources = null; // make sure complete gets called just once
+                            return branchSources;
+                        }
                         @Override public void addAttribute(String key, Object value) throws IllegalArgumentException, ClassCastException {
                             throw new IllegalArgumentException();
                         }
                         @Override public void complete() throws IllegalStateException, InterruptedException {
-                            if (sources == null) {
-                                throw new IllegalStateException();
+                            MultiBranchProject<?,?> existing = observer.shouldUpdate(projectName);
+                            if (existing != null) {
+                                PersistedList<BranchSource> sourcesList = existing.getSourcesList();
+                                sourcesList.clear();
+                                sourcesList.addAll(createBranchSources());
+                                return;
+                            }
+                            if (!observer.mayCreate(projectName)) {
+                                listener.getLogger().println("Ignoring duplicate child " + projectName);
+                                return;
                             }
                             for (MultiBranchProjectFactory factory : projectFactories) {
                                 MultiBranchProject<?, ?> project;
@@ -140,12 +157,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     continue;
                                 }
                                 if (project != null) {
-                                    List<BranchSource> branchSources = project.getSourcesList();
-                                    for (SCMSource source : sources) {
-                                        // TODO we probably need to define a BranchPropertyFactory
-                                        branchSources.add(new BranchSource(source, new DefaultBranchPropertyStrategy(new BranchProperty[0])));
-                                    }
-                                    projects.put(projectName, project);
+                                    project.getSourcesList().addAll(createBranchSources());
+                                    observer.created(project);
+                                    project.scheduleBuild();
                                     break;
                                 }
                             }
@@ -157,18 +171,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 }
             });
         }
-        return projects;
     }
 
-    @Override protected void afterNewItemCreated(MultiBranchProject<?,?> item) {
-        item.scheduleBuild(null);
-    }
-
-    @Override protected void updateExistingItem(MultiBranchProject<?,?> existing, MultiBranchProject<?,?> replacement) {
-        existing.getSourcesList().clear();
-        existing.getSourcesList().addAll(replacement.getSourcesList());
-    }
-
+    // TODO override orphanedItems if creating OrphanedItemStrategy
+    
     @Override public List<SCMSource> getSCMSources() {
         return Collections.emptyList(); // irrelevant unless onSCMSourceUpdated implemented
     }

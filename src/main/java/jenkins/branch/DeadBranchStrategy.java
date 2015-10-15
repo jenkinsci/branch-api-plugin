@@ -23,6 +23,7 @@
  */
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Job;
@@ -31,7 +32,7 @@ import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.Collection;
 
 /**
  * A strategy for removing {@link Branch} projects after they no longer have a source in their
@@ -45,8 +46,9 @@ public abstract class DeadBranchStrategy extends AbstractDescribableImpl<DeadBra
      */
     private transient MultiBranchProject<?, ?> owner;
 
+    /** parameters and return value as in {@link ComputedFolder#orphanedItems} */
     public abstract <P extends Job<P, R> & TopLevelItem, R extends Run<P, R>>
-    void runDeadBranchCleanup(TaskListener listener, Map<String, P> deadBranches) throws IOException,
+    Collection<P> runDeadBranchCleanup(Collection<P> deadBranches, TaskListener listener) throws IOException,
             InterruptedException;
 
     /**

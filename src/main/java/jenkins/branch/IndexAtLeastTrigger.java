@@ -164,7 +164,7 @@ public class IndexAtLeastTrigger<P extends Job<P, R> & TopLevelItem,
     public void run() {
         MultiBranchProject.BranchIndexing<P, R> indexing = job.getIndexing();
         if (indexing != null) {
-            long delay = System.currentTimeMillis() - indexing.getTimeInMillis();
+            long delay = System.currentTimeMillis() - indexing.getTimestamp().getTimeInMillis();
             if (delay < interval) {
                 return;
             }
