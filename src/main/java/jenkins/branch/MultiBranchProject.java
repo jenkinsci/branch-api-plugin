@@ -28,29 +28,22 @@ import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.Extension;
 import hudson.Util;
 import hudson.XmlFile;
-import hudson.model.Describable;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Items;
 import hudson.model.Job;
-import hudson.model.PeriodicWork;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
-import hudson.scheduler.CronTabList;
 import hudson.scm.PollingResult;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.triggers.SCMTrigger;
-import hudson.triggers.Trigger;
-import hudson.triggers.TriggerDescriptor;
 import hudson.util.PersistedList;
-import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadObserver;
 import jenkins.scm.api.SCMRevision;
@@ -69,16 +62,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
-import java.util.Map;
-import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.ParameterizedJobMixIn;
@@ -118,11 +105,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * The factory for building child job instances.
      */
     private BranchProjectFactory<P, R> factory;
-
-    /**
-     * List of all {@link Trigger}s for this project.
-     */
-    private List<Trigger<?>> triggers = new Vector<Trigger<?>>();
 
     /**
      * Constructor, mandated by {@link TopLevelItem}.
@@ -165,13 +147,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         deadBranchStrategy.setOwner(this);
         final BranchProjectFactory<P, R> factory = getProjectFactory();
         factory.setOwner(this);
-        if (triggers == null) {
-            triggers = new Vector<Trigger<?>>();
-        }
-        for (Trigger t : triggers) {
-            //noinspection unchecked
-            t.start(this, false);
-        }
     }
 
     /**
@@ -241,90 +216,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             result.add(source.getSource());
         }
         return result;
-    }
-
-    /**
-     * Adds a new {@link hudson.triggers.Trigger} to this {@link MultiBranchProject} if not active yet.
-     */
-    @SuppressWarnings("unused") // API mirroring of Project
-    public synchronized void addTrigger(Trigger<?> trigger) throws IOException {
-        addToList(trigger, triggers);
-    }
-
-    /**
-     * Removes a new {@link hudson.triggers.Trigger} to this {@link MultiBranchProject} if not active yet.
-     */
-    @SuppressWarnings("unused") // API mirroring of Project
-    public synchronized void removeTrigger(TriggerDescriptor trigger) throws IOException {
-        removeFromList(trigger, triggers);
-    }
-
-    /**
-     * Helper method to add an item to a {@link List} of {@link Describable} instances and maintain the invariant
-     * that there can only be at most one instance of any specific {@link Descriptor}.
-     *
-     * @param item the item to add.
-     * @param list the {@link List} to add to.
-     * @param <T>  the type of {@link Describable} that the {@link List} holds.
-     * @throws IOException if the change to the {@link List} could not be persisted.
-     */
-    private synchronized <T extends Describable<T>>
-    void addToList(T item, List<T> list) throws IOException {
-        for (int i = 0; i < list.size(); i++) {
-            if (list.get(i).getDescriptor() == item.getDescriptor()) {
-                // replace
-                list.set(i, item);
-                save();
-                return;
-            }
-        }
-        // add
-        list.add(item);
-        save();
-    }
-
-    /**
-     * Helper method to remove an item from a {@link List} of {@link Describable} instances by specifying the any
-     * specific {@link Descriptor}.
-     *
-     * @param item the {@link Descriptor} of the item to remove.
-     * @param list the {@link List} to remove from.
-     * @param <T>  the type of {@link Describable} that the {@link List} holds.
-     * @throws IOException if the change to the {@link List} could not be persisted.
-     */
-    private synchronized <T extends Describable<T>>
-    void removeFromList(Descriptor<T> item, List<T> list) throws IOException {
-        for (int i = 0; i < list.size(); i++) {
-            if (list.get(i).getDescriptor() == item) {
-                // found it
-                list.remove(i);
-                save();
-                return;
-            }
-        }
-    }
-
-    /**
-     * Returns the {@link Trigger} as a {@link Map} keyed by {@link TriggerDescriptor}.
-     *
-     * @return the {@link Trigger} as a {@link Map} keyed by {@link TriggerDescriptor}.
-     */
-    @SuppressWarnings("unchecked")
-    public synchronized Map<TriggerDescriptor, Trigger> getTriggers() {
-        return (Map) Descriptor.toMap(triggers);
-    }
-
-    /**
-     * Gets the specific trigger, or null if the property is not configured for this job.
-     */
-    @SuppressWarnings("unused") // API mirroring of Project
-    public <T extends Trigger> T getTrigger(Class<T> clazz) {
-        for (Trigger p : triggers) {
-            if (clazz.isInstance(p)) {
-                return clazz.cast(p);
-            }
-        }
-        return null;
     }
 
     /**
@@ -631,6 +522,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @Override
     protected void submit(StaplerRequest req, StaplerResponse rsp)
             throws IOException, ServletException, Descriptor.FormException {
+        super.submit(req, rsp);
         synchronized (this) {
                 JSONObject json = req.getSubmittedForm();
 
@@ -652,14 +544,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
                 setProjectFactory(req.bindJSON(BranchProjectFactory.class, json.getJSONObject("projectFactory")));
 
-                for (Trigger t : triggers) {
-                    t.stop();
-                }
-                triggers = buildDescribable(req, req.getSubmittedForm(), Trigger.for_(this));
-                for (Trigger t : triggers) {
-                    t.start(this, true);
-                }
-
                 save();
 
                 /* TODO currently ComputedFolder.save always reschedules indexing; could define API to be more discerning
@@ -670,33 +554,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 reindex = !newSourceIds.equals(oldSourceIds);
                 */
         }
-    }
-
-    /**
-     * Builds a list of {@link Describable} instances from the stapler request, the specified {@link JSONObject}
-     * and the list of permitted {@link Descriptor}.
-     *
-     * @param req         the request.
-     * @param data        the {@link JSONObject}.
-     * @param descriptors the allowed {@link Descriptor}s.
-     * @return the {@link List} of corresponding {@link Describable} instances.
-     * @throws Descriptor.FormException if things go wrong.
-     * @throws ServletException         if things go wrong.
-     */
-    private <T extends Describable<T>> List<T> buildDescribable(StaplerRequest req,
-                                                                JSONObject data,
-                                                                List<? extends Descriptor<T>> descriptors)
-            throws Descriptor.FormException, ServletException {
-
-        List<T> r = new Vector<T>();
-        for (Descriptor<T> d : descriptors) {
-            String safeName = d.getJsonSafeClassName();
-            if (req.getParameter(safeName) != null) {
-                T instance = d.newInstance(req, data.getJSONObject(safeName));
-                r.add(instance);
-            }
-        }
-        return r;
     }
 
     /**
@@ -803,94 +660,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @Override
     protected FolderComputation<P> createComputation(FolderComputation<P> previous) {
         return new BranchIndexing<P,R>(this, (BranchIndexing) previous);
-    }
-
-    /**
-     * Runs every minute to check {@link hudson.triggers.TimerTrigger} and schedules build.
-     */
-    @SuppressWarnings("unused") // instantiated by Jenkins
-    @Extension
-    public static class Cron extends PeriodicWork {
-        /**
-         * A calendar to use.
-         */
-        private final Calendar cal = new GregorianCalendar();
-
-        /**
-         * The hack field we want to access.
-         */
-        private final Field tabs;
-
-        /**
-         * Constructor.
-         *
-         * @throws NoSuchFieldException
-         */
-        @SuppressWarnings("unused") // instantiated by Jenkins
-        public Cron() throws NoSuchFieldException {
-            tabs = Trigger.class.getDeclaredField("tabs");
-            tabs.setAccessible(true);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        public long getRecurrencePeriod() {
-            return MIN;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        public void doRun() {
-            while (new Date().getTime() - cal.getTimeInMillis() > 1000) {
-                LOGGER.log(Level.FINE, "cron checking {0}", cal.getTime());
-
-                try {
-                    checkTriggers(cal);
-                } catch (Throwable e) {
-                    LOGGER.log(Level.WARNING, "Cron thread throw an exception", e);
-                    // bug in the code. Don't let the thread die.
-                    e.printStackTrace();
-                }
-
-                cal.add(Calendar.MINUTE, 1);
-            }
-        }
-
-        /**
-         * Checks the triggers.
-         */
-        public void checkTriggers(final Calendar cal) {
-            Jenkins inst = Jenkins.getInstance();
-            if (inst == null) {
-                return;
-            }
-
-            for (MultiBranchProject<?, ?> p : inst.getAllItems(MultiBranchProject.class)) {
-                for (Trigger t : p.getTriggers().values()) {
-                    LOGGER.log(Level.FINE, "cron checking {0}", p.getName());
-
-                    CronTabList tabs;
-                    try {
-                        tabs = (CronTabList) this.tabs.get(t);
-                    } catch (IllegalAccessException e) {
-                        continue;
-                    }
-                    if (tabs.check(cal)) {
-                        LOGGER.log(Level.CONFIG, "cron triggered {0}", p.getName());
-                        try {
-                            t.run();
-                        } catch (Throwable e) {
-                            // t.run() is a plugin, and some of them throw RuntimeException and other things.
-                            // don't let that cancel the polling activity. report and move on.
-                            LOGGER.log(Level.WARNING, t.getClass().getName() + ".run() failed for " + p.getName(), e);
-                        }
-                    }
-                }
-            }
-        }
-
     }
 
     /**
