@@ -368,7 +368,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 _factory.decorate(_factory.setBranch(project, new Branch.Dead(b.getHead(), b.getProperties())));
             }
         }
-        // TODO test what happens when an SCMSource plugin is deleted and reindexing occurs
         return super.orphanedItems(orphaned, listener);
     }
 
