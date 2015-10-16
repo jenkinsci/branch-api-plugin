@@ -68,17 +68,6 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     }
 
     /**
-     * Gets the {@link DeadBranchStrategyDescriptor}s.
-     *
-     * @return the {@link DeadBranchStrategyDescriptor}s.
-     */
-    @SuppressWarnings("unused") // used by stapler
-    @NonNull
-    public List<DeadBranchStrategyDescriptor> getDeadBranchStrategyDescriptors() {
-        return DeadBranchStrategyDescriptor.forProject(getClazz());
-    }
-
-    /**
      * Gets the {@link SCMDescriptor}s, primarily used by {@link jenkins.scm.impl.SingleSCMSource}.
      *
      * @return the {@link SCMDescriptor}s.

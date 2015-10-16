@@ -97,11 +97,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     private transient /*almost final*/ NullSCMSource nullSCMSource;
 
     /**
-     * The branch source for dead branches.
-     */
-    private /*almost final*/ DeadBranchStrategy deadBranchStrategy;
-
-    /**
      * The factory for building child job instances.
      */
     private BranchProjectFactory<P, R> factory;
@@ -141,10 +136,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         for (SCMSource source : getSCMSources()) {
             source.setOwner(this);
         }
-        if (deadBranchStrategy == null) {
-            deadBranchStrategy = new DefaultDeadBranchStrategy();
-        }
-        deadBranchStrategy.setOwner(this);
         final BranchProjectFactory<P, R> factory = getProjectFactory();
         factory.setOwner(this);
     }
@@ -285,17 +276,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         scheduleBuild(0, cause);
     }
 
-    /**
-     * Returns the special dead branch source.
-     *
-     * @return the special dead branch source.
-     */
-    @NonNull
-    @SuppressWarnings("unused") // used by stapler
-    public synchronized DeadBranchStrategy getDeadBranchStrategy() {
-        return deadBranchStrategy;
-    }
-
     @Override
     protected void computeChildren(final ChildObserver<P> observer, final TaskListener listener) throws IOException, InterruptedException {
         final BranchProjectFactory<P, R> _factory = getProjectFactory();
@@ -381,7 +361,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         for (P project : orphaned) {
             if (!_factory.isProject(project)) {
                 listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
-                continue; // TODO better to remove from list passed to DeadBranchStrategy, and return it from here
+                continue; // TODO perhaps better to remove from list passed to super, and return it from here
             }
             Branch b = _factory.getBranch(project);
             if (!(b instanceof Branch.Dead)) {
@@ -389,7 +369,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
         // TODO test what happens when an SCMSource plugin is deleted and reindexing occurs
-        return getDeadBranchStrategy().runDeadBranchCleanup(orphaned, listener);
+        return super.orphanedItems(orphaned, listener);
     }
 
     /**
@@ -537,10 +517,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 for (SCMSource scmSource : getSCMSources()) {
                     scmSource.setOwner(this);
                 }
-
-                deadBranchStrategy =
-                        req.bindJSON(DeadBranchStrategy.class, json.getJSONObject("deadBranchStrategy"));
-                deadBranchStrategy.setOwner(this);
 
                 setProjectFactory(req.bindJSON(BranchProjectFactory.class, json.getJSONObject("projectFactory")));
 
