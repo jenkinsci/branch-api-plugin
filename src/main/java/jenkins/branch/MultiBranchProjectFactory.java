@@ -56,7 +56,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      */
     public abstract @CheckForNull MultiBranchProject<?,?> createProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, @Nonnull TaskListener listener) throws IOException, InterruptedException;
     
-    @Override public MultiBranchProjectFactoryDescriptor getDescriptor() {
+    @Override
+    public MultiBranchProjectFactoryDescriptor getDescriptor() {
         return (MultiBranchProjectFactoryDescriptor) super.getDescriptor();
     }
 
@@ -86,7 +87,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          */
         protected abstract @Nonnull MultiBranchProject<?,?> doCreateProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull Map<String,Object> attributes);
 
-        @Override public final MultiBranchProject<?,?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, final TaskListener listener) throws IOException, InterruptedException {
+        @Override
+        public final MultiBranchProject<?,?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, final TaskListener listener) throws IOException, InterruptedException {
             for (final SCMSource scmSource : scmSources) {
                 SCMSourceOwner owner = scmSource.getOwner();
                 if (!(owner instanceof SCMSourceOwnerHack)) {
@@ -95,7 +97,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
                 boolean empty;
                 try {
                     empty = ((SCMSourceOwnerHack) owner).withSCMSourceCriteria(scmSource, getSCMSourceCriteria(scmSource), new Callable<Boolean>() {
-                        @Override public Boolean call() throws Exception {
+                        @Override
+                        public Boolean call() throws Exception {
                             return scmSource.fetch(listener).isEmpty();
                         }
                     });

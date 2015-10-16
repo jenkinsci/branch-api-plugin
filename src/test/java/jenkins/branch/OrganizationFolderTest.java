@@ -44,9 +44,11 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 public class OrganizationFolderTest {
 
-    @Rule public JenkinsRule r = new JenkinsRule();
+    @Rule
+    public JenkinsRule r = new JenkinsRule();
     
-    @Test public void configRoundTrip() throws Exception {
+    @Test
+    public void configRoundTrip() throws Exception {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
         assertEquals(1, projectFactories.size());
@@ -63,11 +65,14 @@ public class OrganizationFolderTest {
         assertEquals(MockFactory.class, projectFactories.get(0).getClass());
         assertEquals(MockFactory.class, projectFactories.get(1).getClass());
     }
-    @TestExtension("configRoundTrip") public static class ConfigRoundTripDescriptor extends MockFactoryDescriptor {}
+    @TestExtension("configRoundTrip")
+    public static class ConfigRoundTripDescriptor extends MockFactoryDescriptor {}
 
     public static class MockFactory extends MultiBranchProjectFactory {
-        @DataBoundConstructor public MockFactory() {}
-        @Override public MultiBranchProject<?, ?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String,Object> attributes, TaskListener listener) throws IOException, InterruptedException {
+        @DataBoundConstructor
+        public MockFactory() {}
+        @Override
+        public MultiBranchProject<?, ?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String,Object> attributes, TaskListener listener) throws IOException, InterruptedException {
             return null;
         }
     }
@@ -75,10 +80,12 @@ public class OrganizationFolderTest {
         MockFactoryDescriptor() {
             super(MockFactory.class);
         }
-        @Override public MultiBranchProjectFactory newInstance() {
+        @Override
+        public MultiBranchProjectFactory newInstance() {
             return new MockFactory();
         }
-        @Override public String getDisplayName() {
+        @Override
+        public String getDisplayName() {
             return "MockFactory";
         }
     }

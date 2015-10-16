@@ -52,22 +52,26 @@ public class SpecificDescriptor extends TopLevelItemDescriptor {
         this.delegate = delegate;
     }
     
-    @Override public String getId() {
+    @Override
+    public String getId() {
         return OrganizationFolder.class.getName() + "." + delegate.getId(); // must be distinct from OrganizationFolder.DescriptorImpl
     }
     
-    @Override public String getDisplayName() {
+    @Override
+    public String getDisplayName() {
         return delegate.getDisplayName();
     }
 
-    @Override public TopLevelItem newInstance(ItemGroup parent, String name) {
+    @Override
+    public TopLevelItem newInstance(ItemGroup parent, String name) {
         OrganizationFolder p = new OrganizationFolder(parent, name);
         p.getNavigators().add(delegate.newInstance(name));
         return p;
     }
 
     @SuppressWarnings("deprecation") // dynamic registration intentional here
-    @Initializer(after=InitMilestone.PLUGINS_STARTED, before=InitMilestone.EXTENSIONS_AUGMENTED) public static void addSpecificDescriptors() {
+    @Initializer(after=InitMilestone.PLUGINS_STARTED, before=InitMilestone.EXTENSIONS_AUGMENTED)
+    public static void addSpecificDescriptors() {
         if (ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).isEmpty()) {
             return; // nothing like workflow-multibranch installed, so do not even offer this option
         }
@@ -82,9 +86,11 @@ public class SpecificDescriptor extends TopLevelItemDescriptor {
     /**
      * Hides {@link OrganizationFolder.DescriptorImpl}.
      */
-    @Extension public static class HideGeneric extends DescriptorVisibilityFilter {
+    @Extension
+    public static class HideGeneric extends DescriptorVisibilityFilter {
 
-        @Override public boolean filter(Object context, Descriptor descriptor) {
+        @Override
+        public boolean filter(Object context, Descriptor descriptor) {
             if (descriptor instanceof OrganizationFolder.DescriptorImpl && context instanceof View) {
                 return false;
             }

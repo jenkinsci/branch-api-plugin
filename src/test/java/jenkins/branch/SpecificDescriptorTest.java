@@ -45,49 +45,61 @@ import org.jvnet.hudson.test.TestExtension;
 
 public class SpecificDescriptorTest {
 
-    @Rule public JenkinsRule r = new JenkinsRule();
+    @Rule
+    public JenkinsRule r = new JenkinsRule();
     
-    @Test public void noNavigatorNoFactoryInstalled() throws Exception {
+    @Test
+    public void noNavigatorNoFactoryInstalled() throws Exception {
         assertEquals(1, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
         assertEquals(SingleSCMNavigator.DescriptorImpl.class, ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass());
         assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
         assertEquals(Collections.emptyList(), newItemTypes());
     }
 
-    @Test public void someNavigatorNoFactoryInstalled() throws Exception {
+    @Test
+    public void someNavigatorNoFactoryInstalled() throws Exception {
         assertEquals(2, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
         assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
         assertEquals(Collections.emptyList(), newItemTypes());
     }
-    @TestExtension("someNavigatorNoFactoryInstalled") public static class SomeNavigatorNoFactoryInstalledDescriptor extends MockNavigatorDescriptor {}
+    @TestExtension("someNavigatorNoFactoryInstalled")
+    public static class SomeNavigatorNoFactoryInstalledDescriptor extends MockNavigatorDescriptor {}
 
-    @Test public void noNavigatorSomeFactoryInstalled() throws Exception {
+    @Test
+    public void noNavigatorSomeFactoryInstalled() throws Exception {
         assertEquals(1, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
         assertEquals(SingleSCMNavigator.DescriptorImpl.class, ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass());
         assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
         assertEquals(Collections.emptyList(), newItemTypes());
     }
-    @TestExtension("noNavigatorSomeFactoryInstalled") public static class NoNavigatorSomeFactoryInstalledDescriptor extends OrganizationFolderTest.MockFactoryDescriptor {}
+    @TestExtension("noNavigatorSomeFactoryInstalled")
+    public static class NoNavigatorSomeFactoryInstalledDescriptor extends OrganizationFolderTest.MockFactoryDescriptor {}
 
-    @Test public void someNavigatorSomeFactoryInstalled() throws Exception {
+    @Test
+    public void someNavigatorSomeFactoryInstalled() throws Exception {
         assertEquals(2, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
         assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
         assertEquals(Collections.singletonList("MockNavigator"), newItemTypes());
     }
-    @TestExtension("someNavigatorSomeFactoryInstalled") public static class SomeNavigatorSomeFactoryInstalledDescriptor1 extends MockNavigatorDescriptor {}
-    @TestExtension("someNavigatorSomeFactoryInstalled") public static class SomeNavigatorSomeFactoryInstalledDescriptor2 extends OrganizationFolderTest.MockFactoryDescriptor {}
+    @TestExtension("someNavigatorSomeFactoryInstalled")
+    public static class SomeNavigatorSomeFactoryInstalledDescriptor1 extends MockNavigatorDescriptor {}
+    @TestExtension("someNavigatorSomeFactoryInstalled")
+    public static class SomeNavigatorSomeFactoryInstalledDescriptor2 extends OrganizationFolderTest.MockFactoryDescriptor {}
 
     private static class MockNavigator extends SCMNavigator {
-        @Override public void visitSources(SCMSourceObserver observer) throws IOException, InterruptedException {}
+        @Override
+        public void visitSources(SCMSourceObserver observer) throws IOException, InterruptedException {}
     }
     private static abstract class MockNavigatorDescriptor extends SCMNavigatorDescriptor {
         MockNavigatorDescriptor() {
             super(MockNavigator.class);
         }
-        @Override public SCMNavigator newInstance(String name) {
+        @Override
+        public SCMNavigator newInstance(String name) {
             return new MockNavigator();
         }
-        @Override public String getDisplayName() {
+        @Override
+        public String getDisplayName() {
             return "MockNavigator";
         }
     }

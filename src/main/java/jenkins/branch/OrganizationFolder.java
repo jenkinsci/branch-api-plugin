@@ -69,7 +69,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         super(parent, name);
     }
 
-    @Override public void onCreatedFromScratch() {
+    @Override
+    public void onCreatedFromScratch() {
         super.onCreatedFromScratch();
         for (MultiBranchProjectFactoryDescriptor d : ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class)) {
             MultiBranchProjectFactory f = d.newInstance();
@@ -79,7 +80,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
     }
 
-    @Override public void onLoad(ItemGroup<? extends Item> parent, String name) throws IOException {
+    @Override
+    public void onLoad(ItemGroup<? extends Item> parent, String name) throws IOException {
         super.onLoad(parent, name);
         navigators.setOwner(this);
         projectFactories.setOwner(this);
@@ -94,29 +96,35 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         return projectFactories;
     }
 
-    @Override protected void submit(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, Descriptor.FormException {
+    @Override
+    protected void submit(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, Descriptor.FormException {
         super.submit(req, rsp);
         navigators.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(SCMNavigatorDescriptor.class), "navigators");
         projectFactories.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
     }
 
-    @Override protected void computeChildren(final ChildObserver<MultiBranchProject<?,?>> observer, final TaskListener listener) throws IOException, InterruptedException {
+    @Override
+    protected void computeChildren(final ChildObserver<MultiBranchProject<?,?>> observer, final TaskListener listener) throws IOException, InterruptedException {
         for (SCMNavigator navigator : navigators) {
             if (Thread.interrupted()) {
                 throw new InterruptedException();
             }
             listener.getLogger().format("Consulting %s%n", navigator.getDescriptor().getDisplayName());
             navigator.visitSources(new SCMSourceObserver() {
-                @Override public SCMSourceOwner getContext() {
+                @Override
+                public SCMSourceOwner getContext() {
                     return OrganizationFolder.this;
                 }
-                @Override public TaskListener getListener() {
+                @Override
+                public TaskListener getListener() {
                     return listener;
                 }
-                @Override public SCMSourceObserver.ProjectObserver observe(final String projectName) {
+                @Override
+                public SCMSourceObserver.ProjectObserver observe(final String projectName) {
                     return new ProjectObserver() {
                         List<SCMSource> sources = new ArrayList<SCMSource>();
-                        @Override public void addSource(SCMSource source) {
+                        @Override
+                        public void addSource(SCMSource source) {
                             sources.add(source);
                             source.setOwner(OrganizationFolder.this);
                         }
@@ -132,10 +140,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             sources = null; // make sure complete gets called just once
                             return branchSources;
                         }
-                        @Override public void addAttribute(String key, Object value) throws IllegalArgumentException, ClassCastException {
+                        @Override
+                        public void addAttribute(String key, Object value) throws IllegalArgumentException, ClassCastException {
                             throw new IllegalArgumentException();
                         }
-                        @Override public void complete() throws IllegalStateException, InterruptedException {
+                        @Override
+                        public void complete() throws IllegalStateException, InterruptedException {
                             MultiBranchProject<?,?> existing = observer.shouldUpdate(projectName);
                             if (existing != null) {
                                 PersistedList<BranchSource> sourcesList = existing.getSourcesList();
@@ -167,36 +177,40 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         }
                     };
                 }
-                @Override public void addAttribute(String key, Object value) throws IllegalArgumentException, ClassCastException {
+                @Override
+                public void addAttribute(String key, Object value) throws IllegalArgumentException, ClassCastException {
                     throw new IllegalArgumentException();
                 }
             });
         }
     }
 
-    // TODO override orphanedItems if creating OrphanedItemStrategy
-    
-    @Override public List<SCMSource> getSCMSources() {
+    @Override
+    public List<SCMSource> getSCMSources() {
         return Collections.emptyList(); // irrelevant unless onSCMSourceUpdated implemented
     }
 
-    @Override public SCMSource getSCMSource(String sourceId) {
+    @Override
+    public SCMSource getSCMSource(String sourceId) {
         return null;
     }
 
-    @Override public void onSCMSourceUpdated(SCMSource source) {
+    @Override
+    public void onSCMSourceUpdated(SCMSource source) {
         // possibly we should recheck whether this project remains valid
     }
 
     private transient Map<SCMSource,ThreadLocal<SCMSourceCriteria>> criteriaBySource = new WeakHashMap<SCMSource,ThreadLocal<SCMSourceCriteria>>();
 
-    @Override public SCMSourceCriteria getSCMSourceCriteria(SCMSource source) {
+    @Override
+    public SCMSourceCriteria getSCMSourceCriteria(SCMSource source) {
         ThreadLocal<SCMSourceCriteria> criteriaTL = criteriaBySource.get(source);
         return criteriaTL != null ? criteriaTL.get() : null;
     }
 
     @SuppressWarnings("SynchronizeOnNonFinalField")
-    @Override public <T> T withSCMSourceCriteria(SCMSource source, SCMSourceCriteria criteria, Callable<T> body) throws Exception {
+    @Override
+    public <T> T withSCMSourceCriteria(SCMSource source, SCMSourceCriteria criteria, Callable<T> body) throws Exception {
         ThreadLocal<SCMSourceCriteria> criteriaTL;
         synchronized (criteriaBySource) {
             criteriaTL = criteriaBySource.get(source);
@@ -214,9 +228,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
     }
     
-    @Extension public static class DescriptorImpl extends AbstractFolderDescriptor {
+    @Extension
+    public static class DescriptorImpl extends AbstractFolderDescriptor {
 
-        @Override public TopLevelItem newInstance(ItemGroup parent, String name) {
+        @Override
+        public TopLevelItem newInstance(ItemGroup parent, String name) {
             return new OrganizationFolder(parent, name);
         }
 
