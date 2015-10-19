@@ -39,8 +39,10 @@ import hudson.util.PersistedList;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.Callable;
 import javax.servlet.ServletException;
@@ -189,7 +191,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
     @Override
     public List<SCMSource> getSCMSources() {
-        return Collections.emptyList(); // irrelevant unless onSCMSourceUpdated implemented
+        // Probably unused unless onSCMSourceUpdated implemented, but just in case:
+        Set<SCMSource> result = new HashSet<SCMSource>();
+        for (MultiBranchProject<?,?> child : getItems()) {
+            result.addAll(child.getSCMSources());
+        }
+        return new ArrayList<SCMSource>(result);
     }
 
     @Override
