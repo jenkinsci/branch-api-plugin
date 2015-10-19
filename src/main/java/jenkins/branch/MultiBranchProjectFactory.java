@@ -54,7 +54,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @param listener a way of reporting progress
      * @return a new uninitialized multibranch project (do not configure its {@link MultiBranchProject#getSourcesList} or call {@link MultiBranchProject#onCreatedFromScratch}), or null if unrecognized
      */
-    public abstract @CheckForNull MultiBranchProject<?,?> createProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, @Nonnull TaskListener listener) throws IOException, InterruptedException;
+    @CheckForNull
+    public abstract MultiBranchProject<?,?> createProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, @Nonnull TaskListener listener) throws IOException, InterruptedException;
     
     @Override
     public MultiBranchProjectFactoryDescriptor getDescriptor() {
@@ -76,7 +77,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          * @param source a repository
          * @return criteria for treating its branches as a match
          */
-        protected abstract @Nonnull SCMSourceCriteria getSCMSourceCriteria(@Nonnull SCMSource source);
+        @Nonnull
+        protected abstract SCMSourceCriteria getSCMSourceCriteria(@Nonnull SCMSource source);
 
         /**
          * Creates a project given that there seems to be a match.
@@ -85,7 +87,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          * @param attributes a set of metadata attributes as added by {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addAttribute}
          * @return a new project suitable for {@link #createProject}
          */
-        protected abstract @Nonnull MultiBranchProject<?,?> doCreateProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull Map<String,Object> attributes);
+        @Nonnull
+        protected abstract MultiBranchProject<?,?> doCreateProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull Map<String,Object> attributes);
 
         @Override
         public final MultiBranchProject<?,?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, final TaskListener listener) throws IOException, InterruptedException {

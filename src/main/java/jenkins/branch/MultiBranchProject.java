@@ -276,6 +276,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         scheduleBuild(0, cause);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void computeChildren(final ChildObserver<P> observer, final TaskListener listener) throws IOException, InterruptedException {
         final BranchProjectFactory<P, R> _factory = getProjectFactory();
@@ -355,6 +358,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected Collection<P> orphanedItems(Collection<P> orphaned, TaskListener listener) throws IOException, InterruptedException {
         BranchProjectFactory<P, R> _factory = getProjectFactory();
@@ -406,6 +412,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         return getItem(name);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ACL getACL() {
         final ACL acl = super.getACL();
@@ -491,12 +500,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * Accepts submission from the configuration page.
-     *
-     * @param req request.
-     * @param rsp response.
-     * @throws IOException      if things go wrong.
-     * @throws ServletException if things go wrong.
+     * {@inheritDoc}
      */
     @Override
     protected void submit(StaplerRequest req, StaplerResponse rsp)
@@ -617,9 +621,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * Returns {@code true} if and only if this project can be indexed.
-     *
-     * @return {@code true} if and only if this project can be indexed.
+     * {@inheritDoc}
      */
     @Override
     public boolean isBuildable() {

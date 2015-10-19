@@ -69,6 +69,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         super(parent, name);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void onCreatedFromScratch() {
         super.onCreatedFromScratch();
@@ -80,6 +81,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public void onLoad(ItemGroup<? extends Item> parent, String name) throws IOException {
         super.onLoad(parent, name);
@@ -197,7 +199,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
     @Override
     public void onSCMSourceUpdated(SCMSource source) {
-        // possibly we should recheck whether this project remains valid
+        // TODO possibly we should recheck whether this project remains valid
     }
 
     private transient Map<SCMSource,ThreadLocal<SCMSourceCriteria>> criteriaBySource = new WeakHashMap<SCMSource,ThreadLocal<SCMSourceCriteria>>();

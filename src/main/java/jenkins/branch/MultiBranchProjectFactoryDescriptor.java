@@ -43,6 +43,7 @@ public abstract class MultiBranchProjectFactoryDescriptor extends Descriptor<Mul
      * Creates a factory instance with a default configuration.
      * @return a default factory, or null to not registered this factory by default
      */
-    public abstract @CheckForNull MultiBranchProjectFactory newInstance();
+    @CheckForNull
+    public abstract MultiBranchProjectFactory newInstance();
 
 }
