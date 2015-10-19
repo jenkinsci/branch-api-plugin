@@ -69,6 +69,7 @@ public class SpecificDescriptor extends TopLevelItemDescriptor {
         return p;
     }
 
+    // TODO better for DescriptorVisibilityFilter to allow items to be added as well as removed
     @SuppressWarnings("deprecation") // dynamic registration intentional here
     @Initializer(after=InitMilestone.PLUGINS_STARTED, before=InitMilestone.EXTENSIONS_AUGMENTED)
     public static void addSpecificDescriptors() {
