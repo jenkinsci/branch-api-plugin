@@ -1,7 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
  ~ The MIT License
  ~
- ~ Copyright (c) 2004-2013, Sun Microsystems, Inc., Kohsuke Kawaguchi, CloudBees, Inc.
+ ~ Copyright (c) 2015, CloudBees, Inc.
  ~
  ~ Permission is hereby granted, free of charge, to any person obtaining a copy
  ~ of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +21,6 @@
  ~ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  ~ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  ~ THE SOFTWARE.
--->
-
-<!--
-  Used to asynchronously update executor queue
--->
+ -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:s="/lib/form">
-  <l:ajax>
-    <t:executors computers="${it.project.primaryView.computers}"/>
-  </l:ajax>
-</j:jelly>
+<j:jelly xmlns:j="jelly:core"/>

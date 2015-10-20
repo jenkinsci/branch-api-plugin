@@ -23,6 +23,7 @@
  */
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
@@ -39,7 +40,7 @@ import java.util.List;
  *
  * @author Stephen Connolly
  */
-public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescriptor {
+public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescriptor {
 
     /**
      * We have to extend {@link TopLevelItemDescriptor} but we want to be able to access {@link #clazz} as a
@@ -64,17 +65,6 @@ public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescripto
     @NonNull
     public List<SCMSourceDescriptor> getSCMSourceDescriptors(boolean onlyUserInstantiable) {
         return SCMSourceDescriptor.forOwner(getClazz(), onlyUserInstantiable);
-    }
-
-    /**
-     * Gets the {@link DeadBranchStrategyDescriptor}s.
-     *
-     * @return the {@link DeadBranchStrategyDescriptor}s.
-     */
-    @SuppressWarnings("unused") // used by stapler
-    @NonNull
-    public List<DeadBranchStrategyDescriptor> getDeadBranchStrategyDescriptors() {
-        return DeadBranchStrategyDescriptor.forProject(getClazz());
     }
 
     /**
@@ -111,10 +101,6 @@ public abstract class MultiBranchProjectDescriptor extends TopLevelItemDescripto
     @SuppressWarnings({"unused", "unchecked"}) // used by stapler
     @NonNull
     public Descriptor<BranchSource> getBranchSourceDescriptor() {
-        Jenkins j = Jenkins.getInstance();
-        if (j == null) {
-            throw new IllegalStateException(); // TODO 1.590+ getActiveInstance
-        }
-        return j.getDescriptorOrDie(BranchSource.class);
+        return Jenkins.getActiveInstance().getDescriptorOrDie(BranchSource.class);
     }
 }

@@ -42,6 +42,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * A source code branch.
+ * Not to be subclassed outside this plugin.
  */
 public class Branch {
 
@@ -94,6 +95,7 @@ public class Branch {
      * @return the name of the branch.
      */
     public String getName() {
+        // TODO this could include a uniquifying prefix defined in BranchSource
         return head.getName();
     }
 

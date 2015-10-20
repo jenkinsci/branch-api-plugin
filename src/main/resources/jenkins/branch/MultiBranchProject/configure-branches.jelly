@@ -30,26 +30,4 @@
                                    addCaption="${%Add source}" deleteCaption="${%Delete source}"/>
     </f:block>
   </f:section>
-  <f:section title="${%Branch Retention Strategy}">
-    <j:set var="deadBranchStrategyDescriptors" value="${descriptor.deadBranchStrategyDescriptors}"/>
-    <f:block>
-    <j:choose>
-      <j:when test="${deadBranchStrategyDescriptors.size()==1}">
-        <j:scope>
-            <table name="deadBranchStrategy" width="100%">
-              <j:set var="descriptor" value="${deadBranchStrategyDescriptors.get(0)}"/>
-              <j:set var="instance" value="${it.deadBranchStrategy}"/>
-              <f:invisibleEntry>
-                <input type="hidden" name="stapler-class" value="${descriptor.clazz.name}"/>
-              </f:invisibleEntry>
-              <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true"/>
-            </table>
-        </j:scope>
-      </j:when>
-      <j:otherwise>
-          <f:hetero-radio field="deadBranchStrategy" descriptors="${deadBranchStrategyDescriptors}"/>
-      </j:otherwise>
-    </j:choose>
-    </f:block>
-  </f:section>
 </j:jelly>
