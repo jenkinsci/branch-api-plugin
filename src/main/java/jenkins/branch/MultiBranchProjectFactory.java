@@ -41,7 +41,7 @@ import jenkins.scm.api.SCMSourceOwner;
 
 /**
  * Creates {@link MultiBranchProject}s for repositories where recognized.
- * @since FIXME
+ * @since 0.2-beta-5
  */
 public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<MultiBranchProjectFactory> implements ExtensionPoint {
 

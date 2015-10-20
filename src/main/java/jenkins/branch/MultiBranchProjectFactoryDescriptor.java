@@ -29,7 +29,7 @@ import javax.annotation.CheckForNull;
 
 /**
  * A kind of {@link MultiBranchProjectFactory}.
- * @since FIXME
+ * @since 0.2-beta-5
  */
 public abstract class MultiBranchProjectFactoryDescriptor extends Descriptor<MultiBranchProjectFactory> {
 
