@@ -35,16 +35,17 @@ import hudson.model.queue.QueueTaskDispatcher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.util.TimeUnit2;
-import jenkins.model.Jenkins;
-import org.jvnet.localizer.ResourceBundleHolder;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
+import org.jvnet.localizer.ResourceBundleHolder;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * A branch property that limits how often a specific branch can be built.
@@ -298,6 +299,12 @@ public class RateLimitBranchProperty extends BranchProperty {
         @Extension
         @SuppressWarnings("unused") // instantiated by jenkins
         public static class DescriptorImpl extends JobPropertyDescriptor {
+
+            @Override
+            public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+                JobPropertyImpl prop = (JobPropertyImpl) super.newInstance(req, formData);
+                return prop.getThrottle() != null ? prop : null;
+            }
 
             /**
              * {@inheritDoc}
