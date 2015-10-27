@@ -48,7 +48,6 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
      * @param project the project.
      * @return {@code} true iff this property is relevant with this project instance.
      */
-    @SuppressWarnings("unused") // by stapler
     public boolean isApplicable(@NonNull MultiBranchProject project) {
         return isApplicable(project.getDescriptor());
     }
