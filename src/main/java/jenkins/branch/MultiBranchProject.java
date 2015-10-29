@@ -89,7 +89,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * The user supplied branch sources.
      */
-    private /*almost final*/ PersistedList<BranchSource> sources = new PersistedList<BranchSource>(this);
+    private /*almost final*/ PersistedList<BranchSource> sources = new BranchSourceList(this);
 
     /**
      * The source for dead branches.
@@ -673,6 +673,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         } catch (UnsupportedEncodingException e) {
             throw new IllegalStateException("JLS specification mandates UTF-8 as a supported encoding", e);
         }
+    }
+
+    private static class BranchSourceList extends PersistedList<BranchSource> {
+
+        BranchSourceList(MultiBranchProject<?,?> owner) {
+            super(owner);
+        }
+
+        @Override
+        protected void onModified() throws IOException {
+            super.onModified();
+            for (BranchSource branchSource : this) {
+                branchSource.getSource().setOwner((MultiBranchProject) owner);
+            }
+        }
+
     }
 
 }
