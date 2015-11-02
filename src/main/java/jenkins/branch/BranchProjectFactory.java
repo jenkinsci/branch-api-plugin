@@ -25,12 +25,14 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.ExtensionPoint;
 import hudson.BulkChange;
+import hudson.Extension;
+import hudson.ExtensionPoint;
 import hudson.XmlFile;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.Item;
+import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.Project;
@@ -40,13 +42,16 @@ import hudson.model.TopLevelItem;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.Publisher;
 import hudson.util.DescribableList;
-import jenkins.scm.api.SCMRevision;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMHead.HeadByItem;
+import jenkins.scm.api.SCMRevision;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
 
 /**
  * Creates instances of the branch projects for a specific {@link Branch} and also provides some utility methods for
@@ -228,6 +233,28 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
             bc.abort();
         }
         return project;
+    }
+
+    @Restricted(DoNotUse.class)
+    @Extension
+    public static class HeadByItemImpl extends HeadByItem {
+
+        /** {@inheritDoc} */
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        @Override
+        public SCMHead getHead(Item item) {
+            if (item instanceof Job) {
+                ItemGroup<?> parent = item.getParent();
+                if (parent instanceof MultiBranchProject) {
+                    BranchProjectFactory projectFactory = ((MultiBranchProject) parent).getProjectFactory();
+                    if (projectFactory.isProject(item)) {
+                        return projectFactory.getBranch((Job) item).getHead();
+                    }
+                }
+            }
+            return null;
+        }
+
     }
 
 }
