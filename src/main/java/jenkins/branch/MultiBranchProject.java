@@ -26,6 +26,7 @@ package jenkins.branch;
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
+import com.google.common.collect.ImmutableSet;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Util;
@@ -66,6 +67,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.ParameterizedJobMixIn;
@@ -424,7 +426,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 public boolean hasPermission(Authentication a, Permission permission) {
                     if (ACL.SYSTEM.equals(a)) {
                         return true;
-                    } else if (permission == Item.CONFIGURE || permission == Item.DELETE) {
+                    } else if (SUPPRESSED_PERMISSIONS.contains(permission)) {
                         return false;
                     } else {
                         return acl.hasPermission(a, permission);
@@ -435,6 +437,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return acl;
         }
     }
+    private static final Set<Permission> SUPPRESSED_PERMISSIONS = ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
 
     /**
      * {@inheritDoc}
