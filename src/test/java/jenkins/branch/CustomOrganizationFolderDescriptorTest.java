@@ -43,7 +43,7 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
-public class SpecificDescriptorTest {
+public class CustomOrganizationFolderDescriptorTest {
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
@@ -111,7 +111,7 @@ public class SpecificDescriptorTest {
         // Cf. View/newJob.jelly:
         List<String> names = new ArrayList<String>();
         for (TopLevelItemDescriptor d : DescriptorVisibilityFilter.apply(allView, Items.all())) {
-            if (d.clazz == OrganizationFolder.class || d instanceof SpecificDescriptor) {
+            if (d.clazz == OrganizationFolder.class || d instanceof CustomOrganizationFolderDescriptor) {
                 names.add(d.getDisplayName());
             }
         }
