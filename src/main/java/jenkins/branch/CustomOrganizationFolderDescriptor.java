@@ -43,11 +43,11 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
  */
 @SuppressWarnings("rawtypes") // not our fault
 @Restricted(NoExternalUse.class)
-public class SpecificDescriptor extends TopLevelItemDescriptor {
+public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
 
     public final SCMNavigatorDescriptor delegate;
 
-    SpecificDescriptor(SCMNavigatorDescriptor delegate) {
+    CustomOrganizationFolderDescriptor(SCMNavigatorDescriptor delegate) {
         super(TopLevelItem.class); // do not register as OrganizationFolder
         this.delegate = delegate;
     }
@@ -79,7 +79,7 @@ public class SpecificDescriptor extends TopLevelItemDescriptor {
         TopLevelItemDescriptor.all().size(); // TODO must force ExtensionList.ensureLoaded to be called, else .add adds to both .legacyInstances and .extensions, then later .ensureLoaded adds two copies!
         for (SCMNavigatorDescriptor d : ExtensionList.lookup(SCMNavigatorDescriptor.class)) {
             if (d.newInstance((String) null) != null) {
-                TopLevelItemDescriptor.all().add(new SpecificDescriptor(d));
+                TopLevelItemDescriptor.all().add(new CustomOrganizationFolderDescriptor(d));
             }
         }
     }
