@@ -86,7 +86,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         try {
             addTrigger(new PeriodicFolderTrigger("1d"));
         } catch (ANTLRException x) {
-            assert false : x;
+            throw new IllegalStateException(x);
         }
     }
 
@@ -183,7 +183,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     try {
                                         project.addTrigger(new PeriodicFolderTrigger("1d"));
                                     } catch (ANTLRException x) {
-                                        assert false : x;
+                                        throw new IllegalStateException(x);
                                     }
                                     observer.created(project);
                                     project.scheduleBuild();
