@@ -24,9 +24,11 @@
 
 package jenkins.branch;
 
+import antlr.ANTLRException;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
+import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
@@ -80,6 +82,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             if (f != null) {
                 projectFactories.add(f);
             }
+        }
+        try {
+            addTrigger(new PeriodicFolderTrigger("1d"));
+        } catch (ANTLRException x) {
+            throw new IllegalStateException(x);
         }
     }
 
@@ -173,6 +180,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 }
                                 if (project != null) {
                                     project.getSourcesList().addAll(createBranchSources());
+                                    try {
+                                        project.addTrigger(new PeriodicFolderTrigger("1d"));
+                                    } catch (ANTLRException x) {
+                                        throw new IllegalStateException(x);
+                                    }
                                     observer.created(project);
                                     project.scheduleBuild();
                                     break;
