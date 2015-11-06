@@ -27,6 +27,7 @@ package jenkins.branch;
 import java.io.IOException;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -45,6 +46,7 @@ public class MultibranchImplementationTest {
     public static boolean check = true;
 
     @Test
+    @Ignore("JENKINS-31432 neds to be fixed")
     public void createMultiBranchProjectWithListenerTest() throws IOException {
         j.jenkins.createProject(MultiBranchImpl.class, "test");
         Assert.assertTrue("SCMSourceOwner.getSCMSources() should never throw NullPointerException", check);
