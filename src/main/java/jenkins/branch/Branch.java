@@ -23,22 +23,13 @@
  */
 package jenkins.branch;
 
-import hudson.model.Descriptor;
-import hudson.model.Job;
-import hudson.model.JobProperty;
-import hudson.model.Run;
+import hudson.Util;
 import hudson.scm.NullSCM;
 import hudson.scm.SCM;
-import hudson.tasks.BuildWrapper;
-import hudson.tasks.Publisher;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.impl.NullSCMSource;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * A source code branch.
@@ -97,6 +88,15 @@ public class Branch {
     public String getName() {
         // TODO this could include a uniquifying prefix defined in BranchSource
         return head.getName();
+    }
+
+    /**
+     * Gets a branch name suitable for use in paths.
+     * @return {@link #getName} with URL-unsafe characters escaped
+     * @since FIXME
+     */
+    public String getEncodedName() {
+        return Util.rawEncode(getName());
     }
 
     /**

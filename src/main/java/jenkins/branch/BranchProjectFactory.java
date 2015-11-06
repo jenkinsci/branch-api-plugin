@@ -73,8 +73,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
 
     /**
      * Creates a new branch project.
-     * {@link Item#getName} must match {@link Branch#getName}.
-     * (But TBD about slashes; cf. JENKINS-30744.)
+     * {@link Item#getName} must match {@link Branch#getEncodedName}.
      * @param branch the branch.
      * @return the new branch project instance.
      */
