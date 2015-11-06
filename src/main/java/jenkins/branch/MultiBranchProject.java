@@ -289,8 +289,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 @Override
                 public void observe(@NonNull SCMHead head, @NonNull SCMRevision revision) {
                     Branch branch = newBranch(source, head);
-                    String name = branch.getName();
-                    P project = observer.shouldUpdate(name);
+                    String rawName = branch.getName();
+                    String encodedName = branch.getEncodedName();
+                    P project = observer.shouldUpdate(encodedName);
                     if (project != null) {
                         if (!_factory.isProject(project)) {
                             listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
@@ -319,18 +320,25 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             try {
                                 project.save();
                             } catch (IOException e) {
-                                e.printStackTrace(listener.error("Could not save changes to " + name));
+                                e.printStackTrace(listener.error("Could not save changes to " + rawName));
                             }
                         }
                         return;
                     }
-                    if (!observer.mayCreate(name)) {
-                        listener.getLogger().println("Ignoring duplicate branch project " + name);
+                    if (!observer.mayCreate(encodedName)) {
+                        listener.getLogger().println("Ignoring duplicate branch project " + rawName);
                         return;
                     }
                     project = _factory.newInstance(branch);
-                    if (!project.getName().equals(branch.getName())) {
-                        throw new IllegalStateException("Created project name did not match branch name");
+                    if (!project.getName().equals(encodedName)) {
+                        throw new IllegalStateException("Name of created project " + project + " did not match expected " + encodedName);
+                    }
+                    if (!rawName.equals(encodedName) && project.getDisplayName().equals(encodedName)) {
+                        try {
+                            project.setDisplayName(rawName);
+                        } catch (IOException e) {
+                            e.printStackTrace(listener.error("Could not save changes to " + rawName));
+                        }
                     }
                     _factory.decorate(project);
                     observer.created(project);
@@ -454,7 +462,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @Override
     @NonNull
     public File getRootDirFor(P child) {
-        File dir = new File(getJobsDir(), /* TODO why? cf. JENKINS-30744 */Util.rawEncode(child.getName()));
+        File dir = super.getRootDirFor(child);
         if (!dir.isDirectory() && !dir.mkdirs()) { // TODO is this really necessary?
             LOGGER.log(Level.WARNING, "Could not create directory {0}", dir);
         }
