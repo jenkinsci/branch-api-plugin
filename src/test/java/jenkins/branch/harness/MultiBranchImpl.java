@@ -55,25 +55,11 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
         return new BranchProjectFactoryImpl();
     }
 
-    /*
-    @Override
-    public List<SCMSource> getSCMSources() {
-        if (getSourcesList() == null) {
-            // test code is generating a NullPointer when calling it from an ItemListener on the SCMSourceOwner
-            // It seems that the object is not fully initialized when the ItemListener uses it.
-            // Perhaps it needs to be reproduced and investigated in a branch-api test.
-            return new ArrayList<SCMSource>();
-        }
-        return super.getSCMSources();
-    }
-    */
-
     public static class BranchProjectFactoryImpl extends BranchProjectFactory<FreeStyleProject, FreeStyleBuild> {
 
         @Override
         public FreeStyleProject newInstance(Branch branch) {
             FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getName());
-            job.onCreatedFromScratch();
             FreeStyleProject spied = spy(job);
             // Do nothing.. Running the actual build is not desired/required (and not possible) in this tests.
             when(spied.scheduleBuild()).thenReturn(false);
