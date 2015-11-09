@@ -24,10 +24,6 @@
 
 package jenkins.branch;
 
-import java.io.IOException;
-
-import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -43,13 +39,14 @@ public class MultibranchImplementationTest {
     @Rule
     public JenkinsRule j = new JenkinsRule();
 
-    public static boolean check = true;
+    public static Exception check = null;
 
     @Test
-    @Ignore("JENKINS-31432 needs to be fixed")
-    public void createMultiBranchProjectWithListenerTest() throws IOException {
+    public void createMultiBranchProjectWithListenerTest() throws Exception {
         j.jenkins.createProject(MultiBranchImpl.class, "test");
-        Assert.assertTrue("SCMSourceOwner.getSCMSources() should never throw NullPointerException", check);
+        if (check != null) {
+            throw check;
+        }
     }
 
     @TestExtension
@@ -61,8 +58,7 @@ public class MultibranchImplementationTest {
                 try {
                     ((SCMSourceOwner) item).getSCMSources();
                 } catch (NullPointerException e) {
-                    check = false;
-                    throw e;
+                    check = new Exception(e);
                 }
             }
         }
