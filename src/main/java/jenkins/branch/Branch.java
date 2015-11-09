@@ -93,7 +93,7 @@ public class Branch {
     /**
      * Gets a branch name suitable for use in paths.
      * @return {@link #getName} with URL-unsafe characters escaped
-     * @since FIXME
+     * @since 0.2-beta-7
      */
     public String getEncodedName() {
         return Util.rawEncode(getName());
