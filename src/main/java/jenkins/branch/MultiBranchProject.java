@@ -187,7 +187,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @NonNull
     public List<BranchSource> getSources() {
-        return sources.toList();
+        if (sources != null) {
+            return sources.toList();
+        } else {
+            // return empty, this object is still being constructed
+            return Collections.emptyList();
+        }
     }
 
     /**
@@ -205,9 +210,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @NonNull
     public List<SCMSource> getSCMSources() {
         List<SCMSource> result = new ArrayList<SCMSource>();
-        for (BranchSource source : sources) {
-            result.add(source.getSource());
-        }
+        if (sources != null) {
+            for (BranchSource source : sources) {
+                result.add(source.getSource());
+            }
+        } // else, ok to ignore and return empty, this object is still being constructed
         return result;
     }
 
