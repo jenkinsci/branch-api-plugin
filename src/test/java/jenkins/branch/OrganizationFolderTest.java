@@ -26,17 +26,27 @@ package jenkins.branch;
 
 import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
+import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.impl.SingleSCMNavigator;
 import hudson.scm.NullSCM;
+import hudson.util.RingBufferLogHandler;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMSource;
 import org.junit.Test;
 import static org.junit.Assert.*;
+
+import org.junit.Assert;
 import org.junit.Rule;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
@@ -65,7 +75,23 @@ public class OrganizationFolderTest {
         assertEquals(MockFactory.class, projectFactories.get(0).getClass());
         assertEquals(MockFactory.class, projectFactories.get(1).getClass());
     }
-    @TestExtension("configRoundTrip")
+
+    @Test
+    public void indexChildrenOnOrganizationFolderIndex() throws Exception {
+        OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
+        List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
+        projectFactories.add(new MockFactory());
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
+        top = r.configRoundtrip(top);
+
+        RingBufferLogHandler logs = createJULTestHandler(); // switch to the mock log handler
+
+        top.setDescription("Org folder test");
+        top = r.configRoundtrip(top);
+        waitForLogFileMessage("Indexing multibranch project: stuff", logs);
+    }
+
+    @TestExtension
     public static class ConfigRoundTripDescriptor extends MockFactoryDescriptor {}
 
     public static class MockFactory extends MultiBranchProjectFactory {
@@ -73,7 +99,7 @@ public class OrganizationFolderTest {
         public MockFactory() {}
         @Override
         public MultiBranchProject<?, ?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String,Object> attributes, TaskListener listener) throws IOException, InterruptedException {
-            return null;
+            return new MultiBranchImpl(parent, name);
         }
     }
     static abstract class MockFactoryDescriptor extends MultiBranchProjectFactoryDescriptor {
@@ -88,6 +114,32 @@ public class OrganizationFolderTest {
         public String getDisplayName() {
             return "MockFactory";
         }
+    }
+
+    private RingBufferLogHandler createJULTestHandler() throws SecurityException, IOException {
+        RingBufferLogHandler handler = new RingBufferLogHandler();
+        SimpleFormatter formatter = new SimpleFormatter();
+        handler.setFormatter(formatter);
+        Logger logger = Logger.getLogger(MultiBranchImpl.class.getName());
+        logger.addHandler(handler);
+        return handler;
+    }
+
+    private void waitForLogFileMessage(String string, RingBufferLogHandler logs) throws IOException, InterruptedException {
+        File rootDir = r.jenkins.getRootDir();
+        synchronized (rootDir) {
+            int limit = 0;
+            while (limit < 5) {
+                rootDir.wait(1000);
+                for (LogRecord r : logs.getView()) {
+                    if (r.getMessage().contains(string)) {
+                        return;
+                    }
+                }
+                limit++;
+            }
+        }
+        Assert.assertTrue("Expected log not found: " + string, false);
     }
 
 }
