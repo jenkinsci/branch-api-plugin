@@ -68,12 +68,8 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
         @Override
         public FreeStyleProject newInstance(Branch branch) {
             FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getName());
-            job.onCreatedFromScratch();
-            FreeStyleProject spied = spy(job);
-            // Do nothing.. Running the actual build is not desired/required (and not possible) in this tests.
-            when(spied.scheduleBuild()).thenReturn(false);
-            setBranch(spied, branch);
-            return spied;
+            setBranch(job, branch);
+            return job;
         }
 
         @Override
