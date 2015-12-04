@@ -48,6 +48,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Assert;
 import org.junit.Rule;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -77,6 +78,7 @@ public class OrganizationFolderTest {
     }
 
     @Test
+    @Issue("JENKINS-31516")
     public void indexChildrenOnOrganizationFolderIndex() throws Exception {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
