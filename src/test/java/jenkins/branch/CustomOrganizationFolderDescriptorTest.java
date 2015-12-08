@@ -24,6 +24,7 @@
 
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
 import hudson.ExtensionList;
 import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Items;
@@ -40,6 +41,7 @@ import jenkins.scm.impl.SingleSCMNavigator;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
@@ -85,6 +87,19 @@ public class CustomOrganizationFolderDescriptorTest {
     public static class SomeNavigatorSomeFactoryInstalledDescriptor1 extends MockNavigatorDescriptor {}
     @TestExtension("someNavigatorSomeFactoryInstalled")
     public static class SomeNavigatorSomeFactoryInstalledDescriptor2 extends OrganizationFolderTest.MockFactoryDescriptor {}
+
+    @Issue("JENKINS-31949")
+    @Test
+    public void insideFolder() throws Exception {
+        Folder folder = r.jenkins.createProject(Folder.class, "d");
+        List<String> names = new ArrayList<String>();
+        for (TopLevelItemDescriptor d : DescriptorVisibilityFilter.apply(folder, Items.all())) {
+            if (d.clazz == OrganizationFolder.class || d instanceof CustomOrganizationFolderDescriptor) {
+                names.add(d.getDisplayName());
+            }
+        }
+        assertEquals(Collections.emptyList(), names);
+    }
 
     private static class MockNavigator extends SCMNavigator {
         @Override
