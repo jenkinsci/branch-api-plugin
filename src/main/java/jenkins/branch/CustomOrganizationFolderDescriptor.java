@@ -34,6 +34,7 @@ import hudson.model.ItemGroup;
 import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
 import hudson.model.View;
+import hudson.model.ViewGroup;
 import jenkins.scm.api.SCMNavigatorDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -92,7 +93,7 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
 
         @Override
         public boolean filter(Object context, Descriptor descriptor) {
-            if (descriptor instanceof OrganizationFolder.DescriptorImpl && context instanceof View) {
+            if (descriptor instanceof OrganizationFolder.DescriptorImpl && (context instanceof View || context instanceof ViewGroup)) {
                 return false;
             }
             return true;
