@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Logger;
 
 import hudson.Extension;
 import hudson.model.FreeStyleBuild;
@@ -45,8 +46,9 @@ import jenkins.branch.MultiBranchProjectDescriptor;
 
 public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeStyleBuild> {
 
+    private static final Logger LOGGER = Logger.getLogger(MultiBranchImpl.class.getName());
 
-    protected MultiBranchImpl(ItemGroup parent, String name) {
+    public MultiBranchImpl(ItemGroup parent, String name) {
         super(parent, name);
     }
 
@@ -55,16 +57,19 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
         return new BranchProjectFactoryImpl();
     }
 
+    @Override
+    public boolean scheduleBuild() {
+        LOGGER.info("Indexing multibranch project: " + getDisplayName());
+        return super.scheduleBuild();
+    }
+
     public static class BranchProjectFactoryImpl extends BranchProjectFactory<FreeStyleProject, FreeStyleBuild> {
 
         @Override
         public FreeStyleProject newInstance(Branch branch) {
             FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getName());
-            FreeStyleProject spied = spy(job);
-            // Do nothing.. Running the actual build is not desired/required (and not possible) in this tests.
-            when(spied.scheduleBuild()).thenReturn(false);
-            setBranch(spied, branch);
-            return spied;
+            setBranch(job, branch);
+            return job;
         }
 
         @Override

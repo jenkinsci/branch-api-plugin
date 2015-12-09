@@ -162,6 +162,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 PersistedList<BranchSource> sourcesList = existing.getSourcesList();
                                 sourcesList.clear();
                                 sourcesList.addAll(createBranchSources());
+                                existing.scheduleBuild();
                                 return;
                             }
                             if (!observer.mayCreate(projectName)) {
