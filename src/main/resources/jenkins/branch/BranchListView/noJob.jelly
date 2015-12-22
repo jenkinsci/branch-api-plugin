@@ -1,0 +1,54 @@
+<!--
+The MIT License
+
+Copyright (c) 2004-2014, Sun Microsystems, Inc., Kohsuke Kawaguchi,
+Seiji Sogabe, Matthew DeTullio
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+    <style type="text/css">
+        #noJobDiv {
+            text-align: center;
+            padding: 1em;
+        }
+    </style>
+    <div class="pane-frame">
+        <div id="noJobDiv">
+            <j:choose>
+                <j:when test="${it.owner.items.size() > 0}">
+                    This view currently has no branches associated with it.
+                    <j:if test="${it.hasPermission(it.CONFIGURE)}">
+                        You can <a href="${rootURL}/${it.viewUrl}configure">add some existing branches</a> to this view.
+                    </j:if>
+                </j:when>
+                <j:otherwise>
+                    This project scans branches in your SCM and generates a job for each of them,
+                    but you have no branches configured.
+                    <j:if test="${it.owner.hasPermission(it.owner.CONFIGURE)}">
+                        <a href="${rootURL}/${it.owner.url}configure">Configure the project</a> and then
+                        <a href="${rootURL}/${it.owner.url}indexing">index branches</a> to get started.
+                    </j:if>
+                </j:otherwise>
+            </j:choose>
+        </div>
+    </div>
+</j:jelly>
