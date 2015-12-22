@@ -40,11 +40,13 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
+import hudson.model.ViewDescriptor;
 import hudson.scm.PollingResult;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.triggers.SCMTrigger;
 import hudson.util.PersistedList;
+import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadObserver;
 import jenkins.scm.api.SCMRevision;
@@ -56,7 +58,6 @@ import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-import org.kohsuke.stapler.export.Exported;
 
 import javax.servlet.ServletException;
 import java.io.ByteArrayOutputStream;
@@ -66,6 +67,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -121,7 +123,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     public void onLoad(ItemGroup<? extends Item> parent, String name) throws IOException {
         super.onLoad(parent, name);
         init2();
-
+        migrateViews();
     }
 
     /**
@@ -140,6 +142,45 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         final BranchProjectFactory<P, R> factory = getProjectFactory();
         factory.setOwner(this);
+    }
+
+    /**
+     * Overrides view initialization to use BranchListView instead of AllView.
+     * <br>
+     * {@inheritDoc}
+     */
+    @Override
+    protected void initViews(List<View> views) throws IOException {
+        BranchListView v = new BranchListView("All", this);
+        v.setIncludeRegex(".*");
+        views.add(v);
+        v.save();
+    }
+
+    /**
+     * Deletes all non-compatible views (as defined by {@link #getViewDescriptors()} and adds a {@link BranchListView}
+     * if none are present.
+     *
+     * @throws IOException
+     */
+    private void migrateViews() throws IOException {
+        Set<Class<? extends View>> compatibleViewClasses = new HashSet<Class<? extends View>>();
+        for (ViewDescriptor viewDescriptor : getViewDescriptors()) {
+            compatibleViewClasses.add(viewDescriptor.clazz);
+        }
+
+        // getViews() is a copy, so we can add/delete in the loop
+        for (View v : getViews()) {
+            if (!compatibleViewClasses.contains(v.getClass())) {
+                if (getViews().size() <= 1) {
+                    // Replacement view must be added before attempting to delete the last view
+                    BranchListView newView = new BranchListView("All", this);
+                    newView.setIncludeRegex(".*");
+                    addView(newView);
+                }
+                deleteView(v);
+            }
+        }
     }
 
     /**
@@ -554,28 +595,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Exported
-    @NonNull
-    @SuppressWarnings("unused") // duck API for view container
-    @Override
-    public View getPrimaryView() {
-        if (getItems().isEmpty()) {
-            // when there's no branches to show, switch to the special welcome view
-            return getWelcomeView();
-        }
-        return super.getPrimaryView();
-    }
-
-    /**
-     * Creates a place holder view when there's no active branch indexed.
-     */
-    protected View getWelcomeView() {
-        return new MultiBranchProjectWelcomeView(this);
-    }
-
-    /**
      * Represents the branch indexing job.
      *
      * @param <P> the type of project that the branch projects consist of.
@@ -707,6 +726,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
 
+    }
+
+    /**
+     * Returns a list of ViewDescriptors that we want to use for this project type.  Used by newView.jelly.
+     */
+    public static List<ViewDescriptor> getViewDescriptors() {
+        return Collections.singletonList(
+                (ViewDescriptor) Jenkins.getActiveInstance().getDescriptorByType(BranchListView.DescriptorImpl.class));
     }
 
 }
