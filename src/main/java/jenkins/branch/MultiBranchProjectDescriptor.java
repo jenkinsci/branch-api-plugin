@@ -28,7 +28,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
 import hudson.model.TopLevelItemDescriptor;
-import hudson.scm.SCMDescriptor;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
 
@@ -66,15 +65,6 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     public List<SCMSourceDescriptor> getSCMSourceDescriptors(boolean onlyUserInstantiable) {
         return SCMSourceDescriptor.forOwner(getClazz(), onlyUserInstantiable);
     }
-
-    /**
-     * Gets the {@link SCMDescriptor}s, primarily used by {@link jenkins.scm.impl.SingleSCMSource}.
-     *
-     * @return the {@link SCMDescriptor}s.
-     */
-    @SuppressWarnings("unused") // used by stapler
-    @NonNull
-    public abstract List<SCMDescriptor<?>> getSCMDescriptors();
 
     /**
      * Returns the {@link BranchProjectFactoryDescriptor}s.

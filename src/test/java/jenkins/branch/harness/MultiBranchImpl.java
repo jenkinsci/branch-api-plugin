@@ -24,11 +24,7 @@
 
 package jenkins.branch.harness;
 
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
 import java.io.IOException;
-import java.util.List;
 import java.util.logging.Logger;
 
 import hudson.Extension;
@@ -37,8 +33,6 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.TopLevelItem;
-import hudson.scm.SCM;
-import hudson.scm.SCMDescriptor;
 import jenkins.branch.Branch;
 import jenkins.branch.BranchProjectFactory;
 import jenkins.branch.MultiBranchProject;
@@ -105,11 +99,6 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
         @Override 
         public TopLevelItem newInstance(ItemGroup parent, String name) {
             return new MultiBranchImpl(parent, name);
-        }
-
-        @Override 
-        public List<SCMDescriptor<?>> getSCMDescriptors() {
-            return SCM.all();
         }
     }
 }
