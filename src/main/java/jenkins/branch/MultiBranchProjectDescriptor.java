@@ -35,7 +35,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The {@link Descriptor} for {@link MultiBranchProject}s.
+ * <p>The {@link Descriptor} for {@link MultiBranchProject}s.</p>
+ *
+ * <p>Compatible {@link hudson.scm.SCM}s displayed by {@link jenkins.scm.impl.SingleSCMSource} (via their
+ * {@link hudson.scm.SCMDescriptor}) can be defined by overriding {@link #isApplicable(Descriptor)}:</p>
+ * <pre>
+ * &#64;Override
+ * public boolean isApplicable(Descriptor descriptor) {
+ *     if (descriptor instanceof SCMDescriptor) {
+ *         SCMDescriptor d = (SCMDescriptor) descriptor;
+ *         // Your logic
+ *     }
+ *     return super.isApplicable(descriptor);
+ * }
+ * </pre>
  *
  * @author Stephen Connolly
  */
