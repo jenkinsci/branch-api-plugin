@@ -28,8 +28,8 @@
 
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
-    <artifactId>plugin</artifactId>
-    <version>1.609.1</version>
+    <artifactId>plugin-pom</artifactId>
+    <version>0.1-SNAPSHOT</version>
   </parent>
 
   <artifactId>branch-api</artifactId>
@@ -56,10 +56,6 @@
     </developer>
   </developers>
 
-  <prerequisites>
-    <maven>2.2.1</maven>
-  </prerequisites>
-
   <scm>
     <connection>scm:git:git://github.com/jenkinsci/branch-api-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/branch-api-plugin.git</developerConnection>
@@ -68,9 +64,8 @@
   </scm>
 
   <properties>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jenkins.version>1.609.1</jenkins.version>
+    <hpi-plugin.version>1.106</hpi-plugin.version>
     <maven.findbugs.failure.strict>true</maven.findbugs.failure.strict>
   </properties>
 
