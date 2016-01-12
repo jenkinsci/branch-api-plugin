@@ -28,7 +28,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
 import hudson.model.TopLevelItemDescriptor;
-import hudson.scm.SCMDescriptor;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
 
@@ -36,7 +35,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The {@link Descriptor} for {@link MultiBranchProject}s.
+ * <p>The {@link Descriptor} for {@link MultiBranchProject}s.</p>
+ *
+ * <p>Compatible {@link hudson.scm.SCM}s displayed by {@link jenkins.scm.impl.SingleSCMSource} (via their
+ * {@link hudson.scm.SCMDescriptor}) can be defined by overriding {@link #isApplicable(Descriptor)}:</p>
+ * <pre>
+ * &#64;Override
+ * public boolean isApplicable(Descriptor descriptor) {
+ *     if (descriptor instanceof SCMDescriptor) {
+ *         SCMDescriptor d = (SCMDescriptor) descriptor;
+ *         // Your logic
+ *     }
+ *     return super.isApplicable(descriptor);
+ * }
+ * </pre>
  *
  * @author Stephen Connolly
  */
@@ -66,15 +78,6 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     public List<SCMSourceDescriptor> getSCMSourceDescriptors(boolean onlyUserInstantiable) {
         return SCMSourceDescriptor.forOwner(getClazz(), onlyUserInstantiable);
     }
-
-    /**
-     * Gets the {@link SCMDescriptor}s, primarily used by {@link jenkins.scm.impl.SingleSCMSource}.
-     *
-     * @return the {@link SCMDescriptor}s.
-     */
-    @SuppressWarnings("unused") // used by stapler
-    @NonNull
-    public abstract List<SCMDescriptor<?>> getSCMDescriptors();
 
     /**
      * Returns the {@link BranchProjectFactoryDescriptor}s.
