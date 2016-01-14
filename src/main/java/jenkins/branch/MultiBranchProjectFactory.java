@@ -41,6 +41,10 @@ import jenkins.scm.api.SCMSourceOwner;
 
 /**
  * Creates {@link MultiBranchProject}s for repositories where recognized.
+ * 
+ * Please define a 'getting-started' view for a subclass, if you would like to provide specific information to the user
+ * how to get started using the type of project factory. This view is displayed when there are no subfolders found.
+ *
  * @since 0.2-beta-5
  */
 public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<MultiBranchProjectFactory> implements ExtensionPoint {

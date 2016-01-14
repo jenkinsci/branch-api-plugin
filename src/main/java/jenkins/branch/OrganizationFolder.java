@@ -36,6 +36,7 @@ import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
+import hudson.model.View;
 import hudson.util.DescribableList;
 import hudson.util.PersistedList;
 import java.io.IOException;
@@ -249,7 +250,20 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             criteriaTL.set(old);
         }
     }
-    
+
+    /**
+     * Will create an specialized view when there are no repositories found, which contain a Jenkinsfile
+     * 
+     * {@inheritDoc}
+     */
+    @Override
+    public View getPrimaryView() {
+        if (getItems().isEmpty()) {
+            return new OrganizationFolderEmptyView(this);
+        }
+        return super.getPrimaryView();
+    }
+
     @Extension
     public static class DescriptorImpl extends AbstractFolderDescriptor {
 
