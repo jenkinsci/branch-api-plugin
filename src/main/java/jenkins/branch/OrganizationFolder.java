@@ -253,8 +253,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
     /**
      * Will create an specialized view when there are no repositories found, which contain a Jenkinsfile
-     * 
-     * {@inheritDoc}
      */
     @Override
     public View getPrimaryView() {
