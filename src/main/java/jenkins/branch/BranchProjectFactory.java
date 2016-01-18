@@ -57,6 +57,9 @@ import org.kohsuke.accmod.restrictions.DoNotUse;
  * Creates instances of the branch projects for a specific {@link Branch} and also provides some utility methods for
  * updating the branch specific projects.
  *
+ * Please define a 'getting-started' view for a subclass, if you would like to provide specific information to the user
+ * how to get started using the type of project factory. This view is displayed when there are no subfolders found.
+ *
  * @param <P> the type of the branch projects.
  * @param <R> the type of the builds of the branch projects.
  * @author Stephen Connolly
@@ -84,6 +87,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
      *
      * @throws IOException if issues saving.
      */
+    @Override
     public void save() throws IOException {
         if (owner != null) {
             owner.save();

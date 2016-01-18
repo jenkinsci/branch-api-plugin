@@ -572,7 +572,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * Creates a place holder view when there's no active branch indexed.
      */
     protected View getWelcomeView() {
-        return new MultiBranchProjectWelcomeView(this);
+        return new MultiBranchProjectEmptyView(this);
     }
 
     /**

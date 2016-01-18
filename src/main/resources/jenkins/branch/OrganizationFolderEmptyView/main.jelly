@@ -1,7 +1,7 @@
 <!--
  ~ The MIT License
  ~
- ~ Copyright (c) 2013, CloudBees, Inc.
+ ~ Copyright (c) 2016, CloudBees, Inc.
  ~
  ~ Permission is hereby granted, free of charge, to any person obtaining a copy
  ~ of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,24 @@
  ~ THE SOFTWARE.
  -->
 <?jelly escape-by-default='true'?>
-<st:compress xmlns:st="jelly:stapler">
-  <p>
-    This project scans branches in your SCM and generate a job for each of them,
-    but you have no branches configured.
-    <a href="./configure">Configure the project</a> and then <a href="./indexing">index branches</a> to get started.
-  </p>
-</st:compress>
+<div xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
+  <div style="margin:20px 0;padding:10px 30px 20px 30px;background:#f8f8f8;border-radius:10px;max-width:55em;">
+    <h1>This folder is empty</h1>
+
+    <p>
+      There are no repositories found that contain buildable projects.
+      Organization Folders automatically build and manage repositories
+      that
+      contain recognizable projects.
+    </p>
+
+    <j:forEach var="projectFactory" items="${it.owner.projectFactories}">
+      <st:include it="${projectFactory}" page="getting-started" optional="true" />
+    </j:forEach>
+
+    <p>
+      Please <a href="./configure">configure Project Sources</a> to get started or
+      <a href="./computation">re-run the Folder Computation</a> if the repositories have since been configured.
+    </p>
+  </div>
+</div>
