@@ -23,21 +23,20 @@
  -->
 <?jelly escape-by-default='true'?>
 <div xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-    <div style="margin: 20px 0; padding: 10px 30px 20px 30px; background: #f8f8f8; border-radius: 10px; max-width: 55em;">
-        <h1>This folder is empty</h1>
+  <div style="margin: 20px 0; padding: 10px 30px 20px 30px; background: #f8f8f8; border-radius: 10px; max-width: 55em;">
+    <h1>This folder is empty</h1>
 
-        <p>
-            There are no branches found that contain buildable projects.
-            Jenkins automatically builds and manages projects in branches that
-            contain recognizable projects.
-        </p>
+    <p>
+      There are no branches found that contain buildable projects.
+      Jenkins automatically builds and manages projects in branches that
+      contain recognizable projects.
+    </p>
 
-        <st:include it="${it.owner.projectFactory}" page="getting-started"
-            optional="true" />
+    <st:include it="${it.owner.projectFactory}" page="getting-started" optional="true" />
 
-        <p>
-            <a href="./configure">Configure the project</a> for a buildable repository or
-            <a href="./indexing">re-index branches</a> if the repository has since been configured.
-        </p>
-    </div>
+    <p>
+      <a href="./configure">Configure the project</a> for a buildable repository or
+      <a href="./indexing">re-index branches</a> if the repository has since been configured.
+    </p>
+  </div>
 </div>

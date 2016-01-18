@@ -15,15 +15,16 @@
     DEALINGS IN ~ THE SOFTWARE. -->
 
 <?jelly escape-by-default='true'?>
-<st:compress xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
-    <l:layout title="${%Welcome}">
-        <j:set var="view" value="${it}" />
-        <!-- expose view to the scripts we include from owner -->
-        <st:include page="sidepanel.jelly" />
+<st:compress xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+    xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
+  <l:layout title="${%Welcome}">
+    <j:set var="view" value="${it}" />
+    <!-- expose view to the scripts we include from owner -->
+    <st:include page="sidepanel.jelly" />
 
-        <l:main-panel>
-            <st:include page="view-index-top.jelly" it="${it.owner}" />
-            <st:include page="main.jelly" />
-        </l:main-panel>
-    </l:layout>
+    <l:main-panel>
+      <st:include page="view-index-top.jelly" it="${it.owner}" />
+      <st:include page="main.jelly" />
+    </l:main-panel>
+  </l:layout>
 </st:compress>
