@@ -65,6 +65,7 @@
 
   <properties>
     <jenkins.version>1.609.1</jenkins.version>
+    <jenkins-test-harness.version>1.609.1</jenkins-test-harness.version>
     <!-- TODO check if we'd better add the PI. -->
     <jelly.requirePI>false</jelly.requirePI>
     <java.level>6</java.level>
