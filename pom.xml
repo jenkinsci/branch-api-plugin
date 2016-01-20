@@ -28,8 +28,8 @@
 
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
-    <artifactId>plugin-pom</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <artifactId>plugin</artifactId>
+    <version>2.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>branch-api</artifactId>
@@ -66,8 +66,6 @@
   <properties>
     <jenkins.version>1.609.1</jenkins.version>
     <jenkins-test-harness.version>1.609.1</jenkins-test-harness.version>
-    <!-- TODO check if we'd better add the PI. -->
-    <jelly.requirePI>false</jelly.requirePI>
     <java.level>6</java.level>
   </properties>
 
@@ -75,12 +73,6 @@
     <repository>
       <id>repo.jenkins-ci.org</id>
       <url>http://repo.jenkins-ci.org/public/</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
     </repository>
   </repositories>
 
@@ -88,12 +80,6 @@
     <pluginRepository>
       <id>repo.jenkins-ci.org</id>
       <url>http://repo.jenkins-ci.org/public/</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
     </pluginRepository>
   </pluginRepositories>
 
@@ -111,6 +97,7 @@
     </dependency>
     <!-- jenkins dependencies -->
     <!-- test dependencies -->
+    <!-- Must repeat junit here to get the right hamcrest version -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
