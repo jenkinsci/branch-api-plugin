@@ -181,7 +181,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * Decorates the project in with all the {@link BranchProperty#decorator(hudson.model.Job)} instances.
+     * Decorates the project in with all the {@link JobDecorator} instances.
      * NOTE: This method should suppress saving the project and only affect the in-memory state.
      * NOTE: Override if the default strategy is not appropriate for the specific project type.
      *

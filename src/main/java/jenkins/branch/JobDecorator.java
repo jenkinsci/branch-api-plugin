@@ -28,6 +28,8 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.Run;
+import hudson.tasks.BuildWrapper;
+import hudson.tasks.Publisher;
 import java.util.List;
 
 /**
@@ -57,8 +59,8 @@ public class JobDecorator<P extends Job<P, B>, B extends Run<P, B>> {
      * <li>Don't try to manipulate the {@link JobProperty} instances in the job, use
      * {@link #jobProperties(List)} instead.</li>
      * <li>Don't try to manipulate the {@link BuildWrapper} instances in the job, use
-     * {@link #buildWrappers(List)} instead.</li>
-     * <li>Don't try to manipulate the {@link Publisher} instances in the job, use {@link #publishers(java.util.List)}
+     * {@link ProjectDecorator#buildWrappers(List)} instead.</li>
+     * <li>Don't try to manipulate the {@link Publisher} instances in the job, use {@link ProjectDecorator#publishers(java.util.List)}
      * instead.</li>
      * </ul>
      * In general, this method should be seen as a final hook for use in those cases where the existing hooks
