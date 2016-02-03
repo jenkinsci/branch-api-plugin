@@ -32,6 +32,7 @@ import jenkins.scm.api.SCMSourceDescriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.List;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * A source of branches, which consists of a source and a strategy for creating properties of the branches from this
@@ -48,16 +49,14 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
     /**
      * The strategy.
      */
-    private final BranchPropertyStrategy strategy;
+    private BranchPropertyStrategy strategy;
 
-    /**
-     * Stapler's constructor.
-     *
-     * @param source   the source.
-     * @param strategy the strategy.
-     */
     @DataBoundConstructor
-    @SuppressWarnings("unused")
+    public BranchSource(SCMSource source) {
+        this.source = source;
+    }
+
+    @Deprecated
     public BranchSource(SCMSource source, BranchPropertyStrategy strategy) {
         this.source = source;
         this.strategy = strategy;
@@ -78,7 +77,12 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
      * @return the strategy.
      */
     public BranchPropertyStrategy getStrategy() {
-        return strategy;
+        return strategy != null ? strategy : new DefaultBranchPropertyStrategy(new BranchProperty[0]);
+    }
+
+    @DataBoundSetter
+    public void setStrategy(BranchPropertyStrategy strategy) {
+        this.strategy = strategy;
     }
 
     /**
