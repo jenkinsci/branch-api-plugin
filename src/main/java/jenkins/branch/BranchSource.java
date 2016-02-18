@@ -34,6 +34,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import java.util.List;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import javax.annotation.Nonnull;
+
 /**
  * A source of branches, which consists of a source and a strategy for creating properties of the branches from this
  * source.
@@ -44,6 +46,7 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
     /**
      * The source.
      */
+    @Nonnull
     private final SCMSource source;
 
     /**
@@ -60,6 +63,14 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
     public BranchSource(SCMSource source, BranchPropertyStrategy strategy) {
         this.source = source;
         this.strategy = strategy;
+    }
+
+    // TODO make RobustCollectionConverter treat nonnull fields as critical
+    private Object readResolve() {
+        if (source == null) {
+            throw new IllegalStateException("Unloadable SCM Source");
+        }
+        return this;
     }
 
     /**
