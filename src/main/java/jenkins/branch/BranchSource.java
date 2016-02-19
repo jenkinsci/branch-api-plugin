@@ -44,6 +44,7 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
     /**
      * The source.
      */
+    @NonNull
     private final SCMSource source;
 
     /**
@@ -60,6 +61,14 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
     public BranchSource(SCMSource source, BranchPropertyStrategy strategy) {
         this.source = source;
         this.strategy = strategy;
+    }
+
+    // TODO make RobustCollectionConverter treat nonnull fields as critical
+    private Object readResolve() {
+        if (source == null) {
+            throw new IllegalStateException("Unloadable SCM Source");
+        }
+        return this;
     }
 
     /**
