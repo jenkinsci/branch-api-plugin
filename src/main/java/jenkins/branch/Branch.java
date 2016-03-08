@@ -30,11 +30,14 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.impl.NullSCMSource;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.export.ExportedBean;
 
 /**
  * A source code branch.
  * Not to be subclassed outside this plugin.
  */
+@ExportedBean
 public class Branch {
 
     /**
@@ -104,6 +107,7 @@ public class Branch {
      *
      * @return the {@link SCMHead of the branch}
      */
+    @Exported
     public SCMHead getHead() {
         return head;
     }
@@ -113,6 +117,7 @@ public class Branch {
      *
      * @return the {@link SCM} for the branch.
      */
+    @Exported
     public SCM getScm() {
         return scm;
     }
