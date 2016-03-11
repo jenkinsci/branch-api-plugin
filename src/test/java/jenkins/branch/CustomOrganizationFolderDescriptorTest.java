@@ -88,6 +88,16 @@ public class CustomOrganizationFolderDescriptorTest {
     @TestExtension("someNavigatorSomeFactoryInstalled")
     public static class SomeNavigatorSomeFactoryInstalledDescriptor2 extends OrganizationFolderTest.MockFactoryDescriptor {}
 
+    @Issue("JENKINS-33106")
+    @SuppressWarnings("deprecation") // ExtensionList.add simulating dynamic installation
+    @Test
+    public void dynamicLoad() throws Exception {
+        assertEquals(Collections.emptyList(), newItemTypes());
+        ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
+        ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
+        assertEquals(Collections.singletonList("MockNavigator"), newItemTypes());
+    }
+
     @Issue("JENKINS-31949")
     @Test
     public void insideFolder() throws Exception {

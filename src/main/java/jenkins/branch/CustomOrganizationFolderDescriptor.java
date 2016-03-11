@@ -26,6 +26,7 @@ package jenkins.branch;
 
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.ExtensionListListener;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
 import hudson.model.Descriptor;
@@ -35,6 +36,10 @@ import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
 import hudson.model.View;
 import hudson.model.ViewGroup;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.scm.api.SCMNavigatorDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -45,6 +50,8 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 @SuppressWarnings("rawtypes") // not our fault
 @Restricted(NoExternalUse.class)
 public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
+
+    private static final Logger LOGGER = Logger.getLogger(CustomOrganizationFolderDescriptor.class.getName());
 
     public final SCMNavigatorDescriptor delegate;
 
@@ -70,19 +77,52 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
         return p;
     }
 
-    // TODO better for DescriptorVisibilityFilter to allow items to be added as well as removed
-    @SuppressWarnings("deprecation") // dynamic registration intentional here
+    @Override
+    public String toString() {
+        return "CustomOrganizationFolderDescriptor[" + delegate.getId() + "]";
+    }
+
+    // TODO HACK ALERT! better for DescriptorVisibilityFilter to allow items to be added as well as removed
+
     @Initializer(after=InitMilestone.PLUGINS_STARTED, before=InitMilestone.EXTENSIONS_AUGMENTED)
     public static void addSpecificDescriptors() {
+        LOGGER.fine("ran addSpecificDescriptors");
+        doAddSpecificDescriptors();
+        ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).addListener(new ListenerImpl());
+    }
+
+    private static class ListenerImpl extends ExtensionListListener {
+
+        @Override
+        public void onChange() {
+            doAddSpecificDescriptors();
+        }
+
+    }
+
+    @SuppressWarnings("deprecation") // dynamic registration intentional here
+    private static void doAddSpecificDescriptors() {
+        LOGGER.fine("ran doAddSpecificDescriptors");
+        List<CustomOrganizationFolderDescriptor> old = new ArrayList<>();
+        for (TopLevelItemDescriptor d : all()) {
+            if (d instanceof CustomOrganizationFolderDescriptor) {
+                old.add((CustomOrganizationFolderDescriptor) d);
+            }
+        }
+        LOGGER.log(Level.FINE, "clearing {0}", old);
+        all().removeAll(old);
         if (ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).isEmpty()) {
+            LOGGER.fine("no MultiBranchProjectFactoryDescriptor");
             return; // nothing like workflow-multibranch installed, so do not even offer this option
         }
         TopLevelItemDescriptor.all().size(); // TODO must force ExtensionList.ensureLoaded to be called, else .add adds to both .legacyInstances and .extensions, then later .ensureLoaded adds two copies!
         for (SCMNavigatorDescriptor d : ExtensionList.lookup(SCMNavigatorDescriptor.class)) {
             if (d.newInstance((String) null) != null) {
+                LOGGER.log(Level.FINE, "adding {0}", d.getId());
                 TopLevelItemDescriptor.all().add(new CustomOrganizationFolderDescriptor(d));
             }
         }
+        LOGGER.fine("done");
     }
 
     /**
@@ -93,6 +133,7 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
 
         @Override
         public boolean filter(Object context, Descriptor descriptor) {
+            LOGGER.log(Level.FINER, "filtering {0}", descriptor.getId());
             if (descriptor instanceof OrganizationFolder.DescriptorImpl && (context instanceof View || context instanceof ViewGroup)) {
                 return false;
             }
