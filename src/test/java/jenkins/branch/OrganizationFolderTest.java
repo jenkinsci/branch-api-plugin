@@ -26,6 +26,7 @@ package jenkins.branch;
 
 import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
+import hudson.model.View;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.impl.SingleSCMNavigator;
@@ -91,6 +92,16 @@ public class OrganizationFolderTest {
         top.setDescription("Org folder test");
         top = r.configRoundtrip(top);
         waitForLogFileMessage("Indexing multibranch project: stuff", logs);
+    }
+
+    @Issue("JENKINS-32782")
+    @Test
+    public void emptyViewEquality() throws Exception {
+        OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
+        View emptyView = top.getPrimaryView();
+        assertEquals("Welcome", emptyView.getViewName());
+        assertEquals(emptyView, top.getPrimaryView());
+        assertTrue(emptyView.isDefault());
     }
 
     @TestExtension
