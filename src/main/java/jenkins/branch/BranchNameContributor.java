@@ -31,9 +31,13 @@ import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.TaskListener;
 import java.io.IOException;
+import java.net.URL;
+import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.actions.ChangeRequestAction;
 
 /**
  * Defines the environment variable {@code BRANCH_NAME} for multibranch builds.
+ * Also defines {@code CHANGE_*} variables when {@link ChangeRequestAction} is present.
  */
 @Extension
 public class BranchNameContributor extends EnvironmentContributor {
@@ -46,9 +50,26 @@ public class BranchNameContributor extends EnvironmentContributor {
         if (parent instanceof MultiBranchProject) {
             BranchProjectFactory projectFactory = ((MultiBranchProject) parent).getProjectFactory();
             if (projectFactory.isProject(j)) {
+                SCMHead head = projectFactory.getBranch(j).getHead();
                 // Note: not using Branch.name, since in the future that could be something different
                 // than SCMHead.name, which is what we really want here.
-                envs.put("BRANCH_NAME", projectFactory.getBranch(j).getHead().getName());
+                envs.put("BRANCH_NAME", head.getName());
+                ChangeRequestAction cr = head.getAction(ChangeRequestAction.class);
+                if (cr != null) {
+                    envs.putIfNotNull("CHANGE_ID", cr.getId());
+                    URL u = cr.getURL();
+                    if (u != null) {
+                        envs.put("CHANGE_URL", u.toString());
+                    }
+                    envs.putIfNotNull("CHANGE_TITLE", cr.getTitle());
+                    envs.putIfNotNull("CHANGE_AUTHOR", cr.getAuthor());
+                    envs.putIfNotNull("CHANGE_AUTHOR_DISPLAY_NAME", cr.getAuthorDisplayName());
+                    envs.putIfNotNull("CHANGE_AUTHOR_EMAIL", cr.getAuthorEmail());
+                    SCMHead target = cr.getTarget();
+                    if (target != null) {
+                        envs.put("CHANGE_TARGET", target.getName());
+                    }
+                }
             }
         }
     }
