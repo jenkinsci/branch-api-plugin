@@ -31,6 +31,7 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Util;
 import hudson.XmlFile;
+import hudson.model.CauseAction;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
@@ -357,20 +358,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     private void scheduleBuild(BranchProjectFactory<P,R> factory, final P item, SCMRevision revision, TaskListener listener) {
         listener.getLogger().println("Scheduling build for branch: " + factory.getBranch(item).getName());
-        if (item instanceof ParameterizedJobMixIn.ParameterizedJob) {
-            // TODO 1.621+ use standard method
-            ParameterizedJobMixIn scheduler = new ParameterizedJobMixIn() {
-                @Override
-                protected Job asJob() {
-                    return item;
-                }
-            };
-            if (scheduler.scheduleBuild(0, new SCMTrigger.SCMTriggerCause("Branch indexing"))) {
-                try {
-                    factory.setRevisionHash(item, revision);
-                } catch (IOException e) {
-                    e.printStackTrace(listener.error("Could not update last revision hash"));
-                }
+        if (ParameterizedJobMixIn.scheduleBuild2(item, 0, new CauseAction(new SCMTrigger.SCMTriggerCause("Branch indexing"))) != null) {
+            try {
+                factory.setRevisionHash(item, revision);
+            } catch (IOException e) {
+                e.printStackTrace(listener.error("Could not update last revision hash"));
             }
         }
     }
