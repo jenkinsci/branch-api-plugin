@@ -28,7 +28,25 @@ public class BaseEmptyView extends View {
      */
     @Override
     public boolean isDefault() {
-        return true; // this renders as a top-level page
+        // TODO might be better for the base implementation in View to be written this way rather than using ==
+        return equals(getOwnerPrimaryView());
+    }
+
+    /**
+     * Equal to any view of the same class and owner.
+     * {@inheritDoc}
+     */
+    @Override
+    public final boolean equals(Object obj) {
+        return obj != null && obj.getClass() == getClass() && ((BaseEmptyView) obj).owner == owner;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final int hashCode() {
+        return owner == null ? 0 : owner.hashCode();
     }
 
     /**
