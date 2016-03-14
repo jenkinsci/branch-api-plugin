@@ -300,6 +300,19 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     String rawName = branch.getName();
                     String encodedName = branch.getEncodedName();
                     P project = observer.shouldUpdate(encodedName);
+
+                    /*
+                     * Check observer.mayCreate:
+                     * 1. after observer.shouldUpdate so removal from the orphaned items list will still occur
+                     * 2. to check if this branch has been observed, and mark it as observed if it was not
+                     * 3. before verifying observer.shouldUpdate's retval, because if this branch has already been
+                     *    observed then we should stop here instead of updating or creating the project
+                     */
+                    if (!observer.mayCreate(encodedName)) {
+                        listener.getLogger().println("Ignoring duplicate branch project " + rawName);
+                        return;
+                    }
+
                     if (project != null) {
                         if (!_factory.isProject(project)) {
                             listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
@@ -331,10 +344,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 e.printStackTrace(listener.error("Could not save changes to " + rawName));
                             }
                         }
-                        return;
-                    }
-                    if (!observer.mayCreate(encodedName)) {
-                        listener.getLogger().println("Ignoring duplicate branch project " + rawName);
                         return;
                     }
                     project = _factory.newInstance(branch);
