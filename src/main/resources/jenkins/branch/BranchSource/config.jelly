@@ -35,8 +35,10 @@
       </table>
     </td>
   </tr>
-  <f:block>
-    <branch:dropdownDescriptorSelector field="strategy" title="Property strategy"
-                                  descriptors="${descriptor.propertyStrategyDescriptors(it,sourceDescriptor)}"/>
-  </f:block>
+  <j:set var="descriptors" value="${descriptor.propertyStrategyDescriptors(it,sourceDescriptor)}"/>
+  <j:if test="${!descriptors.isEmpty()}">
+    <f:block>
+      <branch:dropdownDescriptorSelector field="strategy" title="Property strategy" descriptors="${descriptors}"/>
+    </f:block>
+  </j:if>
 </j:jelly>

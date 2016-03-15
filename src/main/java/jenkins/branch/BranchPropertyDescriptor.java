@@ -89,9 +89,6 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
 
     /**
      * Ensures that the configuration screen of (for example) {@link DefaultBranchPropertyStrategy} shows only appropriate descriptors.
-     * TODO this trick does not work for {@link NamedExceptionsBranchPropertyStrategy} on initial configuration (i.e., when {@link DefaultBranchPropertyStrategy} was initially selected);
-     * seems {@code filterDescriptors} is not called when {@code instance == null} perhaps?
-     * Or perhaps {@code it == null} when {@code l:renderOnDemand} is in use (supposed to work due to {@code capture} attribute, but…)?
      */
     @Restricted(DoNotUse.class)
     @Extension
