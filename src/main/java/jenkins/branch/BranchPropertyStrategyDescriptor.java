@@ -26,6 +26,7 @@ package jenkins.branch;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
+import hudson.model.DescriptorVisibilityFilter;
 import jenkins.scm.api.SCMSourceDescriptor;
 
 import java.util.ArrayList;
@@ -46,7 +47,6 @@ public abstract class BranchPropertyStrategyDescriptor extends Descriptor<Branch
      * @param sourceDescriptor the source descriptor.
      * @return {@code} true iff this property strategy is relevant with this source.
      */
-    @SuppressWarnings("unused") // by stapler
     public boolean isApplicable(@NonNull SCMSourceDescriptor sourceDescriptor) {
         return true;
     }
@@ -54,13 +54,17 @@ public abstract class BranchPropertyStrategyDescriptor extends Descriptor<Branch
     /**
      * A branch property strategy may not be appropriate for every project, this method lets a strategy
      * opt out of being selectable for a specific project.
-     *
+     * <p>By default it checks {@link #isApplicable(MultiBranchProjectDescriptor)},
+     * and whether {@link BranchPropertyDescriptor#all(MultiBranchProject)} is nonempty
+     * when filtered by {@link DescriptorVisibilityFilter} on the project,
+     * which due to {@link jenkins.branch.BranchPropertyDescriptor.Visibility}
+     * also calls {@link BranchPropertyDescriptor#isApplicable(MultiBranchProject)}.
      * @param project the project.
      * @return {@code} true iff this property strategy is relevant with this project instance.
      */
-    @SuppressWarnings("unused") // by stapler
     public boolean isApplicable(@NonNull MultiBranchProject project) {
-        return isApplicable(project.getDescriptor());
+        return isApplicable(project.getDescriptor()) &&
+            !DescriptorVisibilityFilter.apply(project, BranchPropertyDescriptor.all()).isEmpty();
     }
 
     /**
