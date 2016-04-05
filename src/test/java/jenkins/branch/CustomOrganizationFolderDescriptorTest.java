@@ -116,16 +116,31 @@ public class CustomOrganizationFolderDescriptorTest {
         public void visitSources(SCMSourceObserver observer) throws IOException, InterruptedException {}
     }
     private static abstract class MockNavigatorDescriptor extends SCMNavigatorDescriptor {
+
         MockNavigatorDescriptor() {
             super(MockNavigator.class);
         }
+
         @Override
         public SCMNavigator newInstance(String name) {
             return new MockNavigator();
         }
+
         @Override
         public String getDisplayName() {
             return "MockNavigator";
+        }
+
+        public String getDescription() {
+            return "MockNavigator description";
+        }
+
+        public String getCategoryId() {
+            return "MockNavigator categoryId";
+        }
+
+        public String getIconFilePathPattern() {
+            return "MockNavigator iconfilepathpattern";
         }
     }
 
