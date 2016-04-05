@@ -71,7 +71,7 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
     }
 
     /**
-     * Needed if it wants CustomOrganizationFolderDescriptor implementations are categorized in Jenkins 2.x.
+     * Needed if it wants SCMNavigatorDescriptor implementations are categorized in Jenkins 2.x.
      *
      * TODO: Override when the baseline is upgraded to 2.x
      *
@@ -82,18 +82,18 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
     }
 
     /**
-     * Needed if it wants CustomOrganizationFolderDescriptor implementations are categorized in Jenkins 2.x.
+     * Needed if it wants SCMNavigatorDescriptor implementations are categorized in Jenkins 2.x.
      *
      * TODO: Override when the baseline is upgraded to 2.x
      *
      * @return A string it represents a ItemCategory identifier.
      */
     public String getCategoryId() {
-        return delegate.getCategoryId();
+        return "nested-projects";
     }
 
     /**
-     * Needed if it wants CustomOrganizationFolderDescriptor implementations are categorized in Jenkins 2.x.
+     * Needed if it wants SCMNavigatorDescriptor implementations are categorized in Jenkins 2.x.
      *
      * TODO: Override when the baseline is upgraded to 2.x
      *
