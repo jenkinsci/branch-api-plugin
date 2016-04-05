@@ -131,17 +131,6 @@ public class CustomOrganizationFolderDescriptorTest {
             return "MockNavigator";
         }
 
-        public String getDescription() {
-            return "MockNavigator description";
-        }
-
-        public String getCategoryId() {
-            return "MockNavigator categoryId";
-        }
-
-        public String getIconFilePathPattern() {
-            return "MockNavigator iconfilepathpattern";
-        }
     }
 
     private List<String> newItemTypes() {
