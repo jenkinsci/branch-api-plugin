@@ -59,19 +59,19 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
         super(TopLevelItem.class); // do not register as OrganizationFolder
         this.delegate = delegate;
     }
-    
+
     @Override
     public String getId() {
         return OrganizationFolder.class.getName() + "." + delegate.getId(); // must be distinct from OrganizationFolder.DescriptorImpl
     }
-    
+
     @Override
     public String getDisplayName() {
         return delegate.getDisplayName();
     }
 
     /**
-     * Needed if it wants SCMNavigatorDescriptor implementations are categorized in Jenkins 2.x.
+     * Needed if it wants SCMNavigator implementations are categorized in Jenkins 2.x.
      *
      * TODO: Override when the baseline is upgraded to 2.x
      *
@@ -82,7 +82,7 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
     }
 
     /**
-     * Needed if it wants SCMNavigatorDescriptor implementations are categorized in Jenkins 2.x.
+     * Needed if it wants SCMNavigator implementations are categorized in Jenkins 2.x.
      *
      * TODO: Override when the baseline is upgraded to 2.x
      *
@@ -93,7 +93,7 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
     }
 
     /**
-     * Needed if it wants SCMNavigatorDescriptor implementations are categorized in Jenkins 2.x.
+     * Needed if it wants SCMNavigator implementations are categorized in Jenkins 2.x.
      *
      * TODO: Override when the baseline is upgraded to 2.x
      *
