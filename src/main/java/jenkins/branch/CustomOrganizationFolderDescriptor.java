@@ -89,7 +89,7 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
      * @return A string it represents a ItemCategory identifier.
      */
     public String getCategoryId() {
-        return "nested-projects";
+        return delegate.getCategoryId();
     }
 
     /**
