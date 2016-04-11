@@ -59,15 +59,48 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
         super(TopLevelItem.class); // do not register as OrganizationFolder
         this.delegate = delegate;
     }
-    
+
     @Override
     public String getId() {
         return OrganizationFolder.class.getName() + "." + delegate.getId(); // must be distinct from OrganizationFolder.DescriptorImpl
     }
-    
+
     @Override
     public String getDisplayName() {
         return delegate.getDisplayName();
+    }
+
+    /**
+     * Needed if it wants SCMNavigator implementations are categorized in Jenkins 2.x.
+     *
+     * TODO: Override when the baseline is upgraded to 2.x
+     *
+     * @return A string with the Item description.
+     */
+    public String getDescription() {
+        return delegate.getDescription();
+    }
+
+    /**
+     * Needed if it wants SCMNavigator implementations are categorized in Jenkins 2.x.
+     *
+     * TODO: Override when the baseline is upgraded to 2.x
+     *
+     * @return A string it represents a ItemCategory identifier.
+     */
+    public String getCategoryId() {
+        return delegate.getCategoryId();
+    }
+
+    /**
+     * Needed if it wants SCMNavigator implementations are categorized in Jenkins 2.x.
+     *
+     * TODO: Override when the baseline is upgraded to 2.x
+     *
+     * @return A string it represents a URL pattern to get the Item icon in different sizes.
+     */
+    public String getIconFilePathPattern() {
+        return delegate.getIconFilePathPattern();
     }
 
     @Override
