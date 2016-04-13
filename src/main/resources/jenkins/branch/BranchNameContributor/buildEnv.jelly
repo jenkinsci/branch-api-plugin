@@ -26,6 +26,27 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:t="/lib/hudson">
     <t:buildEnvVar name="BRANCH_NAME">
-        <j:out value="${%blurb}"/>
+        <j:out value="${%blurb.BRANCH_NAME}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="CHANGE_ID">
+        <j:out value="${%blurb.CHANGE_ID}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="CHANGE_URL">
+        <j:out value="${%blurb.CHANGE_URL}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="CHANGE_TITLE">
+        <j:out value="${%blurb.CHANGE_TITLE}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="CHANGE_AUTHOR">
+        <j:out value="${%blurb.CHANGE_AUTHOR}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="CHANGE_AUTHOR_DISPLAY_NAME">
+        <j:out value="${%blurb.CHANGE_AUTHOR_DISPLAY_NAME}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="CHANGE_AUTHOR_EMAIL">
+        <j:out value="${%blurb.CHANGE_AUTHOR_EMAIL}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="CHANGE_TARGET">
+        <j:out value="${%blurb.CHANGE_TARGET}"/>
     </t:buildEnvVar>
 </j:jelly>
