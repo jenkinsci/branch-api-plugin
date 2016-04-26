@@ -42,6 +42,10 @@ public class BranchProperty extends JobProperty<FreeStyleProject> {
         return b;
     }
 
+    public void setBranch(Branch b) {
+        this.b = b;
+    }
+
     @Override
     public JobPropertyDescriptor getDescriptor() {
         return new DescriptorImpl();
