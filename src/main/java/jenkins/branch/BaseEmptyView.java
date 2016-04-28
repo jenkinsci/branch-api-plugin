@@ -33,6 +33,14 @@ public class BaseEmptyView extends View {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isEditable() {
+        return false;
+    }
+
+    /**
      * Equal to any view of the same class and owner.
      * {@inheritDoc}
      */
