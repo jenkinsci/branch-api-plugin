@@ -252,7 +252,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
-     * Will create an specialized view when there are no repositories found, which contain a Jenkinsfile
+     * Will create an specialized view when there are no repositories or branches found, which contain a Jenkinsfile
+     * or other MARKER file.
      */
     @Override
     public View getPrimaryView() {
@@ -260,6 +261,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             return new OrganizationFolderEmptyView(this);
         }
         return super.getPrimaryView();
+    }
+
+    @Override
+    public View getView(String name) {
+        return getPrimaryView();
     }
 
     @Extension

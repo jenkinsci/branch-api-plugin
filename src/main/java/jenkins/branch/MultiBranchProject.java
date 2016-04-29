@@ -554,7 +554,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @Override
     public View getPrimaryView() {
         if (getItems().isEmpty()) {
-            // when there's no branches to show, switch to the special welcome view
+            // when there are no branches nor pull requests to show, switch to the special welcome view
             return getWelcomeView();
         }
         return super.getPrimaryView();
@@ -565,6 +565,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     protected View getWelcomeView() {
         return new MultiBranchProjectEmptyView(this);
+    }
+
+    @Override
+    public View getView(String name) {
+        return getPrimaryView();
     }
 
     /**
