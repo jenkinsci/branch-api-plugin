@@ -569,7 +569,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     @Override
     public View getView(String name) {
-        return getPrimaryView();
+        if (name.equals("Welcome")) {
+            return getWelcomeView();
+        } else {
+            return super.getView(name);
+        }
     }
 
     /**
