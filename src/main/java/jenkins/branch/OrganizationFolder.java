@@ -267,7 +267,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * Creates a place holder view when there's no active branch indexed.
      */
     protected View getWelcomeView() {
-        return new MultiBranchProjectEmptyView(this);
+        return new OrganizationFolderEmptyView(this);
     }
 
     @Override
