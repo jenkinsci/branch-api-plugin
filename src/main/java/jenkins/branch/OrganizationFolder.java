@@ -258,14 +258,25 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     @Override
     public View getPrimaryView() {
         if (getItems().isEmpty()) {
-            return new OrganizationFolderEmptyView(this);
+            return getWelcomeView();
         }
         return super.getPrimaryView();
     }
 
+    /**
+     * Creates a place holder view when there's no active branch indexed.
+     */
+    protected View getWelcomeView() {
+        return new OrganizationFolderEmptyView(this);
+    }
+
     @Override
     public View getView(String name) {
-        return getPrimaryView();
+        if (name.equals("Welcome")) {
+            return getWelcomeView();
+        } else {
+            return super.getView(name);
+        }
     }
 
     @Extension
