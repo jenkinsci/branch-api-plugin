@@ -310,8 +310,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         if (revision.isDeterministic()) {
                             SCMRevision lastBuild = _factory.getRevision(project);
                             if (!revision.equals(lastBuild)) {
+                                listener.getLogger().println("Changes detected in " + rawName + " (" + lastBuild + " → " + revision + ")");
                                 needSave = true;
-                                scheduleBuild(_factory, project, revision, listener);
+                                scheduleBuild(_factory, project, revision, listener, rawName);
+                            } else {
+                                listener.getLogger().println("No changes detected in " + rawName + " (still at " + revision + ")");
                             }
                         } else {
                             // fall back to polling when we have a non-deterministic revision/hash.
@@ -319,8 +322,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             if (scmProject != null) {
                                 PollingResult pollingResult = scmProject.poll(listener);
                                 if (pollingResult.hasChanges()) {
+                                    listener.getLogger().println("Changes detected in " + rawName);
                                     needSave = true;
-                                    scheduleBuild(_factory, project, revision, listener);
+                                    scheduleBuild(_factory, project, revision, listener, rawName);
+                                } else {
+                                    listener.getLogger().println("No changes detected in " + rawName);
                                 }
                             }
                         }
@@ -350,20 +356,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     }
                     _factory.decorate(project);
                     observer.created(project);
-                    scheduleBuild(_factory, project, revision, listener);
+                    scheduleBuild(_factory, project, revision, listener, rawName);
                 }
             }, listener);
         }
     }
 
-    private void scheduleBuild(BranchProjectFactory<P,R> factory, final P item, SCMRevision revision, TaskListener listener) {
-        listener.getLogger().println("Scheduling build for branch: " + factory.getBranch(item).getName());
+    private void scheduleBuild(BranchProjectFactory<P,R> factory, final P item, SCMRevision revision, TaskListener listener, String name) {
         if (ParameterizedJobMixIn.scheduleBuild2(item, 0, new CauseAction(new SCMTrigger.SCMTriggerCause("Branch indexing"))) != null) {
+            listener.getLogger().println("Scheduled build for branch: " + name);
             try {
                 factory.setRevisionHash(item, revision);
             } catch (IOException e) {
                 e.printStackTrace(listener.error("Could not update last revision hash"));
             }
+        } else {
+            listener.getLogger().println("Failed to schedule build for branch: " + name);
         }
     }
 
