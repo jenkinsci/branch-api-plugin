@@ -163,6 +163,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 PersistedList<BranchSource> sourcesList = existing.getSourcesList();
                                 sourcesList.clear();
                                 sourcesList.addAll(createBranchSources());
+                                existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
                                 existing.scheduleBuild();
                                 return;
                             }
@@ -181,6 +182,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     continue;
                                 }
                                 if (project != null) {
+                                    project.setOrphanedItemStrategy(getOrphanedItemStrategy());
                                     project.getSourcesList().addAll(createBranchSources());
                                     try {
                                         project.addTrigger(new PeriodicFolderTrigger("1d"));
