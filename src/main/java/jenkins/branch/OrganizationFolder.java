@@ -146,7 +146,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             }
                             List<BranchSource> branchSources = new ArrayList<BranchSource>();
                             for (SCMSource source : sources) {
-                                // TODO we probably need to define a BranchPropertyStrategyFactory (cf. JENKINS-22242)
+                                // TODO do we want/need a more general BranchPropertyStrategyFactory?
                                 branchSources.add(new BranchSource(source));
                             }
                             sources = null; // make sure complete gets called just once

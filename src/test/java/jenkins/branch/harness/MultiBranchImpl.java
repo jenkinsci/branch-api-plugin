@@ -24,16 +24,13 @@
 
 package jenkins.branch.harness;
 
-import java.io.IOException;
 import java.util.logging.Logger;
 
 import hudson.Extension;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.TopLevelItem;
-import jenkins.branch.Branch;
 import jenkins.branch.BranchProjectFactory;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.MultiBranchProjectDescriptor;
@@ -55,37 +52,6 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
     public boolean scheduleBuild() {
         LOGGER.info("Indexing multibranch project: " + getDisplayName());
         return super.scheduleBuild();
-    }
-
-    public static class BranchProjectFactoryImpl extends BranchProjectFactory<FreeStyleProject, FreeStyleBuild> {
-
-        @Override
-        public FreeStyleProject newInstance(Branch branch) {
-            FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getName());
-            setBranch(job, branch);
-            return job;
-        }
-
-        @Override
-        public Branch getBranch(FreeStyleProject project) {
-            return project.getProperty(BranchProperty.class).getBranch();
-        }
-
-        @Override
-        public FreeStyleProject setBranch(FreeStyleProject project, Branch branch) {
-            try {
-                project.addProperty(new BranchProperty(branch));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return project;
-        }
-
-        @Override
-        public boolean isProject(Item item) {
-            return item instanceof FreeStyleProject && ((FreeStyleProject) item).getProperty(BranchProperty.class) != null;
-        }
-
     }
 
     @Extension
