@@ -73,11 +73,19 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
 
         @Override
         public FreeStyleProject setBranch(FreeStyleProject project, Branch branch) {
+            BranchProperty property = project.getProperty(BranchProperty.class);
+
             try {
-                project.addProperty(new BranchProperty(branch));
+                if (property == null) {
+                    project.addProperty(new BranchProperty(branch));
+                } else if (!property.getBranch().equals(branch)) {
+                    property.setBranch(branch);
+                    project.save();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
             return project;
         }
 

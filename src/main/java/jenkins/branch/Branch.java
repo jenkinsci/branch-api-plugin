@@ -180,6 +180,12 @@ public class Branch {
         if (!head.equals(branch.head)) {
             return false;
         }
+        if (scm != null ? !scm.equals(branch.scm) : branch.scm != null) {
+            return false;
+        }
+        if (properties != null ? !properties.equals(branch.properties) : branch.properties != null) {
+            return false;
+        }
 
         return true;
     }
