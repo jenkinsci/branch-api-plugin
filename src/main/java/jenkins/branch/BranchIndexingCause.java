@@ -42,7 +42,7 @@ public final class BranchIndexingCause extends Cause {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void onAddedTo(Run build) {
@@ -53,7 +53,7 @@ public final class BranchIndexingCause extends Cause {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public void onLoad(Run<?,?> build) {
@@ -76,7 +76,7 @@ public final class BranchIndexingCause extends Cause {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public String getShortDescription() {
