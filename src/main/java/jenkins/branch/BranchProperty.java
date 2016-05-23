@@ -82,7 +82,7 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
         if (Util.isOverridden(BranchProperty.class, getClass(), "decorator", Class.class) && AbstractProject.class.isAssignableFrom(clazz)) {
             return decorator(clazz);
         } else {
-            throw new AbstractMethodError("you must implement jobDecorator");
+            throw new AbstractMethodError("you must implement jobDecorator in " + getClass());
         }
     }
 
