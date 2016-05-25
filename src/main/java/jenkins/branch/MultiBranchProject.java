@@ -420,7 +420,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      *
      * @param name the name of the branch
      * @return the named branch job or {@code null} if no such branch exists.
+     * @deprecated use {@link #getItem(String)} or {@link #getJob(String)} directly
      */
+    @Deprecated
     @CheckForNull
     @SuppressWarnings("unused")// by stapler for URL binding
     public P getBranch(String name) {
@@ -451,15 +453,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
     }
     private static final Set<Permission> SUPPRESSED_PERMISSIONS = ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    @NonNull
-    public String getUrlChildPrefix() {
-        return "branch";
-    }
 
     /**
      * {@inheritDoc}
