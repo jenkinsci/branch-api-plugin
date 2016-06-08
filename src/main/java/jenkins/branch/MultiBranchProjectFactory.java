@@ -80,7 +80,11 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
     @Nonnull
     public MultiBranchProject<?,?> createNewProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, @Nonnull TaskListener listener) throws IOException, InterruptedException {
         if (Util.isOverridden(MultiBranchProjectFactory.class, getClass(), "createProject", ItemGroup.class, String.class, List.class, Map.class, TaskListener.class)) {
-            return createProject(parent, name, scmSources, attributes, listener);
+            MultiBranchProject<?, ?> p = createProject(parent, name, scmSources, attributes, listener);
+            if (p == null) {
+                throw new IOException("recognized project " + name + " before, but now");
+            }
+            return p;
         } else {
             throw new AbstractMethodError(getClass().getName() + " must override createNewProject");
         }
