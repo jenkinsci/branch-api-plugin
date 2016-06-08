@@ -158,41 +158,46 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         }
                         @Override
                         public void complete() throws IllegalStateException, InterruptedException {
-                            MultiBranchProject<?,?> existing = observer.shouldUpdate(projectName);
-                            if (existing != null) {
-                                PersistedList<BranchSource> sourcesList = existing.getSourcesList();
-                                sourcesList.clear();
-                                sourcesList.addAll(createBranchSources());
-                                existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                                existing.scheduleBuild();
-                                return;
-                            }
-                            if (!observer.mayCreate(projectName)) {
-                                listener.getLogger().println("Ignoring duplicate child " + projectName);
-                                return;
-                            }
-                            for (MultiBranchProjectFactory factory : projectFactories) {
-                                MultiBranchProject<?, ?> project;
-                                try {
-                                    project = factory.createProject(OrganizationFolder.this, projectName, sources, Collections.<String,Object>emptyMap(), listener);
-                                } catch (InterruptedException x) {
-                                    throw x;
-                                } catch (Exception x) {
-                                    x.printStackTrace(listener.error("Failed to create a subproject " + projectName));
-                                    continue;
-                                }
-                                if (project != null) {
-                                    project.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                                    project.getSourcesList().addAll(createBranchSources());
-                                    try {
-                                        project.addTrigger(new PeriodicFolderTrigger("1d"));
-                                    } catch (ANTLRException x) {
-                                        throw new IllegalStateException(x);
+                            try {
+                                MultiBranchProjectFactory factory = null;
+                                Map<String, Object> attributes = Collections.<String,Object>emptyMap();
+                                for (MultiBranchProjectFactory candidateFactory : projectFactories) {
+                                    if (candidateFactory.recognizes(OrganizationFolder.this, projectName, sources, attributes, listener)) {
+                                        factory = candidateFactory;
+                                        break;
                                     }
-                                    observer.created(project);
-                                    project.scheduleBuild();
-                                    break;
                                 }
+                                if (factory == null) {
+                                    return;
+                                }
+                                MultiBranchProject<?,?> existing = observer.shouldUpdate(projectName);
+                                if (existing != null) {
+                                    PersistedList<BranchSource> sourcesList = existing.getSourcesList();
+                                    sourcesList.clear();
+                                    sourcesList.addAll(createBranchSources());
+                                    existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                                    factory.updateExistingProject(existing, attributes, listener);
+                                    existing.scheduleBuild();
+                                    return;
+                                }
+                                if (!observer.mayCreate(projectName)) {
+                                    listener.getLogger().println("Ignoring duplicate child " + projectName);
+                                    return;
+                                }
+                                MultiBranchProject<?, ?> project = factory.createNewProject(OrganizationFolder.this, projectName, sources, attributes, listener);
+                                project.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                                project.getSourcesList().addAll(createBranchSources());
+                                try {
+                                    project.addTrigger(new PeriodicFolderTrigger("1d"));
+                                } catch (ANTLRException x) {
+                                    throw new IllegalStateException(x);
+                                }
+                                observer.created(project);
+                                project.scheduleBuild();
+                            } catch (InterruptedException x) {
+                                throw x;
+                            } catch (Exception x) {
+                                x.printStackTrace(listener.error("Failed to create or update a subproject " + projectName));
                             }
                         }
                     };
