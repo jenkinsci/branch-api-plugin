@@ -99,7 +99,15 @@ public class Branch {
      * @since 0.2-beta-7
      */
     public String getEncodedName() {
-        return Util.rawEncode(getName());
+        return this.encodeBranchName(getName());
+    }
+
+    /**
+     * Get a branch name with backslach symbol replaced with "__"
+     * @return with URL-unsafe characters escaped and slash symbols replaced with underscores
+     */
+    protected String encodeBranchName(String branchName) {
+        return Util.rawEncode(branchName).replace("%2F","___");
     }
 
     /**
