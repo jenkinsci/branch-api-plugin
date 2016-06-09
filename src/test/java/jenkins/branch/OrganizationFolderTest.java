@@ -82,8 +82,6 @@ public class OrganizationFolderTest {
     @Issue("JENKINS-31516")
     public void indexChildrenOnOrganizationFolderIndex() throws Exception {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
-        List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-        projectFactories.add(new MockFactory());
         top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
         top = r.configRoundtrip(top);
 
@@ -111,7 +109,6 @@ public class OrganizationFolderTest {
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
         assertEquals(1, projectFactories.size());
         assertEquals(MockFactory.class, projectFactories.get(0).getClass());
-        projectFactories.add(new MockFactory());
         top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
         top.scheduleBuild2(0).getFuture().get();
         top.getComputation().writeWholeLogTo(System.out);
