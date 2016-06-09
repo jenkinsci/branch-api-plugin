@@ -82,8 +82,6 @@ public class OrganizationFolderTest {
     @Issue("JENKINS-31516")
     public void indexChildrenOnOrganizationFolderIndex() throws Exception {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
-        List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-        projectFactories.add(new MockFactory());
         top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
         top = r.configRoundtrip(top);
 
@@ -104,14 +102,41 @@ public class OrganizationFolderTest {
         assertTrue(emptyView.isDefault());
     }
 
+    @Issue("JENKINS-34246")
+    @Test
+    public void deletedMarker() throws Exception {
+        OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
+        List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
+        assertEquals(1, projectFactories.size());
+        assertEquals(MockFactory.class, projectFactories.get(0).getClass());
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
+        top.scheduleBuild2(0).getFuture().get();
+        top.getComputation().writeWholeLogTo(System.out);
+        assertEquals(1, top.getItems().size());
+        r.waitUntilNoActivity();
+        MockFactory.live = false;
+        try {
+            top.scheduleBuild2(0).getFuture().get();
+            top.getComputation().writeWholeLogTo(System.out);
+            assertEquals(0, top.getItems().size());
+        } finally {
+            MockFactory.live = true;
+        }
+    }
+
     @TestExtension
     public static class ConfigRoundTripDescriptor extends MockFactoryDescriptor {}
 
     public static class MockFactory extends MultiBranchProjectFactory {
         @DataBoundConstructor
         public MockFactory() {}
+        static boolean live = true;
         @Override
-        public MultiBranchProject<?, ?> createProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String,Object> attributes, TaskListener listener) throws IOException, InterruptedException {
+        public boolean recognizes(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String, Object> attributes, TaskListener listener) throws IOException, InterruptedException {
+            return live;
+        }
+        @Override
+        public MultiBranchProject<?, ?> createNewProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String,Object> attributes, TaskListener listener) throws IOException, InterruptedException {
             return new MultiBranchImpl(parent, name);
         }
     }
