@@ -23,22 +23,42 @@
  */
 package jenkins.branch;
 
+import hudson.Extension;
+import hudson.ExtensionPoint;
 import hudson.Util;
+import hudson.model.AbstractDescribableImpl;
+import hudson.model.Descriptor;
+import hudson.model.Descriptor.FormException;
 import hudson.scm.NullSCM;
 import hudson.scm.SCM;
+import hudson.scm.SCMDescriptor;
+
+import javax.xml.bind.DatatypeConverter;
+
+import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import jenkins.model.GlobalConfiguration;
+import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.impl.NullSCMSource;
+import net.sf.json.JSONObject;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
+
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * A source code branch.
  * Not to be subclassed outside this plugin.
  */
 @ExportedBean
-public class Branch {
+public class Branch extends AbstractDescribableImpl<Branch> {
 
     /**
      * The ID of our {@link jenkins.scm.api.SCMSource}
@@ -67,6 +87,7 @@ public class Branch {
      * @param head     the name of the branch.
      * @param scm      the {@link SCM} for the branch.
      */
+    @DataBoundConstructor
     public Branch(String sourceId, SCMHead head, SCM scm, List<? extends BranchProperty> properties) {
         this.sourceId = sourceId;
         this.head = head;
@@ -94,12 +115,37 @@ public class Branch {
     }
 
     /**
+     * Create a clean version of the name, suitable for use as file paths
+     * @return the cleaned name
+     */
+    private String stripName() {
+        String name = getName().replaceAll("_", "___"); // Escape all underscores
+
+        return Util.rawEncode(name).
+                replaceAll("%2F", "_"). // Replace forward slash with underscore
+                replaceAll("%", "__"); // Replace remaining % with double underscore
+    }
+
+    /**
      * Gets a branch name suitable for use in paths.
      * @return {@link #getName} with URL-unsafe characters escaped
      * @since 0.2-beta-7
      */
     public String getEncodedName() {
-        return Util.rawEncode(getName());
+        BranchGlobalDescriptor descriptor =  GlobalConfiguration.all().get(BranchGlobalDescriptor.class);
+
+        try {
+            switch (descriptor.getPathEncodingType()) {
+            case BASE64:
+                return DatatypeConverter.printBase64Binary(getName().getBytes("UTF-8"));
+            case STRIP:
+                return stripName();
+            default:
+                return Util.rawEncode(getName());
+            }
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("JLS specification mandates UTF-8 as a supported encoding", e);
+        }
     }
 
     /**
@@ -215,5 +261,4 @@ public class Branch {
             return false;
         }
     }
-
 }
