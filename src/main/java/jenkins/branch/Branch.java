@@ -120,6 +120,9 @@ public class Branch extends AbstractDescribableImpl<Branch> {
      */
     public String getEncodedName() {
         BranchGlobalDescriptor descriptor =  GlobalConfiguration.all().get(BranchGlobalDescriptor.class);
+        if (null == descriptor) {
+            throw new IllegalStateException("BranchGlobalDescriptor should always be available as it is included in this plugin");
+        }
 
         try {
             switch (descriptor.getPathEncodingType()) {
