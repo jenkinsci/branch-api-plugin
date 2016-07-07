@@ -23,35 +23,23 @@
  */
 package jenkins.branch;
 
-import hudson.Extension;
-import hudson.ExtensionPoint;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.Descriptor;
-import hudson.model.Descriptor.FormException;
 import hudson.scm.NullSCM;
 import hudson.scm.SCM;
-import hudson.scm.SCMDescriptor;
 
 import javax.xml.bind.DatatypeConverter;
 
-import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import jenkins.model.GlobalConfiguration;
-import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.impl.NullSCMSource;
-import net.sf.json.JSONObject;
 
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
-
-import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * A source code branch.
@@ -87,7 +75,6 @@ public class Branch extends AbstractDescribableImpl<Branch> {
      * @param head     the name of the branch.
      * @param scm      the {@link SCM} for the branch.
      */
-    @DataBoundConstructor
     public Branch(String sourceId, SCMHead head, SCM scm, List<? extends BranchProperty> properties) {
         this.sourceId = sourceId;
         this.head = head;

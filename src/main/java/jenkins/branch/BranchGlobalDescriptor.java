@@ -30,8 +30,6 @@ import hudson.Extension;
 import jenkins.model.GlobalConfiguration;
 import net.sf.json.JSONObject;
 
-import java.util.logging.Logger;
-
 enum PathEncoding {
     DEFAULT, BASE64, STRIP
 };
