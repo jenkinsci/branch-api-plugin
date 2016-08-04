@@ -115,7 +115,7 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
         return "CustomOrganizationFolderDescriptor[" + delegate.getId() + "]";
     }
 
-    // TODO HACK ALERT! better for DescriptorVisibilityFilter to allow items to be added as well as removed
+    // TODO HACK ALERT! better for DescriptorVisibilityFilter to allow items to be added as well as removed; or consider using ExtensionFinder
 
     @Initializer(after=InitMilestone.PLUGINS_STARTED, before=InitMilestone.EXTENSIONS_AUGMENTED)
     public static void addSpecificDescriptors() {
