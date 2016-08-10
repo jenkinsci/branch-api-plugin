@@ -295,7 +295,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 @Override
                 public void observe(@NonNull SCMHead head, @NonNull SCMRevision revision) {
                     Branch branch = newBranch(source, head);
-                    String rawName = branch.getName();
+                    String remoteName = branch.getRemoteName();
+                    String prettyName = branch.getName();
                     String encodedName = branch.getEncodedName();
                     P project = observer.shouldUpdate(encodedName);
                     if (project != null) {
@@ -308,11 +309,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         if (revision.isDeterministic()) {
                             SCMRevision lastBuild = _factory.getRevision(project);
                             if (!revision.equals(lastBuild)) {
-                                listener.getLogger().println("Changes detected in " + rawName + " (" + lastBuild + " → " + revision + ")");
+                                listener.getLogger().println("Changes detected in " + remoteName + " (" + lastBuild + " → " + revision + ")");
                                 needSave = true;
-                                scheduleBuild(_factory, project, revision, listener, rawName);
+                                scheduleBuild(_factory, project, revision, listener, remoteName);
                             } else {
-                                listener.getLogger().println("No changes detected in " + rawName + " (still at " + revision + ")");
+                                listener.getLogger().println("No changes detected in " + remoteName + " (still at " + revision + ")");
                             }
                         } else {
                             // fall back to polling when we have a non-deterministic revision/hash.
@@ -320,11 +321,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             if (scmProject != null) {
                                 PollingResult pollingResult = scmProject.poll(listener);
                                 if (pollingResult.hasChanges()) {
-                                    listener.getLogger().println("Changes detected in " + rawName);
+                                    listener.getLogger().println("Changes detected in " + remoteName);
                                     needSave = true;
-                                    scheduleBuild(_factory, project, revision, listener, rawName);
+                                    scheduleBuild(_factory, project, revision, listener, remoteName);
                                 } else {
-                                    listener.getLogger().println("No changes detected in " + rawName);
+                                    listener.getLogger().println("No changes detected in " + remoteName);
                                 }
                             }
                         }
@@ -332,29 +333,29 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             try {
                                 project.save();
                             } catch (IOException e) {
-                                e.printStackTrace(listener.error("Could not save changes to " + rawName));
+                                e.printStackTrace(listener.error("Could not save changes to " + remoteName));
                             }
                         }
                         return;
                     }
                     if (!observer.mayCreate(encodedName)) {
-                        listener.getLogger().println("Ignoring duplicate branch project " + rawName);
+                        listener.getLogger().println("Ignoring duplicate branch project " + remoteName);
                         return;
                     }
                     project = _factory.newInstance(branch);
                     if (!project.getName().equals(encodedName)) {
                         throw new IllegalStateException("Name of created project " + project + " did not match expected " + encodedName);
                     }
-                    if (!rawName.equals(encodedName) && project.getDisplayName().equals(encodedName)) {
+                    if (!prettyName.equals(encodedName) && project.getDisplayName().equals(encodedName)) {
                         try {
-                            project.setDisplayName(rawName);
+                            project.setDisplayName(prettyName);
                         } catch (IOException e) {
-                            e.printStackTrace(listener.error("Could not save changes to " + rawName));
+                            e.printStackTrace(listener.error("Could not save changes to " + prettyName));
                         }
                     }
                     _factory.decorate(project);
                     observer.created(project);
-                    scheduleBuild(_factory, project, revision, listener, rawName);
+                    scheduleBuild(_factory, project, revision, listener, remoteName);
                 }
             }, listener);
         }
