@@ -27,6 +27,7 @@ import hudson.Extension;
 import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
+import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -58,6 +59,10 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
     @Symbol("overrideIndexTriggers")
     public static class DescriptorImpl extends JobPropertyDescriptor {
 
+        public boolean isOwnerMultibranch(Job<?,?> owner) {
+            return owner.getParent() instanceof MultiBranchProject;
+        }
+
         @Override public String getDisplayName() {
             return "Override multibranch or organization branch indexing triggers setting.";
         }
@@ -66,11 +71,6 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
         public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
             return formData.optBoolean("specified") ? super.newInstance(req, formData) : null;
         }
-
-    }
-
-    public boolean isOwnerMultibranch() {
-        return owner.getParent() instanceof MultiBranchProject;
     }
 
     @Extension

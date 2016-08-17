@@ -25,9 +25,9 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-    <j:if test="${it.isOwnerMultibranch()}">
+    <j:if test="${descriptor.isOwnerMultibranch(it)}">
         <f:block>
-            <f:optionalBlock title="${descriptor.displayName}" name="specified" checked="${instance != null}" inline="true" help="${descriptor.helpFile}">
+            <f:optionalBlock title="${descriptor.displayName}" name="specified" checked="${instance != null}" inline="true">
                 <f:entry title="${%Select to enable index triggers despite overrides. Unselect to disable index triggers regardless of overrides.}"
                          field="enableTriggers">
                     <f:checkbox />
