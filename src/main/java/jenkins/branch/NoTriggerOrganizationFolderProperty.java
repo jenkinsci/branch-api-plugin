@@ -90,6 +90,9 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
                         if (c instanceof BranchIndexingCause) {
                             if (p instanceof Job) {
                                 Job j = (Job) p;
+                                OverrideIndexTriggersJobProperty overrideProp =
+                                        (OverrideIndexTriggersJobProperty) j.getProperty(OverrideIndexTriggersJobProperty.class);
+
                                 if (j.getParent() instanceof MultiBranchProject) {
                                     MultiBranchProject mbp = (MultiBranchProject) j.getParent();
                                     if (mbp.getParent() instanceof OrganizationFolder) {
@@ -97,7 +100,8 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
                                         if (prop != null) {
                                             // Not necessarily the same as j.getName(), which may be encoded:
                                             String name = mbp.getProjectFactory().getBranch(j).getName();
-                                            if (!name.matches(prop.getBranches())) {
+                                            if (!name.matches(prop.getBranches()) &&
+                                                    (overrideProp == null || !overrideProp.getEnableTriggers())) {
                                                 return false;
                                             }
                                         }
