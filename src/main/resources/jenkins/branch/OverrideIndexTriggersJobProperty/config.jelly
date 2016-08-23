@@ -28,7 +28,7 @@ THE SOFTWARE.
     <j:if test="${descriptor.isOwnerMultibranch(it)}">
         <f:block>
             <f:optionalBlock title="${descriptor.displayName}" name="specified" checked="${instance != null}" inline="true">
-                <f:entry title="${%Select to enable index triggers despite overrides. Unselect to disable index triggers regardless of overrides.}"
+                <f:entry title="${%Override disabled triggers}"
                          field="enableTriggers">
                     <f:checkbox />
                 </f:entry>

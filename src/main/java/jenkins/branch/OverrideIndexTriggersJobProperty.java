@@ -64,7 +64,7 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
         }
 
         @Override public String getDisplayName() {
-            return "Override multibranch or organization branch indexing triggers setting.";
+            return "Override multibranch or organization branch indexing triggers.";
         }
 
         @Override
