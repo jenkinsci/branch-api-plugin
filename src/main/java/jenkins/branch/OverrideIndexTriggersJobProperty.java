@@ -59,8 +59,8 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
     @Symbol("overrideIndexTriggers")
     public static class DescriptorImpl extends JobPropertyDescriptor {
 
-        public boolean isOwnerMultibranch(Job<?,?> owner) {
-            return owner.getParent() instanceof MultiBranchProject;
+        public boolean isOwnerMultibranch(Item item) {
+            return item instanceof MultiBranchProject || item instanceof OrganizationFolder || item.getParent() instanceof MultiBranchProject;
         }
 
         @Override public String getDisplayName() {
