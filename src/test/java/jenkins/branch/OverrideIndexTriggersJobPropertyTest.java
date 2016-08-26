@@ -24,9 +24,6 @@
 
 package jenkins.branch;
 
-import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
-import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.queue.QueueTaskFuture;
@@ -53,8 +50,6 @@ public class OverrideIndexTriggersJobPropertyTest {
     public JenkinsRule r = new JenkinsRule();
     @Rule
     public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
-    @Rule
-    public GitSampleRepoRule orgSampleRepo = new GitSampleRepoRule();
 
     @Issue("JENKINS-37219")
     @Test
@@ -119,15 +114,15 @@ public class OverrideIndexTriggersJobPropertyTest {
     @Issue("JENKINS-37219")
     @Test
     public void overridesDisabledOrg() throws Exception {
-        orgSampleRepo.init();
-        orgSampleRepo.git("checkout", "-b", "newfeature");
-        orgSampleRepo.write("stuff", "content");
-        orgSampleRepo.git("add", "stuff");
-        orgSampleRepo.git("commit", "--all", "--message=newfeature");
-        orgSampleRepo.git("checkout", "-b", "release", "master");
-        orgSampleRepo.write("server", "mycorp.com");
-        orgSampleRepo.git("add", "server");
-        orgSampleRepo.git("commit", "--all", "--message=release");
+        sampleRepo.init();
+        sampleRepo.git("checkout", "-b", "newfeature");
+        sampleRepo.write("stuff", "content");
+        sampleRepo.git("add", "stuff");
+        sampleRepo.git("commit", "--all", "--message=newfeature");
+        sampleRepo.git("checkout", "-b", "release", "master");
+        sampleRepo.write("server", "mycorp.com");
+        sampleRepo.git("add", "server");
+        sampleRepo.git("commit", "--all", "--message=release");
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         r.configRoundtrip(top);
         NoTriggerOrganizationFolderProperty prop = top.getProperties().get(NoTriggerOrganizationFolderProperty.class);
@@ -135,7 +130,7 @@ public class OverrideIndexTriggersJobPropertyTest {
         assertEquals(".*", prop.getBranches());
         top.getProperties().replace(new NoTriggerOrganizationFolderProperty("(?!release.*).*"));
         top.getProjectFactories().add(new OrganizationFolderTest.MockFactory());
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new GitSCMSource(null, orgSampleRepo.toString(), "", "*", "", false))));
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false))));
         r.configRoundtrip(top);
         prop = top.getProperties().get(NoTriggerOrganizationFolderProperty.class);
         assertNotNull(prop);
@@ -156,16 +151,16 @@ public class OverrideIndexTriggersJobPropertyTest {
         FreeStyleProject newfeature = r.jenkins.getItemByFullName("top/stuff/newfeature", FreeStyleProject.class);
         assertNotNull(newfeature);
         assertEquals(2, newfeature.getNextBuildNumber());
-        orgSampleRepo.git("checkout", "master");
-        orgSampleRepo.write("file", "more");
-        orgSampleRepo.git("commit", "--all", "--message=master-2");
-        orgSampleRepo.git("checkout", "newfeature");
-        orgSampleRepo.write("file", "more");
-        orgSampleRepo.git("commit", "--all", "--message=newfeature-2");
-        orgSampleRepo.git("checkout", "release");
-        orgSampleRepo.write("file", "more");
-        orgSampleRepo.git("commit", "--all", "--message=release-2");
-        orgSampleRepo.notifyCommit(r);
+        sampleRepo.git("checkout", "master");
+        sampleRepo.write("file", "more");
+        sampleRepo.git("commit", "--all", "--message=master-2");
+        sampleRepo.git("checkout", "newfeature");
+        sampleRepo.write("file", "more");
+        sampleRepo.git("commit", "--all", "--message=newfeature-2");
+        sampleRepo.git("checkout", "release");
+        sampleRepo.write("file", "more");
+        sampleRepo.git("commit", "--all", "--message=release-2");
+        sampleRepo.notifyCommit(r);
         showComputation(top);
         showComputation(stuff);
         assertEquals(3, master.getNextBuildNumber());
@@ -174,10 +169,10 @@ public class OverrideIndexTriggersJobPropertyTest {
 
         // Now add the property and make sure a build will get triggered.
         release.addProperty(new OverrideIndexTriggersJobProperty(true));
-        orgSampleRepo.git("checkout", "release");
-        orgSampleRepo.write("file", "even more");
-        orgSampleRepo.git("commit", "--all", "--message=release-3");
-        orgSampleRepo.notifyCommit(r);
+        sampleRepo.git("checkout", "release");
+        sampleRepo.write("file", "even more");
+        sampleRepo.git("commit", "--all", "--message=release-3");
+        sampleRepo.notifyCommit(r);
         showComputation(top);
         showComputation(stuff);
 

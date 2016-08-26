@@ -44,7 +44,7 @@ import java.util.List;
  * suppress them, or disabling if they're otherwise enabled.
  */
 public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
-    private boolean enableTriggers;
+    private final boolean enableTriggers;
 
     @DataBoundConstructor
     public OverrideIndexTriggersJobProperty(boolean enableTriggers) {
@@ -84,11 +84,12 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
                     for (Cause c : ((CauseAction) action).getCauses()) {
                         if (c instanceof BranchIndexingCause) {
                             if (p instanceof Job) {
-                                Job j = (Job) p;
-                                OverrideIndexTriggersJobProperty overrideProp =
-                                        (OverrideIndexTriggersJobProperty) j.getProperty(OverrideIndexTriggersJobProperty.class);
-                                if (overrideProp != null && !overrideProp.getEnableTriggers()) {
-                                    return false;
+                                Job<?,?> j = (Job) p;
+                                OverrideIndexTriggersJobProperty overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
+                                if (overrideProp != null) {
+                                    return overrideProp.getEnableTriggers();
+                                } else {
+                                    return true;
                                 }
                             }
                         }
