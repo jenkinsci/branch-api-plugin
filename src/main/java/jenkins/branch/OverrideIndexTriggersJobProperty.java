@@ -21,43 +21,56 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package jenkins.branch;
 
 import hudson.Extension;
 import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
+import hudson.model.Item;
 import hudson.model.Job;
+import hudson.model.JobProperty;
+import hudson.model.JobPropertyDescriptor;
 import hudson.model.Queue;
-import hudson.model.Run;
-import java.util.List;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
+import net.sf.json.JSONObject;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.StaplerRequest;
+
+import java.util.List;
 
 /**
- * Suppresses builds due to {@link BranchIndexingCause}.
+ * Allows overriding indexing triggers for an individual job - either by enabling when the multibranch or org is set to
+ * suppress them, or disabling if they're otherwise enabled.
  */
-@Restricted(NoExternalUse.class)
-public class NoTriggerBranchProperty extends BranchProperty {
+public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
+    private final boolean enableTriggers;
 
     @DataBoundConstructor
-    public NoTriggerBranchProperty() {}
+    public OverrideIndexTriggersJobProperty(boolean enableTriggers) {
+        this.enableTriggers = enableTriggers;
+    }
 
-    @Override
-    public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
-        return null;
+    public boolean getEnableTriggers() {
+        return enableTriggers;
     }
 
     @Extension
-    public static class DescriptorImpl extends BranchPropertyDescriptor {
+    @Symbol("overrideIndexTriggers")
+    public static class DescriptorImpl extends JobPropertyDescriptor {
 
-        @Override
-        public String getDisplayName() {
-            return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();
+        public boolean isOwnerMultibranch(Item item) {
+            return item instanceof MultiBranchProject || item instanceof OrganizationFolder || item.getParent() instanceof MultiBranchProject;
         }
 
+        @Override public String getDisplayName() {
+            return "Override multibranch or organization branch indexing triggers.";
+        }
+
+        @Override
+        public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+            return formData.optBoolean("specified") ? super.newInstance(req, formData) : null;
+        }
     }
 
     @Extension
@@ -66,24 +79,17 @@ public class NoTriggerBranchProperty extends BranchProperty {
         @SuppressWarnings({"unchecked", "rawtypes"}) // untypable
         @Override
         public boolean shouldSchedule(Queue.Task p, List<Action> actions) {
-            for (Action action :  actions) {
+            for (Action action : actions) {
                 if (action instanceof CauseAction) {
                     for (Cause c : ((CauseAction) action).getCauses()) {
                         if (c instanceof BranchIndexingCause) {
                             if (p instanceof Job) {
                                 Job<?,?> j = (Job) p;
-                                if (j.getParent() instanceof MultiBranchProject) {
-
-                                    OverrideIndexTriggersJobProperty overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
-                                    if (overrideProp != null) {
-                                        return overrideProp.getEnableTriggers();
-                                    } else {
-                                        for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
-                                            if (prop instanceof NoTriggerBranchProperty) {
-                                                return false;
-                                            }
-                                        }
-                                    }
+                                OverrideIndexTriggersJobProperty overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
+                                if (overrideProp != null) {
+                                    return overrideProp.getEnableTriggers();
+                                } else {
+                                    return true;
                                 }
                             }
                         }
@@ -94,5 +100,6 @@ public class NoTriggerBranchProperty extends BranchProperty {
         }
 
     }
+
 
 }

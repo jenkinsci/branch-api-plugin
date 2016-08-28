@@ -89,16 +89,22 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
                     for (Cause c : ((CauseAction) action).getCauses()) {
                         if (c instanceof BranchIndexingCause) {
                             if (p instanceof Job) {
-                                Job j = (Job) p;
+                                Job<?,?> j = (Job) p;
+
                                 if (j.getParent() instanceof MultiBranchProject) {
-                                    MultiBranchProject mbp = (MultiBranchProject) j.getParent();
-                                    if (mbp.getParent() instanceof OrganizationFolder) {
-                                        NoTriggerOrganizationFolderProperty prop = ((OrganizationFolder) mbp.getParent()).getProperties().get(NoTriggerOrganizationFolderProperty.class);
-                                        if (prop != null) {
-                                            // Not necessarily the same as j.getName(), which may be encoded:
-                                            String name = mbp.getProjectFactory().getBranch(j).getName();
-                                            if (!name.matches(prop.getBranches())) {
-                                                return false;
+                                    OverrideIndexTriggersJobProperty overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
+                                    if (overrideProp != null) {
+                                        return overrideProp.getEnableTriggers();
+                                    } else {
+                                        MultiBranchProject mbp = (MultiBranchProject) j.getParent();
+                                        if (mbp.getParent() instanceof OrganizationFolder) {
+                                            NoTriggerOrganizationFolderProperty prop = ((OrganizationFolder) mbp.getParent()).getProperties().get(NoTriggerOrganizationFolderProperty.class);
+                                            if (prop != null) {
+                                                // Not necessarily the same as j.getName(), which may be encoded:
+                                                String name = mbp.getProjectFactory().getBranch(j).getName();
+                                                if (!name.matches(prop.getBranches())) {
+                                                    return false;
+                                                }
                                             }
                                         }
                                     }
