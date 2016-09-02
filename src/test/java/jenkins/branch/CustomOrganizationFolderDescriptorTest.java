@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMSourceObserver;
@@ -43,12 +44,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.TestExtension;
 
 public class CustomOrganizationFolderDescriptorTest {
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
+    @Rule
+    public LoggerRule logger = new LoggerRule().record(CustomOrganizationFolderDescriptor.class, Level.ALL);
     
     @Test
     public void noNavigatorNoFactoryInstalled() throws Exception {
@@ -95,6 +99,16 @@ public class CustomOrganizationFolderDescriptorTest {
         assertEquals(Collections.emptyList(), newItemTypes());
         ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
         ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
+        assertEquals(Collections.singletonList("MockNavigator"), newItemTypes());
+    }
+
+    @Issue("JENKINS-34239")
+    @SuppressWarnings("deprecation") // ExtensionList.add simulating dynamic installation
+    @Test
+    public void dynamicLoadReversed() throws Exception {
+        assertEquals(Collections.emptyList(), newItemTypes());
+        ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
+        ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
         assertEquals(Collections.singletonList("MockNavigator"), newItemTypes());
     }
 
