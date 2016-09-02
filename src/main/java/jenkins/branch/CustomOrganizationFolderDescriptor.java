@@ -122,6 +122,7 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
         LOGGER.fine("ran addSpecificDescriptors");
         doAddSpecificDescriptors();
         ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).addListener(new ListenerImpl());
+        ExtensionList.lookup(SCMNavigatorDescriptor.class).addListener(new ListenerImpl());
     }
 
     private static class ListenerImpl extends ExtensionListListener {
