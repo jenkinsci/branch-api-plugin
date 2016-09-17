@@ -46,7 +46,7 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
  * @see "JENKINS-34564"
  */
 @Restricted(NoExternalUse.class)
-@Extension
+@Extension(ordinal = -100)
 public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
     private static final Logger LOGGER = Logger.getLogger(WorkspaceLocatorImpl.class.getName());
