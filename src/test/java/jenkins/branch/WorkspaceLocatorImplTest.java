@@ -48,6 +48,11 @@ public class WorkspaceLocatorImplTest {
         assertEquals("stuff_dev_flow-X0yiR9.BqsTqg9pFIyiV0ATm6dyruRbTOvnNTG9SxW8", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
         assertEquals("some_longish_name_here_master-ftMhCUghiC48kxZS4Zw6.QohYNA35xl611Xy3HUNe.M", WorkspaceLocatorImpl.minimize("some longish name here/master"));
         assertEquals("o_much_to_fit_in_a_short_path_at_all-cH_mwM17JKzXFOunEJLQFV6iV4B5V.S2Wi1AC3bM6K0", WorkspaceLocatorImpl.minimize("really way too much to fit in a short path at all"));
+        assertEquals("LIQOQHEADljz_nbflhsfliafdzbclllhdfla-Uj_ZXj._0tE7db2I1CxWsNPBcPjy0saTTJ0QT8iGAxQ", WorkspaceLocatorImpl.minimize("abc!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUHLHULIQOQHEADljz,nbflhsfliafdzbclllhdfla"));
+        assertEquals("llhdflaabcd_hdjlaiuehiuehbn_znxbbLUH-ahHH_tuKAYgION2gQVf2YnyMDSDX306fkceD914r_b0", WorkspaceLocatorImpl.minimize("LHULIQOQHEADljz,nbflhsfliafdzbclllhdflaabcd!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUH"));
+        assertEquals("lhdflaabcde_hdjlaiuehiuehbn_znxbbLUH-uPkP5l4k9eSBkVcNaracGXcXUnPfgADiTa7PVyWXa0w", WorkspaceLocatorImpl.minimize("LHULIQOQHEADljz,nbflhsfliafdzbclllhdflaabcde!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUH"));
+        assertEquals("hdflaabcdef_hdjlaiuehiuehbn_znxbbLUH-q8tDA_HG4zGluLyc80K9po3VXYHxIETkXoZqI0.lDDE", WorkspaceLocatorImpl.minimize("LHULIQOQHEADljz,nbflhsfliafdzbclllhdflaabcdef!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUH"));
+        assertEquals("dflaabcdefg_hdjlaiuehiuehbn_znxbbLUH-F00a2zf8qKtFgFO3WdCsvgWzY9SCgmjjnNJuLfbSans", WorkspaceLocatorImpl.minimize("LHULIQOQHEADljz,nbflhsfliafdzbclllhdflaabcdefg!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUH"));
         assertEquals("a_b_c_d-oy2E86mHig3a7JI3gjl1h1_pFxZuvFiQUZFDQ1B6_jo", WorkspaceLocatorImpl.minimize("a/b/c/d"));
     }
 

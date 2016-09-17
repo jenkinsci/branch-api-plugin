@@ -40,8 +40,15 @@ import jenkins.slaves.WorkspaceLocator;
 @Extension
 public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
+    /** The most characters to allow in a workspace directory name, relative to the root. Zero to disable altogether. */
+    @SuppressWarnings("FieldMayBeFinal")
+    private static /* not final */ int PATH_MAX = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".PATH_MAX", 80);
+
     @Override
     public FilePath locate(TopLevelItem item, Node node) {
+        if (PATH_MAX == 0) {
+            return null;
+        }
         if (!(item.getParent() instanceof MultiBranchProject)) {
             return null;
         }
@@ -57,8 +64,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     static String minimize(String name) {
-        return name.replaceAll("(%[0-9A-F]{2}|[^a-zA-Z0-9-_.])+", "_").replaceFirst(".*?(.{0,36}$)", "$1") + "-" +
-            Base64.encode(Hashing.sha256().hashString(name).asBytes()).replace('/', '_').replace('+', '.').replaceFirst("=+$", "");
+        String uniqueSuffix = "-" + Base64.encode(Hashing.sha256().hashString(name).asBytes()).replace('/', '_').replace('+', '.').replaceFirst("=+$", "");
+        int maxMnemonic = Math.max(PATH_MAX - 44, 1);
+        String result = name.replaceAll("(%[0-9A-F]{2}|[^a-zA-Z0-9-_.])+", "_").replaceFirst(".*?(.{0," + maxMnemonic + "}$)", "$1") + uniqueSuffix;
+        assert result.length() <= PATH_MAX : result + " does not fit inside " + PATH_MAX;
+        return result;
     }
 
 }
