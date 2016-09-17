@@ -27,6 +27,7 @@ package jenkins.branch;
 import hudson.model.FreeStyleProject;
 import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
+import java.util.Collections;
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.impl.SingleSCMSource;
@@ -71,6 +72,40 @@ public class WorkspaceLocatorImplTest {
         assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow-X0yiR9.BqsTqg9pFIyiV0ATm6dyruRbTOvnNTG9SxW8"), slave.getWorkspaceFor(master));
         FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
         assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
+    }
+
+    @Issue("JENKINS-2111")
+    @Test
+    public void delete() throws Exception {
+        MultiBranchImpl p = r.createProject(MultiBranchImpl.class, "p");
+        p.getSourcesList().add(new BranchSource(new SingleSCMSource(null, "master", new NullSCM())));
+        BranchSource pr1Source = new BranchSource(new SingleSCMSource(null, "PR-1", new NullSCM()));
+        p.getSourcesList().add(pr1Source);
+        p.scheduleBuild2(0).getFuture().get();
+        r.waitUntilNoActivity();
+        showComputation(p);
+        FreeStyleProject master = r.jenkins.getItemByFullName("p/master", FreeStyleProject.class);
+        assertNotNull(master);
+        FreeStyleProject pr1 = r.jenkins.getItemByFullName("p/PR-1", FreeStyleProject.class);
+        assertNotNull(pr1);
+        assertEquals(r.jenkins.getRootPath().child("workspace/p_master-aUAcX_zHoHqLGnKPdVG8lI8EWxiSbfSTZWe7brOuldg"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(r.jenkins.getRootPath().child("workspace/p_PR-1-4Vkhx2z.S5QnRAYknhYdbgpPuaAIibouodML_pFe914"), r.jenkins.getWorkspaceFor(pr1));
+        // Do builds on an agent too.
+        DumbSlave slave = r.createOnlineSlave();
+        assertEquals(slave.getWorkspaceRoot().child("p_master-aUAcX_zHoHqLGnKPdVG8lI8EWxiSbfSTZWe7brOuldg"), slave.getWorkspaceFor(master));
+        assertEquals(slave.getWorkspaceRoot().child("p_PR-1-4Vkhx2z.S5QnRAYknhYdbgpPuaAIibouodML_pFe914"), slave.getWorkspaceFor(pr1));
+        master.setAssignedNode(slave);
+        assertEquals(2, r.buildAndAssertSuccess(master).getNumber());
+        pr1.setAssignedNode(slave);
+        assertEquals(2, r.buildAndAssertSuccess(pr1).getNumber());
+        // Now delete PR-1 and make sure its workspaces are deleted too.
+        p.getSourcesList().remove(pr1Source);
+        p.scheduleBuild2(0).getFuture().get();
+        r.waitUntilNoActivity();
+        showComputation(p);
+        assertEquals(Collections.singletonList(master), r.jenkins.getAllItems(FreeStyleProject.class));
+        assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master-aUAcX_zHoHqLGnKPdVG8lI8EWxiSbfSTZWe7brOuldg")), r.jenkins.getRootPath().child("workspace").listDirectories());
+        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-aUAcX_zHoHqLGnKPdVG8lI8EWxiSbfSTZWe7brOuldg")), slave.getWorkspaceRoot().listDirectories());
     }
 
 }
