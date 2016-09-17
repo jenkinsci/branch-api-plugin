@@ -49,7 +49,8 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         if (node instanceof Jenkins) {
             return ((Jenkins) node).getRootPath().child("workspace/" + minimized);
         } else if (node instanceof Slave) {
-            return ((Slave) node).getWorkspaceRoot().child(minimized);
+            FilePath root = ((Slave) node).getWorkspaceRoot();
+            return root != null ? root.child(minimized) : null;
         } else { // ?
             return null;
         }
