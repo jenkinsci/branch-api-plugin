@@ -75,7 +75,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     static String uniqueSuffix(String name) {
-        return "-" + Base64.encode(Hashing.sha256().hashString(name).asBytes()).
+        return Base64.encode(Hashing.sha256().hashString(name).asBytes()).
             replace('/', '_').
             replace('+', '.').
             replaceFirst("=+$", "");
@@ -85,7 +85,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         int maxMnemonic = Math.max(PATH_MAX - 44, 1);
         String result = name.replaceAll("(%[0-9A-F]{2}|[^a-zA-Z0-9-_.])+", "_").
             replaceFirst(".*?(.{0," + maxMnemonic + "}$)", "$1") +
-            uniqueSuffix(name);
+            "-" + uniqueSuffix(name);
         assert result.length() <= PATH_MAX : result + " does not fit inside " + PATH_MAX;
         return result;
     }
@@ -117,7 +117,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     return;
                 }
                 for (FilePath child : root.listDirectories()) {
-                    if (child.getName().endsWith(suffix)) {
+                    if (child.getName().contains(suffix)) {
                         LOGGER.log(Level.INFO, "deleting obsolete workspace {0} on {1}", new Object[] {child, node.getNodeName()});
                         child.deleteRecursive();
                     }

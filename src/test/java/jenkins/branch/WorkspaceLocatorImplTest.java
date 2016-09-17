@@ -27,19 +27,24 @@ package jenkins.branch;
 import hudson.model.FreeStyleProject;
 import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
+import hudson.slaves.WorkspaceList;
 import java.util.Collections;
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.impl.SingleSCMSource;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.ClassRule;
 import org.junit.Rule;
+import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
 
 public class WorkspaceLocatorImplTest {
-    
+
+    @ClassRule
+    public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
@@ -98,6 +103,10 @@ public class WorkspaceLocatorImplTest {
         assertEquals(2, r.buildAndAssertSuccess(master).getNumber());
         pr1.setAssignedNode(slave);
         assertEquals(2, r.buildAndAssertSuccess(pr1).getNumber());
+        // Also make sure we are testing alternate workspaces.
+        try (WorkspaceList.Lease lease = slave.toComputer().getWorkspaceList().acquire(slave.getWorkspaceFor(pr1))) {
+            assertEquals(3, r.buildAndAssertSuccess(pr1).getNumber());
+        }
         // Now delete PR-1 and make sure its workspaces are deleted too.
         p.getSourcesList().remove(pr1Source);
         p.scheduleBuild2(0).getFuture().get();
