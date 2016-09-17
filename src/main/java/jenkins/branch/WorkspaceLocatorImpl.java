@@ -113,7 +113,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         private void cleanUp(String suffix, FilePath root, Node node) {
             try {
-                if (!root.isDirectory()) {
+                if (root == null || !root.isDirectory()) {
                     return;
                 }
                 for (FilePath child : root.listDirectories()) {
