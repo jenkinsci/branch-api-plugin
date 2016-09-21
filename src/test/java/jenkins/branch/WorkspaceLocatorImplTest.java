@@ -51,15 +51,19 @@ public class WorkspaceLocatorImplTest {
     @WithoutJenkins
     @Test
     public void minimize() {
-        assertEquals("stuff_dev_flow-X0yiR9.BqsTqg9pFIyiV0ATm6dyruRbTOvnNTG9SxW8", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
-        assertEquals("some_longish_name_here_master-ftMhCUghiC48kxZS4Zw6.QohYNA35xl611Xy3HUNe.M", WorkspaceLocatorImpl.minimize("some longish name here/master"));
-        assertEquals("o_much_to_fit_in_a_short_path_at_all-cH_mwM17JKzXFOunEJLQFV6iV4B5V.S2Wi1AC3bM6K0", WorkspaceLocatorImpl.minimize("really way too much to fit in a short path at all"));
-        assertEquals("LIQOQHEADljz_nbflhsfliafdzbclllhdfla-Uj_ZXj._0tE7db2I1CxWsNPBcPjy0saTTJ0QT8iGAxQ", WorkspaceLocatorImpl.minimize("abc!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUHLHULIQOQHEADljz,nbflhsfliafdzbclllhdfla"));
-        assertEquals("llhdflaabcd_hdjlaiuehiuehbn_znxbbLUH-ahHH_tuKAYgION2gQVf2YnyMDSDX306fkceD914r_b0", WorkspaceLocatorImpl.minimize("LHULIQOQHEADljz,nbflhsfliafdzbclllhdflaabcd!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUH"));
-        assertEquals("lhdflaabcde_hdjlaiuehiuehbn_znxbbLUH-uPkP5l4k9eSBkVcNaracGXcXUnPfgADiTa7PVyWXa0w", WorkspaceLocatorImpl.minimize("LHULIQOQHEADljz,nbflhsfliafdzbclllhdflaabcde!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUH"));
-        assertEquals("hdflaabcdef_hdjlaiuehiuehbn_znxbbLUH-q8tDA_HG4zGluLyc80K9po3VXYHxIETkXoZqI0.lDDE", WorkspaceLocatorImpl.minimize("LHULIQOQHEADljz,nbflhsfliafdzbclllhdflaabcdef!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUH"));
-        assertEquals("dflaabcdefg_hdjlaiuehiuehbn_znxbbLUH-F00a2zf8qKtFgFO3WdCsvgWzY9SCgmjjnNJuLfbSans", WorkspaceLocatorImpl.minimize("LHULIQOQHEADljz,nbflhsfliafdzbclllhdflaabcdefg!@#$%^&*()[]{}|hdjlaiuehiuehbn,znxbbLUH"));
-        assertEquals("a_b_c_d-oy2E86mHig3a7JI3gjl1h1_pFxZuvFiQUZFDQ1B6_jo", WorkspaceLocatorImpl.minimize("a/b/c/d"));
+        assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM57BBNSYVIXGXHCE4KAEVPV5KZYQ", WorkspaceLocatorImpl.minimize("a/b"));
+        assertEquals("a_b_c_d-UMWYJ45JQ6FA3WXMSI3YEOLVQ5P6SFYWN26FRECRSFBUGUD27Y5A", WorkspaceLocatorImpl.minimize("a/b/c/d"));
+        assertEquals("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
+        assertEquals("me_longish_name_here_master-P3JSCCKIEGEC4PETCZJODHB27EFCCYGQG7TRS6WXKXZNY5INPPRQ", WorkspaceLocatorImpl.minimize("some longish name here/master"));
+        assertEquals("_fit_in_a_short_path_at_all-OB76NQGNPMSKZVYU5OTRBEWQCVPKEV4APFL6JNS2FVAAW5WM5CWQ", WorkspaceLocatorImpl.minimize("really way too much to fit in a short path at all"));
+        assertEquals("abc_esky_-XHOKB7XHQS32PT7KIXIDYFSRSU4SBSGHX3K5O36BMZE2CSLSOVQA", WorkspaceLocatorImpl.minimize("abc!@#$%^&*()[]{}|česky™"));
+        assertEquals("lahblahblahblahblahblahblah-PKYGNQW7EX27MNOU63BZF4FUBUTNK3HIBC37PR673KBZYLRZAQLA", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblah"));
+        assertEquals("ahblahblahblahblahblahblahX-B4K3CPB6GP6JRCDBAKDJNRGX42AYU55PGVSOX2UWB5SVLUW42NCA", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahX"));
+        assertEquals("hblahblahblahblahblahblahXY-ZGH2VVOGO2FEM72MZYA7CWRLPBOJK2HZ4YV7IFVDLZPCNVE3CXNQ", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXY"));
+        assertEquals("blahblahblahblahblahblahXYZ-I7NHG3VUEWUH3IFAPUM3HGRL7O4EFAE3FXCXPL35CWOOQSZR6S4Q", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZ"));
+        assertEquals("lahblahblahblahblahblahXYZW-LRVIZHY37BWI3PKRF7WSERGRN3NGPY4T74VWKWNFRMR4IWGXJPQA", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZW"));
+        assertEquals("ahblahblahblahblahblahXYZWV-KLYOGWEJODAVXII3MEM2SLNMRPE7HF6IADTBQ5MP66V3RYCL2LAA", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
+        assertEquals("hblahblahblahblahblahXYZWVU-OSF24EPB4C42KAUXYHPP66XDQHOHKWPHGKZLIWREKOGZDZ46T2PQ", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
     }
 
     @Issue("JENKINS-34564")
@@ -72,9 +76,9 @@ public class WorkspaceLocatorImplTest {
         showComputation(stuff);
         FreeStyleProject master = r.jenkins.getItemByFullName("stuff/dev%2Fflow", FreeStyleProject.class);
         assertNotNull(master);
-        assertEquals(r.jenkins.getRootPath().child("workspace/stuff_dev_flow-X0yiR9.BqsTqg9pFIyiV0ATm6dyruRbTOvnNTG9SxW8"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(r.jenkins.getRootPath().child("workspace/stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), r.jenkins.getWorkspaceFor(master));
         DumbSlave slave = r.createOnlineSlave();
-        assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow-X0yiR9.BqsTqg9pFIyiV0ATm6dyruRbTOvnNTG9SxW8"), slave.getWorkspaceFor(master));
+        assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), slave.getWorkspaceFor(master));
         FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
         assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
     }
@@ -93,12 +97,12 @@ public class WorkspaceLocatorImplTest {
         assertNotNull(master);
         FreeStyleProject pr1 = r.jenkins.getItemByFullName("p/PR-1", FreeStyleProject.class);
         assertNotNull(pr1);
-        assertEquals(r.jenkins.getRootPath().child("workspace/p_master-aUAcX_zHoHqLGnKPdVG8lI8EWxiSbfSTZWe7brOuldg"), r.jenkins.getWorkspaceFor(master));
-        assertEquals(r.jenkins.getRootPath().child("workspace/p_PR-1-4Vkhx2z.S5QnRAYknhYdbgpPuaAIibouodML_pFe914"), r.jenkins.getWorkspaceFor(pr1));
+        assertEquals(r.jenkins.getRootPath().child("workspace/p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(r.jenkins.getRootPath().child("workspace/p_PR-1-4FMSDR3M7ZFZIJ2EAYSJ4FQ5NYFE7ONABCE3ULVB2MF75EK665PA"), r.jenkins.getWorkspaceFor(pr1));
         // Do builds on an agent too.
         DumbSlave slave = r.createOnlineSlave();
-        assertEquals(slave.getWorkspaceRoot().child("p_master-aUAcX_zHoHqLGnKPdVG8lI8EWxiSbfSTZWe7brOuldg"), slave.getWorkspaceFor(master));
-        assertEquals(slave.getWorkspaceRoot().child("p_PR-1-4Vkhx2z.S5QnRAYknhYdbgpPuaAIibouodML_pFe914"), slave.getWorkspaceFor(pr1));
+        assertEquals(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA"), slave.getWorkspaceFor(master));
+        assertEquals(slave.getWorkspaceRoot().child("p_PR-1-4FMSDR3M7ZFZIJ2EAYSJ4FQ5NYFE7ONABCE3ULVB2MF75EK665PA"), slave.getWorkspaceFor(pr1));
         master.setAssignedNode(slave);
         assertEquals(2, r.buildAndAssertSuccess(master).getNumber());
         pr1.setAssignedNode(slave);
@@ -113,8 +117,8 @@ public class WorkspaceLocatorImplTest {
         r.waitUntilNoActivity();
         showComputation(p);
         assertEquals(Collections.singletonList(master), r.jenkins.getAllItems(FreeStyleProject.class));
-        assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master-aUAcX_zHoHqLGnKPdVG8lI8EWxiSbfSTZWe7brOuldg")), r.jenkins.getRootPath().child("workspace").listDirectories());
-        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-aUAcX_zHoHqLGnKPdVG8lI8EWxiSbfSTZWe7brOuldg")), slave.getWorkspaceRoot().listDirectories());
+        assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), r.jenkins.getRootPath().child("workspace").listDirectories());
+        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), slave.getWorkspaceRoot().listDirectories());
     }
 
 }

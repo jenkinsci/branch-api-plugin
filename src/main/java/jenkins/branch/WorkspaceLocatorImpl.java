@@ -24,7 +24,7 @@
 
 package jenkins.branch;
 
-import com.google.common.hash.Hashing;
+import com.google.common.base.Charsets;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.Item;
@@ -32,12 +32,15 @@ import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.model.TopLevelItem;
 import hudson.model.listeners.ItemListener;
-import hudson.remoting.Base64;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import jenkins.slaves.WorkspaceLocator;
+import org.apache.commons.codec.binary.Base32;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
@@ -52,6 +55,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     private static final Logger LOGGER = Logger.getLogger(WorkspaceLocatorImpl.class.getName());
 
     /** The most characters to allow in a workspace directory name, relative to the root. Zero to disable altogether. */
+    // TODO 2.4+ use SystemProperties
     @SuppressWarnings("FieldMayBeFinal")
     private static /* not final */ int PATH_MAX = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".PATH_MAX", 80);
 
@@ -75,17 +79,20 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     static String uniqueSuffix(String name) {
-        return Base64.encode(Hashing.sha256().hashString(name).asBytes()).
-            replace('/', '_').
-            replace('+', '.').
-            replaceFirst("=+$", "");
+        // TODO still in beta: byte[] sha256 = Hashing.sha256().hashString(name).asBytes();
+        byte[] sha256;
+        try {
+            sha256 = MessageDigest.getInstance("SHA-256").digest(name.getBytes(Charsets.UTF_16LE));
+        } catch (NoSuchAlgorithmException x) {
+            throw new AssertionError("https://docs.oracle.com/javase/7/docs/technotes/guides/security/StandardNames.html#MessageDigest", x);
+        }
+        return new Base32(0).encodeToString(sha256).replaceFirst("=+$", "");
     }
 
     static String minimize(String name) {
-        int maxMnemonic = Math.max(PATH_MAX - 44, 1);
-        String result = name.replaceAll("(%[0-9A-F]{2}|[^a-zA-Z0-9-_.])+", "_").
-            replaceFirst(".*?(.{0," + maxMnemonic + "}$)", "$1") +
-            "-" + uniqueSuffix(name);
+        String mnemonic = name.replaceAll("(%[0-9A-F]{2}|[^a-zA-Z0-9-_.])+", "_");
+        int maxMnemonic = Math.max(PATH_MAX - /* ceil(256 / lg(32)) + length("-") */53, 1);
+        String result = StringUtils.right(mnemonic, maxMnemonic) + "-" + uniqueSuffix(name);
         assert result.length() <= PATH_MAX : result + " does not fit inside " + PATH_MAX;
         return result;
     }
