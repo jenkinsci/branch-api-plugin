@@ -42,7 +42,7 @@ public class BranchProjectFactoryImpl extends BranchProjectFactory<FreeStyleProj
 
     @Override
     public FreeStyleProject newInstance(Branch branch) {
-        FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getName());
+        FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getEncodedName());
         setBranch(job, branch);
         return job;
     }
