@@ -1,0 +1,14 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <f:section title="Branch API plugin" name="branchAPI">
+    <f:entry title="Path Encoding" field="pathEncoding">
+      <select name="pathEncoding">
+        <f:option value="DEFAULT" selected="${descriptor.pathEncoding == 'DEFAULT'}">Default</f:option>
+        <f:option value="BASE64" selected="${descriptor.pathEncoding == 'BASE64'}">Base64</f:option>
+        <f:option value="STRIP" selected="${descriptor.pathEncoding == 'STRIP'}">Strip</f:option>
+      </select>
+    </f:entry>
+  </f:section>
+</j:jelly>
+

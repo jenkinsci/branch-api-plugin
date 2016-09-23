@@ -1,0 +1,9 @@
+<div>
+    Choose how branch names are encoded on disk:
+    <ul>
+        <li>Default: The legacy encoding, using URL encoding. Note that this may cause problems in some projects, as special characters are encoded with '%', which may have special meanings (eg. in Makefiles).</li>
+        <li>Base64: The branch name is Base64 encoded. This is always safe, but the directory name is not human readable.</li>
+        <li>Strip: A variant of URL encoding, with special characters replaced with underscores.</li>
+    </ul>
+    <strong>Warning: Changing this value will require projects that utilize the Branch API to be reindexed, eg. Multibranch Project & Multibranch Pipeline projects. This will cause history to be lost if the encoded branch name changes.</strong>
+</div>
