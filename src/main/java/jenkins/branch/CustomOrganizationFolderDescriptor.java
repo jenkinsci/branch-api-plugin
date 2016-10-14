@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.scm.api.SCMNavigatorDescriptor;
+import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
@@ -49,7 +50,7 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
  */
 @SuppressWarnings("rawtypes") // not our fault
 @Restricted(NoExternalUse.class)
-public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
+public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor implements IconSpec {
 
     private static final Logger LOGGER = Logger.getLogger(CustomOrganizationFolderDescriptor.class.getName());
 
@@ -101,6 +102,11 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
      */
     public String getIconFilePathPattern() {
         return delegate.getIconFilePathPattern();
+    }
+
+    @Override
+    public String getIconClassName() {
+        return delegate.getIconClassName();
     }
 
     @Override
