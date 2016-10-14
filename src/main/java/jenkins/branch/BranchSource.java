@@ -76,6 +76,7 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
      *
      * @return the source.
      */
+    @NonNull
     public SCMSource getSource() {
         return source;
     }

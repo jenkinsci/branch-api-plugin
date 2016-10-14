@@ -45,20 +45,6 @@ import hudson.scm.PollingResult;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.util.PersistedList;
-import jenkins.scm.api.SCMHead;
-import jenkins.scm.api.SCMHeadObserver;
-import jenkins.scm.api.SCMRevision;
-import jenkins.scm.api.SCMSource;
-import jenkins.scm.api.SCMSourceCriteria;
-import jenkins.scm.api.SCMSourceOwner;
-import jenkins.scm.impl.NullSCMSource;
-import net.sf.json.JSONObject;
-import org.acegisecurity.Authentication;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
-import org.kohsuke.stapler.export.Exported;
-
-import javax.servlet.ServletException;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -68,10 +54,25 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.servlet.ServletException;
 import jenkins.model.ParameterizedJobMixIn;
+import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMHeadObserver;
+import jenkins.scm.api.SCMRevision;
+import jenkins.scm.api.SCMSource;
+import jenkins.scm.api.SCMSourceCriteria;
+import jenkins.scm.api.SCMSourceOwner;
+import jenkins.scm.impl.NullSCMSource;
 import jenkins.triggers.SCMTriggerItem;
+import net.sf.json.JSONObject;
+import org.acegisecurity.Authentication;
+import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.export.Exported;
 
 /**
  * Abstract base class for multiple-branch based projects.
@@ -140,6 +141,21 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         final BranchProjectFactory<P, R> factory = getProjectFactory();
         factory.setOwner(this);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getPronoun() {
+        Set<String> result = new TreeSet<>();
+        for (BranchSource source: sources) {
+            String pronoun = Util.fixEmptyAndTrim(source.getSource().getPronoun());
+            if (pronoun != null) {
+                result.add(pronoun);
+            }
+        }
+        return result.isEmpty() ? super.getPronoun() : StringUtils.join(result, " / ");
     }
 
     /**
@@ -617,7 +633,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          */
         @Override
         public String getDisplayName() {
-            return "Branch Indexing";
+            return Messages.MultiBranchProject_BranchIndexing_displayName(getParent().getPronoun());
         }
 
         /**
