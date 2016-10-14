@@ -235,7 +235,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 result.add(pronoun);
             }
         }
-        return result.isEmpty() ? super.getPronoun() : StringUtils.join(result, "/");
+        return result.isEmpty() ? super.getPronoun() : StringUtils.join(result, " / ");
     }
 
     @Override

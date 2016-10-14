@@ -155,7 +155,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 result.add(pronoun);
             }
         }
-        return result.isEmpty() ? super.getPronoun() : StringUtils.join(result, "/");
+        return result.isEmpty() ? super.getPronoun() : StringUtils.join(result, " / ");
     }
 
     /**
