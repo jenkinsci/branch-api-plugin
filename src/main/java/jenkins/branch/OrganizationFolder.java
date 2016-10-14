@@ -28,9 +28,11 @@ import antlr.ANTLRException;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
+import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.Util;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
@@ -46,8 +48,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.WeakHashMap;
 import java.util.concurrent.Callable;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
@@ -55,6 +60,7 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.api.SCMSourceOwner;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
@@ -113,6 +119,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         super.submit(req, rsp);
         navigators.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(SCMNavigatorDescriptor.class), "navigators");
         projectFactories.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
+    }
+
+    @Nonnull
+    @Override
+    protected FolderComputation<MultiBranchProject<?, ?>> createComputation(
+            @CheckForNull FolderComputation<MultiBranchProject<?, ?>> previous) {
+        return new OrganizationScan(OrganizationFolder.this, previous);
     }
 
     @Override
@@ -210,6 +223,21 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getPronoun() {
+        Set<String> result = new TreeSet<>();
+        for (SCMNavigator navigator: navigators) {
+            String pronoun = Util.fixEmptyAndTrim(navigator.getPronoun());
+            if (pronoun != null) {
+                result.add(pronoun);
+            }
+        }
+        return result.isEmpty() ? super.getPronoun() : StringUtils.join(result, "/");
+    }
+
     @Override
     public List<SCMSource> getSCMSources() {
         // Probably unused unless onSCMSourceUpdated implemented, but just in case:
@@ -296,4 +324,18 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
     }
 
+    public static class OrganizationScan extends FolderComputation<MultiBranchProject<?, ?>> {
+        public OrganizationScan(OrganizationFolder folder, FolderComputation<MultiBranchProject<?, ?>> previous) {
+            super(folder, previous);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public String getDisplayName() {
+            return Messages.OrganizationFolder_OrganizationScan_displayName(getParent().getPronoun());
+        }
+
+    }
 }
