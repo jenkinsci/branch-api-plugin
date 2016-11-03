@@ -24,6 +24,8 @@
 
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
@@ -33,9 +35,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMHeadObserver;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceOwner;
@@ -60,7 +61,7 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @param listener a way of reporting progress
      * @return true if recognized
      */
-    public boolean recognizes(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name, @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String,Object> attributes, @NonNull TaskListener listener) throws IOException, InterruptedException {
         if (Util.isOverridden(MultiBranchProjectFactory.class, getClass(), "createProject", ItemGroup.class, String.class, List.class, Map.class, TaskListener.class)) {
             return createProject(parent, name, scmSources, attributes, listener) != null;
         } else {
@@ -77,8 +78,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @param listener a way of reporting progress
      * @return a new uninitialized multibranch project (do not configure its {@link MultiBranchProject#getSourcesList} or call {@link MultiBranchProject#onCreatedFromScratch})
      */
-    @Nonnull
-    public MultiBranchProject<?,?> createNewProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    @NonNull
+    public MultiBranchProject<?,?> createNewProject(@NonNull ItemGroup<?> parent, @NonNull String name, @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String,Object> attributes, @NonNull TaskListener listener) throws IOException, InterruptedException {
         if (Util.isOverridden(MultiBranchProjectFactory.class, getClass(), "createProject", ItemGroup.class, String.class, List.class, Map.class, TaskListener.class)) {
             MultiBranchProject<?, ?> p = createProject(parent, name, scmSources, attributes, listener);
             if (p == null) {
@@ -96,11 +97,11 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @param attributes a set of metadata attributes as added by {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addAttribute}
      * @param listener a way of reporting progress
      */
-    public void updateExistingProject(MultiBranchProject<?,?> project, @Nonnull Map<String,Object> attributes, @Nonnull TaskListener listener) throws IOException, InterruptedException {}
+    public void updateExistingProject(MultiBranchProject<?,?> project, @NonNull Map<String,Object> attributes, @NonNull TaskListener listener) throws IOException, InterruptedException {}
 
     @Deprecated
     @CheckForNull
-    public MultiBranchProject<?,?> createProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull List<? extends SCMSource> scmSources, @Nonnull Map<String,Object> attributes, @Nonnull TaskListener listener) throws IOException, InterruptedException {
+    public MultiBranchProject<?,?> createProject(@NonNull ItemGroup<?> parent, @NonNull String name, @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String,Object> attributes, @NonNull TaskListener listener) throws IOException, InterruptedException {
         if (recognizes(parent, name, scmSources, attributes, listener)) {
             return createNewProject(parent, name, scmSources, attributes, listener);
         } else {
@@ -115,7 +116,7 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
 
     // TODO we have no way with the current API of instructing an SCMSource to use a specific SCMSourceCriteria during retrieve; impls hardcode SCMSource.getCriteria, which relies on a parent SCMSourceOwner
     interface SCMSourceOwnerHack extends SCMSourceOwner {
-        <T> T withSCMSourceCriteria(@Nonnull SCMSource source, @Nonnull SCMSourceCriteria criteria, @Nonnull Callable<T> body) throws Exception;
+        <T> T withSCMSourceCriteria(@NonNull SCMSource source, @NonNull SCMSourceCriteria criteria, @NonNull Callable<T> body) throws Exception;
     }
 
     /**
@@ -128,46 +129,30 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          * @param source a repository
          * @return criteria for treating its branches as a match
          */
-        @Nonnull
-        protected abstract SCMSourceCriteria getSCMSourceCriteria(@Nonnull SCMSource source);
+        @NonNull
+        protected abstract SCMSourceCriteria getSCMSourceCriteria(@NonNull SCMSource source);
 
         /**
          * Historical alias for {@link #createNewProject}.
          */
-        @Nonnull
-        protected abstract MultiBranchProject<?,?> doCreateProject(@Nonnull ItemGroup<?> parent, @Nonnull String name, @Nonnull Map<String,Object> attributes);
+        @NonNull
+        protected abstract MultiBranchProject<?,?> doCreateProject(@NonNull ItemGroup<?> parent, @NonNull String name, @NonNull Map<String,Object> attributes);
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public final MultiBranchProject<?, ?> createNewProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String, Object> attributes, TaskListener listener) throws IOException, InterruptedException {
             return doCreateProject(parent, name, attributes);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean recognizes(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String, Object> attributes, final TaskListener listener) throws IOException, InterruptedException {
             for (final SCMSource scmSource : scmSources) {
-                SCMSourceOwner owner = scmSource.getOwner();
-                if (!(owner instanceof SCMSourceOwnerHack)) {
-                    throw new IOException("cannot influence criteria on " + owner);
-                }
-                boolean empty;
-                try {
-                    empty = ((SCMSourceOwnerHack) owner).withSCMSourceCriteria(scmSource, getSCMSourceCriteria(scmSource), new Callable<Boolean>() {
-                        @Override
-                        public Boolean call() throws Exception {
-                            return scmSource.fetch(listener).isEmpty();
-                        }
-                    });
-                // This is ugly but lambdas do not seem to help at all: http://stackoverflow.com/q/18198176/12916
-                } catch (IOException x) {
-                    throw x;
-                } catch (InterruptedException x) {
-                    throw x;
-                } catch (RuntimeException x) {
-                    throw x;
-                } catch (Exception x) {
-                    throw new AssertionError(x);
-                }
-                if (!empty) {
+                if (scmSource.fetch(getSCMSourceCriteria(scmSource), SCMHeadObserver.any(), listener).getRevision() != null) {
                     return true;
                 }
             }

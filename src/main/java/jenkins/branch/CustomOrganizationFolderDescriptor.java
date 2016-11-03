@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.scm.api.SCMNavigatorDescriptor;
+import jenkins.scm.impl.SingleSCMNavigator;
 import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -104,11 +105,17 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor i
         return delegate.getIconFilePathPattern();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getIconClassName() {
         return delegate.getIconClassName();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public TopLevelItem newInstance(ItemGroup parent, String name) {
         OrganizationFolder p = new OrganizationFolder(parent, name);
@@ -116,6 +123,9 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor i
         return p;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString() {
         return "CustomOrganizationFolderDescriptor[" + delegate.getId() + "]";
@@ -133,6 +143,9 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor i
 
     private static class ListenerImpl extends ExtensionListListener {
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onChange() {
             doAddSpecificDescriptors();
@@ -171,10 +184,30 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor i
     @Extension
     public static class HideGeneric extends DescriptorVisibilityFilter {
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public boolean filter(Object context, Descriptor descriptor) {
             LOGGER.log(Level.FINER, "filtering {0}", descriptor.getId());
-            if (descriptor instanceof OrganizationFolder.DescriptorImpl && (context instanceof View || context instanceof ViewGroup)) {
+            if (descriptor instanceof OrganizationFolder.DescriptorImpl
+                    && (context instanceof View || context instanceof ViewGroup)) {
+                if (ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).isEmpty()) {
+                    // if we have no factories, so do not display
+                    return false;
+                }
+                // if we only have one navigator, then do not display
+                boolean haveOne = false;
+                for (SCMNavigatorDescriptor d: ExtensionList.lookup(SCMNavigatorDescriptor.class)) {
+                    if (d instanceof SingleSCMNavigator.DescriptorImpl) {
+                        continue;
+                    }
+                    if (haveOne) {
+                        // there is more than one, therefore we should display the generic option also
+                        return true;
+                    }
+                    haveOne = true;
+                }
                 return false;
             }
             return true;

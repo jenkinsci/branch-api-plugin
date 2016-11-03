@@ -24,15 +24,16 @@
 package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
+import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
 import hudson.model.TopLevelItemDescriptor;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * <p>The {@link Descriptor} for {@link MultiBranchProject}s.</p>
@@ -105,5 +106,23 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     @NonNull
     public Descriptor<BranchSource> getBranchSourceDescriptor() {
         return Jenkins.getActiveInstance().getDescriptorOrDie(BranchSource.class);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<FolderIconDescriptor> getIconDescriptors() {
+        return Collections.<FolderIconDescriptor>singletonList(
+                Jenkins.getActiveInstance().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class)
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isIconConfigurable() {
+        return false;
     }
 }

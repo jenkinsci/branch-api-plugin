@@ -1,0 +1,14 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+  <td>
+    <j:set var="p" value="${col.getPropertyOf(job)}"/>
+    <j:choose>
+      <j:when test="${p != null and p.objectUrl != null}">
+        <a href="${p.objectUrl}">${it.description(p, job)}</a>
+      </j:when>
+      <j:otherwise>
+        ${it.description(p, job)}
+      </j:otherwise>
+    </j:choose>
+  </td>
+</j:jelly>

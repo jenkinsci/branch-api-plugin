@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2011-2013, CloudBees, Inc., Stephen Connolly.
+ * Copyright (c) 2011-2016, CloudBees, Inc., Stephen Connolly.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,14 +23,18 @@
  */
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.FolderIcon;
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
+import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.google.common.collect.ImmutableSet;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.BulkChange;
 import hudson.Util;
 import hudson.XmlFile;
+import hudson.model.Action;
 import hudson.model.CauseAction;
 import hudson.model.Descriptor;
 import hudson.model.Item;
@@ -52,7 +56,10 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
@@ -141,6 +148,28 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         final BranchProjectFactory<P, R> factory = getProjectFactory();
         factory.setOwner(this);
+        if (!(getFolderViews() instanceof MultiBranchProjectViewHolder)) {
+            resetFolderViews();
+        }
+        if (!(getIcon() instanceof MetadataActionFolderIcon)) {
+            setIcon(newDefaultFolderIcon());
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected AbstractFolderViewHolder newFolderViewHolder() {
+        return new MultiBranchProjectViewHolder(this);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected FolderIcon newDefaultFolderIcon() {
+        return new MetadataActionFolderIcon();
     }
 
     /**
@@ -304,9 +333,32 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * {@inheritDoc}
      */
     @Override
-    protected void computeChildren(final ChildObserver<P> observer, final TaskListener listener) throws IOException, InterruptedException {
+    protected void computeChildren(final ChildObserver<P> observer, final TaskListener listener)
+            throws IOException, InterruptedException {
         final BranchProjectFactory<P, R> _factory = getProjectFactory();
-        for (final SCMSource source : getSCMSources()) {
+        List<SCMSource> scmSources = getSCMSources();
+        Map<Class<? extends Action>, Action> persistentActions = new HashMap<>();
+        for (ListIterator<SCMSource> iterator = scmSources.listIterator(scmSources.size()); iterator.hasPrevious(); ) {
+            SCMSource source = iterator.previous();
+            persistentActions.putAll(source.fetchActions(listener)); // first source always wins
+        }
+        // update any persistent actions for the SCMSource
+        if (!persistentActions.isEmpty()) {
+            BulkChange bc = new BulkChange(this);
+            try {
+                for (Map.Entry<Class<? extends Action>, Action> entry : persistentActions.entrySet()) {
+                    if (entry.getValue() == null) {
+                        removeActions(entry.getKey());
+                    } else {
+                        replaceActions(entry.getKey(), entry.getValue());
+                    }
+                }
+                bc.commit();
+            } finally {
+                bc.abort();
+            }
+        }
+        for (final SCMSource source : scmSources) {
             source.fetch(new SCMHeadObserver() {
                 @Override
                 public void observe(@NonNull SCMHead head, @NonNull SCMRevision revision) {
@@ -314,6 +366,25 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     String rawName = branch.getName();
                     String encodedName = branch.getEncodedName();
                     P project = observer.shouldUpdate(encodedName);
+                    Map<Class<? extends Action>, Action> headActions = null;
+                    Action[] revisionActions = new Action[0];
+                    try {
+                        headActions = source.fetchActions(head, listener);
+                    } catch (IOException | InterruptedException e) {
+                        e.printStackTrace(listener.error("Could not fetch metadata of branch %s", rawName));
+                    }
+                    try {
+                        List<Action> actions = new ArrayList<Action>();
+                        for (Action a : source.fetchActions(revision, listener).values()) {
+                            if (a != null) {
+                                actions.add(a);
+                            }
+                        }
+                        revisionActions = actions.toArray(new Action[actions.size()]);
+                    } catch (IOException |InterruptedException e) {
+                        e.printStackTrace(listener.error("Could not fetch metadata for revision %s of branch %s",
+                                revision, rawName));
+                    }
                     if (project != null) {
                         if (!_factory.isProject(project)) {
                             listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
@@ -326,7 +397,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             if (!revision.equals(lastBuild)) {
                                 listener.getLogger().println("Changes detected in " + rawName + " (" + lastBuild + " → " + revision + ")");
                                 needSave = true;
-                                scheduleBuild(_factory, project, revision, listener, rawName);
+                                scheduleBuild(_factory, project, revision, listener, rawName, revisionActions);
                             } else {
                                 listener.getLogger().println("No changes detected in " + rawName + " (still at " + revision + ")");
                             }
@@ -338,18 +409,51 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 if (pollingResult.hasChanges()) {
                                     listener.getLogger().println("Changes detected in " + rawName);
                                     needSave = true;
-                                    scheduleBuild(_factory, project, revision, listener, rawName);
+                                    scheduleBuild(_factory, project, revision, listener, rawName, revisionActions);
                                 } else {
                                     listener.getLogger().println("No changes detected in " + rawName);
                                 }
                             }
                         }
-                        if (needSave) {
-                            try {
-                                project.save();
-                            } catch (IOException e) {
-                                e.printStackTrace(listener.error("Could not save changes to " + rawName));
+
+                        BulkChange bc = new BulkChange(project);
+                        try {
+                            // update any persistent revisionActions for the SCMHead
+                            for (Map.Entry<Class<? extends Action>, Action> entry : headActions.entrySet()) {
+                                // BEGIN TODO simplify once baseline has JENKINS-39404
+                                List<Action> actions = project.getActions();
+                                List<Action> forRemoval = new ArrayList<Action>(1);
+                                boolean found = false;
+                                for (Action a: actions) {
+                                    if (found) {
+                                        if (entry.getKey().isInstance(a)){
+                                            forRemoval.add(a);
+                                        }
+                                    } else {
+                                        if (a.equals(entry.getValue())) {
+                                            found = true;
+                                        } else if (entry.getKey().isInstance(a)) {
+                                            forRemoval.add(a);
+                                        }
+                                    }
+                                }
+                                if (!forRemoval.isEmpty()) {
+                                    needSave |= actions.removeAll(forRemoval);
+                                }
+                                if (!found) {
+                                    project.addAction(entry.getValue());
+                                    needSave = true;
+                                }
+                                // END TODO simplify once baseline has JENKINS-39404
                             }
+                            if (needSave) {
+                                project.save();
+                            }
+                            bc.commit();
+                        } catch (IOException e) {
+                            e.printStackTrace(listener.error("Could not save changes to " + rawName));
+                        } finally {
+                            bc.abort();
                         }
                         return;
                     }
@@ -370,14 +474,18 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     }
                     _factory.decorate(project);
                     observer.created(project);
-                    scheduleBuild(_factory, project, revision, listener, rawName);
+                    scheduleBuild(_factory, project, revision, listener, rawName,
+                            revisionActions);
                 }
             }, listener);
         }
     }
 
-    private void scheduleBuild(BranchProjectFactory<P,R> factory, final P item, SCMRevision revision, TaskListener listener, String name) {
-        if (ParameterizedJobMixIn.scheduleBuild2(item, 0, new CauseAction(new BranchIndexingCause())) != null) {
+    private void scheduleBuild(BranchProjectFactory<P,R> factory, final P item, SCMRevision revision, TaskListener listener, String name, Action... actions) {
+        Action[] _actions = new Action[actions.length+1];
+        _actions[0] = new CauseAction(new BranchIndexingCause());
+        System.arraycopy(actions, 0, _actions, 1, actions.length);
+        if (ParameterizedJobMixIn.scheduleBuild2(item, 0, _actions) != null) {
             listener.getLogger().println("Scheduled build for branch: " + name);
             try {
                 factory.setRevisionHash(item, revision);
@@ -481,6 +589,37 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             LOGGER.log(Level.WARNING, "Could not create directory {0}", dir);
         }
         return dir;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getDescription() {
+        String description = super.getDescription();
+        if (StringUtils.isNotBlank(description)) {
+            return description;
+        }
+        MetadataAction action = getAction(MetadataAction.class);
+        if (action != null) {
+            return action.getObjectDescription();
+        }
+        return super.getDescription();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getDisplayName() {
+        String displayName = getDisplayNameOrNull();
+        if (displayName == null) {
+            MetadataAction action = getAction(MetadataAction.class);
+            if (action != null && StringUtils.isNotBlank(action.getDisplayName())) {
+                return action.getDisplayName();
+            }
+        }
+        return super.getDisplayName();
     }
 
     /**
