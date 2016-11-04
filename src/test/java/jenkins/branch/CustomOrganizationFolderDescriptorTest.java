@@ -32,6 +32,7 @@ import hudson.model.TopLevelItemDescriptor;
 import hudson.model.View;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
@@ -110,6 +111,17 @@ public class CustomOrganizationFolderDescriptorTest {
         ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
         ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
         assertEquals(Collections.singletonList("MockNavigator"), newItemTypes());
+    }
+
+    @Issue("JENKINS-39520")
+    @SuppressWarnings("deprecation") // ExtensionList.add simulating dynamic installation
+    @Test
+    public void dynamicLoad2() throws Exception {
+        assertEquals(Collections.emptyList(), newItemTypes());
+        ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorNoFactoryInstalledDescriptor());
+        ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
+        ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
+        assertEquals(Arrays.asList("MockNavigator", "MockNavigator"), newItemTypes());
     }
 
     @Issue("JENKINS-31949")
