@@ -144,7 +144,9 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor {
             }
         }
         LOGGER.log(Level.FINE, "clearing {0}", old);
-        all().removeAll(old);
+        for (CustomOrganizationFolderDescriptor d : old) {
+            all().remove(d);
+        }
         if (ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).isEmpty()) {
             LOGGER.fine("no MultiBranchProjectFactoryDescriptor");
             return; // nothing like workflow-multibranch installed, so do not even offer this option
