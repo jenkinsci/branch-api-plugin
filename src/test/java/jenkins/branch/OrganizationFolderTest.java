@@ -27,6 +27,7 @@ package jenkins.branch;
 import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
 import hudson.model.View;
+import java.util.concurrent.TimeUnit;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.impl.SingleSCMNavigator;
@@ -85,11 +86,8 @@ public class OrganizationFolderTest {
         top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
         top = r.configRoundtrip(top);
 
-        RingBufferLogHandler logs = createJULTestHandler(); // switch to the mock log handler
-
-        top.setDescription("Org folder test");
-        top = r.configRoundtrip(top);
-        waitForLogFileMessage("Indexing multibranch project: stuff", logs);
+        top.scheduleBuild(0);
+        assertTrue(MultiBranchImpl.awaitIndexed(top, "stuff", 15, TimeUnit.SECONDS));
     }
 
     @Issue("JENKINS-32782")
@@ -152,32 +150,6 @@ public class OrganizationFolderTest {
         public String getDisplayName() {
             return "MockFactory";
         }
-    }
-
-    private RingBufferLogHandler createJULTestHandler() throws SecurityException, IOException {
-        RingBufferLogHandler handler = new RingBufferLogHandler();
-        SimpleFormatter formatter = new SimpleFormatter();
-        handler.setFormatter(formatter);
-        Logger logger = Logger.getLogger(MultiBranchImpl.class.getName());
-        logger.addHandler(handler);
-        return handler;
-    }
-
-    private void waitForLogFileMessage(String string, RingBufferLogHandler logs) throws IOException, InterruptedException {
-        File rootDir = r.jenkins.getRootDir();
-        synchronized (rootDir) {
-            int limit = 0;
-            while (limit < 5) {
-                rootDir.wait(1000);
-                for (LogRecord r : logs.getView()) {
-                    if (r.getMessage().contains(string)) {
-                        return;
-                    }
-                }
-                limit++;
-            }
-        }
-        Assert.assertTrue("Expected log not found: " + string, false);
     }
 
 }

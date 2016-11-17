@@ -24,6 +24,13 @@
 
 package jenkins.branch.harness;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
 import hudson.Extension;
@@ -38,6 +45,47 @@ import jenkins.branch.MultiBranchProjectDescriptor;
 public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeStyleBuild> {
 
     private static final Logger LOGGER = Logger.getLogger(MultiBranchImpl.class.getName());
+    private static WeakHashMap<MultiBranchImpl, Long> lastIndex = new WeakHashMap<>();
+    private static Lock lastIndexLock = new ReentrantLock();
+    private static Condition lastIndexUpdated = lastIndexLock.newCondition();
+
+    public static boolean awaitIndexed(ItemGroup parent, String displayName, long timeout, TimeUnit units)
+            throws InterruptedException {
+        long nanos = units.toNanos(timeout);
+
+        lastIndexLock.lock();
+        try {
+            MultiBranchImpl target = null;
+            Long timestamp = null;
+            for (Map.Entry<MultiBranchImpl, Long> entry : lastIndex.entrySet()) {
+                if (entry.getKey().getParent() == parent && displayName.equals(entry.getKey().getDisplayName())) {
+                    target = entry.getKey();
+                    timestamp = entry.getValue();
+                    break;
+                }
+            }
+            while (true) {
+                if (target != null) {
+                    if (timestamp == null ? lastIndex.get(target) != null : !timestamp.equals(lastIndex.get(target))) {
+                        return true;
+                    }
+                } else {
+                    for (Map.Entry<MultiBranchImpl, Long> entry : lastIndex.entrySet()) {
+                        if (entry.getKey().getParent() == parent && displayName
+                                .equals(entry.getKey().getDisplayName())) {
+                            return true;
+                        }
+                    }
+                }
+                if (nanos < 0L) {
+                    return false;
+                }
+                nanos = lastIndexUpdated.awaitNanos(nanos);
+            }
+        } finally {
+            lastIndexLock.unlock();
+        }
+    }
 
     public MultiBranchImpl(ItemGroup parent, String name) {
         super(parent, name);
@@ -50,6 +98,13 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
 
     @Override
     public boolean scheduleBuild() {
+        lastIndexLock.lock();
+        try {
+            lastIndex.put(this, System.currentTimeMillis());
+            lastIndexUpdated.signalAll();
+        } finally {
+            lastIndexLock.unlock();
+        }
         LOGGER.info("Indexing multibranch project: " + getDisplayName());
         return super.scheduleBuild();
     }
