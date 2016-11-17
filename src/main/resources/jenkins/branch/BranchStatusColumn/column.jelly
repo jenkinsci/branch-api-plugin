@@ -1,8 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!--
 The MIT License
 
-Copyright 2016 CloudBees, Inc.
+Copyright (c) 2004-2016, Sun Microsystems, Inc., Kohsuke Kawaguchi, Martin Eigenbrodt, CloudBees, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,14 +23,7 @@ THE SOFTWARE.
 -->
 
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <j:set var="url" value="${it.indexingUrl}"/>
-    <j:choose>
-        <j:when test="${url != null}">
-          <a href="${rootURL}/${url}console">${%Branch indexing}</a>
-        </j:when>
-        <j:otherwise>
-          ${%Branch indexing}
-        </j:otherwise>
-    </j:choose>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
+  <t:ballColorTd it="${it.iconColor(job)}" style="${indenter.getRelativeShift(job)}"/>
 </j:jelly>

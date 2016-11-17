@@ -28,12 +28,16 @@ import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.Descriptor;
 import hudson.model.ListView;
 import hudson.model.View;
 import hudson.model.ViewDescriptor;
 import hudson.model.ViewGroup;
 import hudson.security.ACL;
 import hudson.security.Permission;
+import hudson.util.DescribableList;
+import hudson.views.ListViewColumn;
+import hudson.views.StatusColumn;
 import hudson.views.ViewsTabBar;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -196,6 +200,8 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
             this.category = category;
             try {
                 getJobFilters().replaceBy(Collections.singletonList(new BranchCategoryFilter(category)));
+                DescribableList<ListViewColumn, Descriptor<ListViewColumn>> columns = getColumns();
+                columns.replace(columns.get(StatusColumn.class), new BranchStatusColumn());
             } catch (IOException e) {
                 // ignore
             }

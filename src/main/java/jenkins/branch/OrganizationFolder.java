@@ -33,6 +33,7 @@ import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
+import com.thoughtworks.xstream.XStreamException;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
@@ -43,14 +44,22 @@ import hudson.model.Action;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
+import hudson.model.Items;
+import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
 import hudson.util.DescribableList;
+import hudson.util.LogTaskListener;
 import hudson.util.PersistedList;
+import hudson.util.io.ReopenableRotatingFileOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -59,20 +68,26 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
+import jenkins.scm.api.SCMEventListener;
+import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMNavigatorOwner;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCategory;
 import jenkins.scm.api.SCMSourceCriteria;
+import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.Icon;
 import org.jenkins.ui.icon.IconSet;
@@ -82,6 +97,9 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import static jenkins.scm.api.SCMEvent.Type.CREATED;
+import static jenkins.scm.api.SCMEvent.Type.UPDATED;
+
 /**
  * A folder-like collection of {@link MultiBranchProject}s, one per repository.
  */
@@ -89,9 +107,22 @@ import org.kohsuke.stapler.StaplerResponse;
 @SuppressWarnings({"unchecked", "rawtypes"}) // mistakes in various places
 public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<?,?>> implements SCMNavigatorOwner {
 
+    /**
+     * Our logger.
+     */
+    private static final Logger LOGGER = Logger.getLogger(MultiBranchProject.class.getName());
+    /**
+     * Our navigators.
+     */
     private final DescribableList<SCMNavigator,SCMNavigatorDescriptor> navigators = new DescribableList<SCMNavigator, SCMNavigatorDescriptor>(this);
+    /**
+     * Our project factories.
+     */
     private final DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor> projectFactories = new DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor>(this);
 
+    /**
+     * {@inheritDoc}
+     */
     public OrganizationFolder(ItemGroup parent, String name) {
         super(parent, name);
     }
@@ -153,9 +184,28 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      */
     @Override
     protected void submit(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, Descriptor.FormException {
+        String navDigest;
+        try {
+            navDigest = Util.getDigestOf(Items.XSTREAM2.toXML(navigators));
+        } catch (XStreamException e) {
+            navDigest = null;
+        }
+        String facDigest;
+        try {
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(projectFactories));
+        } catch (XStreamException e) {
+            facDigest = null;
+        }
         super.submit(req, rsp);
         navigators.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(SCMNavigatorDescriptor.class), "navigators");
         projectFactories.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
+        for (SCMNavigator n : navigators) {
+            n.afterSave(this);
+        }
+        recalculateAfterSubmitted(navDigest == null
+                || !navDigest.equals(Util.getDigestOf(Items.XSTREAM2.toXML(navigators))));
+        recalculateAfterSubmitted(facDigest == null
+                || !facDigest.equals(Util.getDigestOf(Items.XSTREAM2.toXML(projectFactories))));
     }
 
     /**
@@ -168,124 +218,56 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         return new OrganizationScan(OrganizationFolder.this, previous);
     }
 
+    @Override
+    public boolean isHasEvents() {
+        return true;
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     protected void computeChildren(final ChildObserver<MultiBranchProject<?,?>> observer, final TaskListener listener) throws IOException, InterruptedException {
-        listener.getLogger().format("Updating actions...%n");
-        Map<Class<? extends Action>, Action> persistentActions = new HashMap<>();
-        for (ListIterator<SCMNavigator> iterator = navigators.listIterator(navigators.size()); iterator.hasPrevious(); ) {
-            SCMNavigator navigator = iterator.previous();
-            // first navigator always wins in case of duplicate keys
-            persistentActions.putAll(navigator.fetchActions(this, listener));
-        }
-        // update any persistent actions for the SCMNavigator
-        if (!persistentActions.isEmpty()) {
-            BulkChange bc = new BulkChange(this);
-            try {
-                for (Map.Entry<Class<? extends Action>, Action> entry: persistentActions.entrySet()) {
-                    if (entry.getValue() == null) {
-                        removeActions(entry.getKey());
-                    } else {
-                        replaceActions(entry.getKey(), entry.getValue());
+        long start = System.currentTimeMillis();
+        listener.getLogger().format("[%tc] Starting organization scan...%n", start);
+        try {
+            listener.getLogger().format("[%tc] Updating actions...%n", System.currentTimeMillis());
+            Map<Class<? extends Action>, Action> persistentActions = new HashMap<>();
+            for (ListIterator<SCMNavigator> iterator = navigators.listIterator(navigators.size());
+                 iterator.hasPrevious(); ) {
+                SCMNavigator navigator = iterator.previous();
+                // first navigator always wins in case of duplicate keys
+                persistentActions.putAll(navigator.fetchActions(this, listener));
+            }
+            // update any persistent actions for the SCMNavigator
+            if (!persistentActions.isEmpty()) {
+                BulkChange bc = new BulkChange(this);
+                try {
+                    for (Map.Entry<Class<? extends Action>, Action> entry : persistentActions.entrySet()) {
+                        if (entry.getValue() == null) {
+                            removeActions(entry.getKey());
+                        } else {
+                            replaceActions(entry.getKey(), entry.getValue());
+                        }
                     }
+                    bc.commit();
+                } finally {
+                    bc.abort();
                 }
-                bc.commit();
-            }  finally {
-                bc.abort();
             }
-        }
-        for (SCMNavigator navigator : navigators) {
-            if (Thread.interrupted()) {
-                throw new InterruptedException();
+            for (SCMNavigator navigator : navigators) {
+                if (Thread.interrupted()) {
+                    throw new InterruptedException();
+                }
+                listener.getLogger().format("[%tc] Consulting %s%n", System.currentTimeMillis(),
+                        navigator.getDescriptor().getDisplayName());
+                navigator.visitSources(new SCMSourceObserverImpl(listener, observer));
             }
-            listener.getLogger().format("Consulting %s%n", navigator.getDescriptor().getDisplayName());
-            navigator.visitSources(new SCMSourceObserver() {
-                @Override
-                public SCMSourceOwner getContext() {
-                    return OrganizationFolder.this;
-                }
-                @Override
-                public TaskListener getListener() {
-                    return listener;
-                }
-                @Override
-                public SCMSourceObserver.ProjectObserver observe(final String projectName) {
-                    return new ProjectObserver() {
-                        List<SCMSource> sources = new ArrayList<SCMSource>();
-                        @Override
-                        public void addSource(SCMSource source) {
-                            sources.add(source);
-                            source.setOwner(OrganizationFolder.this);
-                        }
-                        private List<BranchSource> createBranchSources() {
-                            if (sources == null) {
-                                throw new IllegalStateException();
-                            }
-                            List<BranchSource> branchSources = new ArrayList<BranchSource>();
-                            for (SCMSource source : sources) {
-                                // TODO do we want/need a more general BranchPropertyStrategyFactory?
-                                branchSources.add(new BranchSource(source));
-                            }
-                            sources = null; // make sure complete gets called just once
-                            return branchSources;
-                        }
-                        @Override
-                        public void addAttribute(String key, Object value) throws IllegalArgumentException, ClassCastException {
-                            throw new IllegalArgumentException();
-                        }
-                        @Override
-                        public void complete() throws IllegalStateException, InterruptedException {
-                            try {
-                                MultiBranchProjectFactory factory = null;
-                                Map<String, Object> attributes = Collections.<String,Object>emptyMap();
-                                for (MultiBranchProjectFactory candidateFactory : projectFactories) {
-                                    if (candidateFactory.recognizes(OrganizationFolder.this, projectName, sources, attributes, listener)) {
-                                        factory = candidateFactory;
-                                        break;
-                                    }
-                                }
-                                if (factory == null) {
-                                    return;
-                                }
-                                MultiBranchProject<?,?> existing = observer.shouldUpdate(projectName);
-                                if (existing != null) {
-                                    PersistedList<BranchSource> sourcesList = existing.getSourcesList();
-                                    sourcesList.clear();
-                                    sourcesList.addAll(createBranchSources());
-                                    existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                                    factory.updateExistingProject(existing, attributes, listener);
-                                    existing.scheduleBuild();
-                                    return;
-                                }
-                                if (!observer.mayCreate(projectName)) {
-                                    listener.getLogger().println("Ignoring duplicate child " + projectName);
-                                    return;
-                                }
-                                MultiBranchProject<?, ?> project = factory.createNewProject(OrganizationFolder.this, projectName, sources, attributes, listener);
-                                project.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                                project.getSourcesList().addAll(createBranchSources());
-                                try {
-                                    project.addTrigger(new PeriodicFolderTrigger("1d"));
-                                } catch (ANTLRException x) {
-                                    throw new IllegalStateException(x);
-                                }
-                                observer.created(project);
-                                project.scheduleBuild();
-                            } catch (InterruptedException x) {
-                                throw x;
-                            } catch (Exception x) {
-                                x.printStackTrace(listener.error("Failed to create or update a subproject " + projectName));
-                            }
-                        }
-                    };
-                }
-                @Override
-                public void addAttribute(String key, Object value) throws IllegalArgumentException, ClassCastException {
-                    throw new IllegalArgumentException();
-                }
-            });
+        } finally {
+            long end = System.currentTimeMillis();
+            listener.getLogger().format("[%tc] Finished organization scan. Scan took %s%n", end,
+                    Util.getTimeSpanString(end - start));
+
         }
     }
 
@@ -637,5 +619,260 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             return Messages.OrganizationFolder_OrganizationScan_displayName(getParent().getPronoun());
         }
 
+        @Override
+        public void run() {
+            long start = System.currentTimeMillis();
+            try {
+                super.run();
+            } finally {
+                long end = System.currentTimeMillis();
+                LOGGER.log(Level.INFO, "{0} #{1,time,yyyyMMdd.HHmmss} organization scan action completed: {2} in {3}",
+                        new Object[]{
+                                getParent().getFullName(), start, getResult(), Util.getTimeSpanString(end - start)
+                        }
+                );
+            }
+        }
+
+    }
+
+    @Extension
+    public static class SCMEventListenerImpl extends SCMEventListener {
+
+        public TaskListener globalEventsListener() {
+            File eventsFile =
+                    new File(Jenkins.getActiveInstance().getRootDir(), OrganizationFolder.class.getName() + ".log");
+            boolean rotate = eventsFile.length() > 30 * 1024;
+            OutputStream os = new ReopenableRotatingFileOutputStream(eventsFile, 5);
+            if (rotate) {
+                try {
+                    ((ReopenableRotatingFileOutputStream) os).rewind();
+                } catch (IOException e) {
+                    LOGGER.log(Level.WARNING, "Could not rotate " + eventsFile, e);
+                }
+            }
+            return new StreamBuildListener(os, Charsets.UTF_8);
+        }
+
+        @Override
+        public void onSCMHeadEvent(SCMHeadEvent<?> event) {
+            TaskListener global = globalEventsListener();
+            global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
+                    System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                    event.getTimestamp());
+            if (CREATED == event.getType() || UPDATED == event.getType()) {
+                for (OrganizationFolder p : Jenkins.getActiveInstance().getAllItems(OrganizationFolder.class)) {
+                    // we want to catch when a branch is created / updated and consequently becomes eligible
+                    // against the criteria. First check if the event matches one of the navigators
+                    SCMNavigator navigator = null;
+                    for (SCMNavigator n : p.getSCMNavigators()) {
+                        if (event.isMatch(n)) {
+                            global.getLogger().format("Found match against %s%n", p.getFullName());
+                            navigator = n;
+                            break;
+                        }
+                    }
+                    if (navigator == null) {
+                        continue;
+                    }
+                    // ok, now check if any of the sources are a match... if they are then this event is not our
+                    // concern
+                    for (SCMSource s : p.getSCMSources()) {
+                        if (event.isMatch(s)) {
+                            // already have a source that will see this
+                            global.getLogger()
+                                    .format("Project %s already has a corresponding sub-project%n", p.getFullName());
+                            navigator = null;
+                            break;
+                        }
+                    }
+                    if (navigator != null) {
+                        global.getLogger()
+                                .format("Project %s does not have a corresponding sub-project%n", p.getFullName());
+                        TaskListener listener;
+                        try {
+                            listener = p.getComputation().createEventsListener();
+                        } catch (IOException e) {
+                            listener = new LogTaskListener(LOGGER, Level.FINE);
+                        }
+                        ChildObserver childObserver = p.createEventsChildObserver();
+                        long start = System.currentTimeMillis();
+                        listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
+                                start, event.getType().name(), event.getTimestamp());
+                        try {
+                            navigator.visitSource(event.getSourceName(),
+                                    p.new SCMSourceObserverImpl(listener, childObserver));
+                        } catch (IOException | InterruptedException e) {
+                            e.printStackTrace(listener.error(e.getMessage()));
+                        } finally {
+                            long end = System.currentTimeMillis();
+                            listener.getLogger().format("[%tc] %s event processed in %s%n",
+                                    end, event.getType().name(), Util.getTimeSpanString(end - start));
+                        }
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void onSCMSourceEvent(SCMSourceEvent<?> event) {
+            TaskListener global = globalEventsListener();
+            global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
+                    System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                    event.getTimestamp());
+            if (CREATED == event.getType()) {
+                for (OrganizationFolder p : Jenkins.getActiveInstance().getAllItems(OrganizationFolder.class)) {
+                    boolean haveMatch = false;
+                    for (SCMNavigator n : p.getSCMNavigators()) {
+                        if (event.isMatch(n)) {
+                            global.getLogger().format("Found match against %s%n", p.getFullName());
+                            haveMatch = true;
+                            break;
+                        }
+                    }
+                    if (haveMatch) {
+                        TaskListener listener;
+                        try {
+                            listener = p.getComputation().createEventsListener();
+                        } catch (IOException e) {
+                            listener = new LogTaskListener(LOGGER, Level.FINE);
+                        }
+                        ChildObserver childObserver = p.createEventsChildObserver();
+                        long start = System.currentTimeMillis();
+                        listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
+                                start, event.getType().name(), event.getTimestamp());
+                        try {
+                            for (SCMNavigator n : p.getSCMNavigators()) {
+                                if (event.isMatch(n)) {
+                                    try {
+                                        n.visitSource(event.getSourceName(),
+                                                p.new SCMSourceObserverImpl(listener, childObserver));
+                                    } catch (IOException e) {
+                                        e.printStackTrace(listener.error(e.getMessage()));
+                                    }
+                                }
+                            }
+                        } catch (InterruptedException e) {
+                            e.printStackTrace(listener.error(e.getMessage()));
+                        } finally {
+                            long end = System.currentTimeMillis();
+                            listener.getLogger().format("[%tc] %s event processed in %s%n",
+                                    end, event.getType().name(), Util.getTimeSpanString(end - start));
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+
+    private class SCMSourceObserverImpl extends SCMSourceObserver {
+        private final TaskListener listener;
+        private final ChildObserver<MultiBranchProject<?, ?>> observer;
+
+        public SCMSourceObserverImpl(TaskListener listener, ChildObserver<MultiBranchProject<?, ?>> observer) {
+            this.listener = listener;
+            this.observer = observer;
+        }
+
+        @NonNull
+        @Override
+        public SCMSourceOwner getContext() {
+            return OrganizationFolder.this;
+        }
+
+        @NonNull
+        @Override
+        public TaskListener getListener() {
+            return listener;
+        }
+
+        @NonNull
+        @Override
+        public ProjectObserver observe(@NonNull final String projectName) {
+            return new ProjectObserver() {
+                List<SCMSource> sources = new ArrayList<SCMSource>();
+
+                @Override
+                public void addSource(@NonNull SCMSource source) {
+                    sources.add(source);
+                    source.setOwner(OrganizationFolder.this);
+                }
+
+                private List<BranchSource> createBranchSources() {
+                    if (sources == null) {
+                        throw new IllegalStateException();
+                    }
+                    List<BranchSource> branchSources = new ArrayList<BranchSource>();
+                    for (SCMSource source : sources) {
+                        // TODO do we want/need a more general BranchPropertyStrategyFactory?
+                        branchSources.add(new BranchSource(source));
+                    }
+                    sources = null; // make sure complete gets called just once
+                    return branchSources;
+                }
+
+                @Override
+                public void addAttribute(@NonNull String key, Object value)
+                        throws IllegalArgumentException, ClassCastException {
+                    throw new IllegalArgumentException();
+                }
+
+                @Override
+                public void complete() throws IllegalStateException, InterruptedException {
+                    try {
+                        MultiBranchProjectFactory factory = null;
+                        Map<String, Object> attributes = Collections.<String, Object>emptyMap();
+                        for (MultiBranchProjectFactory candidateFactory : projectFactories) {
+                            if (candidateFactory.recognizes(
+                                    OrganizationFolder.this, projectName, sources, attributes, listener
+                            )) {
+                                factory = candidateFactory;
+                                break;
+                            }
+                        }
+                        if (factory == null) {
+                            return;
+                        }
+                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(projectName);
+                        if (existing != null) {
+                            PersistedList<BranchSource> sourcesList = existing.getSourcesList();
+                            sourcesList.clear();
+                            sourcesList.addAll(createBranchSources());
+                            existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                            factory.updateExistingProject(existing, attributes, listener);
+                            existing.scheduleBuild();
+                            return;
+                        }
+                        if (!observer.mayCreate(projectName)) {
+                            listener.getLogger().println("Ignoring duplicate child " + projectName);
+                            return;
+                        }
+                        MultiBranchProject<?, ?> project = factory.createNewProject(
+                                OrganizationFolder.this, projectName, sources, attributes, listener
+                        );
+                        project.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                        project.getSourcesList().addAll(createBranchSources());
+                        try {
+                            project.addTrigger(new PeriodicFolderTrigger("1d"));
+                        } catch (ANTLRException x) {
+                            throw new IllegalStateException(x);
+                        }
+                        observer.created(project);
+                        project.scheduleBuild();
+                    } catch (InterruptedException x) {
+                        throw x;
+                    } catch (Exception x) {
+                        x.printStackTrace(listener.error("Failed to create or update a subproject " + projectName));
+                    }
+                }
+            };
+        }
+
+        @Override
+        public void addAttribute(@NonNull String key, Object value)
+                throws IllegalArgumentException, ClassCastException {
+            throw new IllegalArgumentException();
+        }
     }
 }
