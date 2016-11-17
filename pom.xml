@@ -135,6 +135,12 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>subversion</artifactId>
+      <version>2.5</version>
+      <scope>test</scope>
+    </dependency>
     <dependency> <!-- TODO for GitSampleRepoRule; should this be pushed up into scm-api, or git, or jenkins-test-harness? -->
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-scm-step</artifactId>
