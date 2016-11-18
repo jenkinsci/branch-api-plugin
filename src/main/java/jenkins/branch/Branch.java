@@ -25,6 +25,7 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.AbstractProject;
@@ -286,6 +287,7 @@ public class Branch {
          * @throws ObjectStreamException if things go wrong.
          */
         @SuppressWarnings("ConstantConditions")
+        @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
         private Object readResolve() throws ObjectStreamException {
             if (getActions() == null) {
                 return new Branch.Dead(getHead(), getProperties());
