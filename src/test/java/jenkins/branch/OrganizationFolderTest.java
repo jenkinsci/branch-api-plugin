@@ -95,7 +95,8 @@ public class OrganizationFolderTest {
     public void emptyViewEquality() throws Exception {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         View emptyView = top.getPrimaryView();
-        assertEquals("Welcome", emptyView.getViewName());
+        assertEquals(BaseEmptyView.VIEW_NAME, emptyView.getViewName());
+        assertEquals(Messages.BaseEmptyView_displayName(), emptyView.getDisplayName());
         assertEquals(emptyView, top.getPrimaryView());
         assertTrue(emptyView.isDefault());
     }
