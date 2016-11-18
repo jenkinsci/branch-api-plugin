@@ -77,7 +77,11 @@ package integration;
 
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import hudson.model.ListView;
 import hudson.model.TopLevelItem;
+import hudson.views.JobColumn;
+import hudson.views.StatusColumn;
+import hudson.views.WeatherColumn;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
@@ -87,8 +91,10 @@ import integration.harness.MockSCMLink;
 import integration.harness.MockSCMNavigator;
 import integration.harness.MockSCMSource;
 import integration.harness.MockSCMSourceEvent;
+import java.util.Arrays;
 import java.util.Collections;
 import jenkins.branch.BranchSource;
+import jenkins.branch.DescriptionColumn;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMSourceEvent;
@@ -333,6 +339,71 @@ public class BrandingTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getIcon().getIconClassName(), is("icon-star"));
+        }
+    }
+
+    @Test
+    public void given_orgFolder_when_decoratedOrganizationDefined_then_folderIconPresentAfterIndexing()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.setOrgIconClassName("icon-star");
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+            assertThat(prj.getIcon().getIconClassName(), not(is("icon-star")));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat(prj.getIcon().getIconClassName(), is("icon-star"));
+        }
+    }
+
+    @Test
+    public void given_orgFolder_when_decoratedOrganizationDefined_then_displayNamePresentAfterIndexing()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.setDisplayName("Foo Organization");
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+            assertThat(prj.getDisplayName(), is("foo"));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat(prj.getDisplayName(), is("Foo Organization"));
+        }
+    }
+
+    @Test
+    public void given_orgFolder_when_decoratedOrganizationDefined_then_descriptionLinkPresentAfterIndexing()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.setDescription("The Foo of Manchu");
+            c.setUrl("http://foo.manchu.example.com/");
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat(prj.getAction(MockMetadataAction.class), allOf(
+                    hasProperty("objectDescription", is("The Foo of Manchu")),
+                    hasProperty("objectUrl", is("http://foo.manchu.example.com/")),
+                    hasProperty("objectDisplayName", nullValue())
+            ));
+            ListView view = new ListView("descript");
+            view.setIncludeRegex(".*");
+            view.getColumns().replaceBy(Arrays.asList(
+                    new StatusColumn(),
+                    new WeatherColumn(),
+                    new JobColumn(),
+                    new DescriptionColumn()
+            ));
+            r.jenkins.addView(view);
+            JenkinsRule.WebClient webClient = r.createWebClient();
+            HtmlPage page = webClient.getPage(view);
+            HtmlAnchor href = page.getAnchorByHref("http://foo.manchu.example.com/");
+            assertThat(href.getTextContent(), containsString("The Foo of Manchu"));
         }
     }
 
