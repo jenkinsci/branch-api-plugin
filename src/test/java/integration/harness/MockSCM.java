@@ -39,28 +39,62 @@ import hudson.scm.RepositoryBrowser;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.scm.SCMRevisionState;
+import hudson.util.ListBoxModel;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.actions.TagAction;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.xml.sax.SAXException;
 
 public class MockSCM extends SCM {
     private final String controllerId;
     private final String repository;
-    private final MockSCMHead branch;
+    private final SCMHead head;
     private final MockSCMRevision revision;
     private transient MockSCMController controller;
 
-    public MockSCM(MockSCMController controller, String repository, MockSCMHead branch, MockSCMRevision revision) {
+    @DataBoundConstructor
+    public MockSCM(String controllerId, String repository, String head, String revision) {
+        this.controllerId = controllerId;
+        this.repository = repository;
+        // implementations of SCM API need not use the same convention for SCMHead.getName() as their underlying
+        // SCM does, e.g. GitHub calls pull requests PR-# or PR-#-head or PR-#-merge
+        // we simulate this here in order to ensure that the branch api has not made any implicit assumptions
+        // though it would be simpler to not have a unified namespace for tags and branches in MockSCMController
+        // and to have MockSCMController use a separate set of API methods in checking out change requests
+        // instead of merging them into the MockSCMController namespace under change-request/#
+        Matcher m = Pattern.compile("CR-(\\d+)").matcher(head);
+        if (m.matches()) {
+            int number = Integer.parseInt(m.group(1));
+            String target = null;
+            try {
+                target = controller().getTarget(repository, number);
+            } catch (IOException e) {
+                // ignore
+            }
+            this.head = new MockChangeRequestSCMHead(number, target);
+        } else {
+            this.head =
+                    (head.startsWith("TAG:") ? new MockSCMHead(head.substring(4), true) : new MockSCMHead(head, false));
+        }
+        this.revision = revision == null ? null : new MockSCMRevision(this.head, revision);
+    }
+
+    public MockSCM(MockSCMController controller, String repository, SCMHead head, MockSCMRevision revision) {
         this.controllerId = controller.getId();
         this.controller = controller;
         this.repository = repository;
         this.revision = revision;
-        this.branch = branch;
+        this.head = head;
     }
 
     public String getControllerId() {
@@ -76,6 +110,20 @@ public class MockSCM extends SCM {
 
     public String getRepository() {
         return repository;
+    }
+
+    public String getHead() {
+        if (head instanceof MockChangeRequestSCMHead) {
+            return "CR-" + ((MockChangeRequestSCMHead) head).getNumber();
+        }
+        if (head.getAction(TagAction.class) != null) {
+            return "TAG:" + head.getName();
+        }
+        return head.getName();
+    }
+
+    public String getRevision() {
+        return revision == null ? null : revision.getHash();
     }
 
     @Override
@@ -94,9 +142,17 @@ public class MockSCM extends SCM {
                                                    @Nonnull SCMRevisionState baseline)
             throws IOException, InterruptedException {
         if (baseline instanceof MockSCMRevisionState) {
-            String revision = this.revision == null
-                    ? controller().getRevision(repository, branch.getName())
-                    : this.revision.getHash();
+            String revision;
+            if (this.revision == null) {
+                if (head instanceof MockChangeRequestSCMHead) {
+                    revision = controller()
+                            .getRevision(repository, "change-request/" + ((MockChangeRequestSCMHead) head).getNumber());
+                } else {
+                    revision = controller().getRevision(repository, head.getName());
+                }
+            } else {
+                revision = this.revision.getHash();
+            }
             if (((MockSCMRevisionState) baseline).getRevision().getHash().equals(revision)) {
                 return PollingResult.NO_CHANGES;
             }
@@ -110,11 +166,11 @@ public class MockSCM extends SCM {
                          @Nonnull TaskListener listener, @CheckForNull File changelogFile,
                          @CheckForNull SCMRevisionState baseline) throws IOException, InterruptedException {
         String hash =
-                controller().checkout(workspace, repository, revision == null ? branch.getName() : revision.getHash());
+                controller().checkout(workspace, repository, revision == null ? head.getName() : revision.getHash());
         try (FileWriter writer = new FileWriter(changelogFile)) {
             Items.XSTREAM2.toXML(controller().log(repository, hash), writer);
         }
-        build.addAction(new MockSCMRevisionState(new MockSCMRevision(branch, hash)));
+        build.addAction(new MockSCMRevisionState(new MockSCMRevision(head, hash)));
     }
 
     @Override
@@ -148,6 +204,43 @@ public class MockSCM extends SCM {
 
         public DescriptorImpl() {
             super(MockSCMRepositoryBrowser.class);
+        }
+
+        public ListBoxModel doFillControllerIdItems() {
+            ListBoxModel result = new ListBoxModel();
+            for (MockSCMController c : MockSCMController.all()) {
+                result.add(c.getId());
+            }
+            return result;
+        }
+
+        public ListBoxModel doFillRepositoryItems(@QueryParameter String controllerId) throws IOException {
+            ListBoxModel result = new ListBoxModel();
+            MockSCMController c = MockSCMController.lookup(controllerId);
+            if (c != null) {
+                for (String r : c.listRepositories()) {
+                    result.add(r);
+                }
+            }
+            return result;
+        }
+
+        public ListBoxModel doFillHeadItems(@QueryParameter String controllerId, @QueryParameter String repository)
+                throws IOException {
+            ListBoxModel result = new ListBoxModel();
+            MockSCMController c = MockSCMController.lookup(controllerId);
+            if (c != null) {
+                for (String r : c.listBranches(repository)) {
+                    result.add(r);
+                }
+                for (String r : c.listTags(repository)) {
+                    result.add("TAG:" + r);
+                }
+                for (Integer r : c.listChangeRequests(repository)) {
+                    result.add("CR-" + r);
+                }
+            }
+            return result;
         }
     }
 }

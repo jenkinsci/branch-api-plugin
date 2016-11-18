@@ -92,6 +92,10 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
     @NonNull
     @Override
     public synchronized List<View> getViews() {
+        if (owner.getItems().isEmpty()) {
+            // when there are no branches nor pull requests to show, switch to the special welcome view
+            return Collections.singletonList(owner.getWelcomeView());
+        }
         if (views == null) {
             List<View> views = new ArrayList<>();
             for (SCMHeadCategory c : SCMHeadCategory.collectAndSimplify(owner.getSCMSources()).values()) {
@@ -118,6 +122,10 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      */
     @Override
     public synchronized String getPrimaryView() {
+        if (owner.getItems().isEmpty()) {
+            // when there are no branches nor pull requests to show, switch to the special welcome view
+            return BaseEmptyView.VIEW_NAME;
+        }
         if (primaryView == null) {
             getViews(); // will set primaryView for us
         }

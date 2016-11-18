@@ -77,7 +77,7 @@ public class MockSCMHeadEvent extends SCMHeadEvent<String> {
         if (!repository.equals(((MockSCMSource) source).getRepository())) {
             return Collections.emptyMap();
         }
-        MockSCMHead key = new MockSCMHead(head);
+        MockSCMHead key = new MockSCMHead(head, false);
         return Collections.<SCMHead, SCMRevision>singletonMap(
                 key,
                 revision != null ? new MockSCMRevision(key, revision) : null

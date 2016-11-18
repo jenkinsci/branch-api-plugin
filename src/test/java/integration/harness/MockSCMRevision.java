@@ -26,13 +26,14 @@
 package integration.harness;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMRevision;
 
 public class MockSCMRevision extends SCMRevision {
 
     private final String hash;
 
-    public MockSCMRevision(@NonNull MockSCMHead head, String hash) {
+    public MockSCMRevision(@NonNull SCMHead head, String hash) {
         super(head);
         this.hash = hash;
     }

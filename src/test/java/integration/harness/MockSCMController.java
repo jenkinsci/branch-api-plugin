@@ -42,6 +42,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import jenkins.scm.api.SCMFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -65,6 +67,12 @@ public class MockSCMController implements Closeable {
         return c;
     }
 
+    public static List<MockSCMController> all() {
+        synchronized (instances) {
+            return new ArrayList<>(instances.values());
+        }
+    }
+
     public static MockSCMController lookup(String id) {
         synchronized (instances) {
             return instances.get(id);
@@ -83,61 +91,152 @@ public class MockSCMController implements Closeable {
         repositories.clear();
     }
 
-    public synchronized void createRepository(String name) {
+    public synchronized void createRepository(String name) throws IOException {
         repositories.put(name, new Repository());
         createBranch(name, "master");
     }
 
-    public synchronized void deleteRepository(String name) {
+    public synchronized void deleteRepository(String name) throws IOException {
         repositories.remove(name);
     }
 
-    public synchronized List<String> listRepositories() {
+    public synchronized List<String> listRepositories() throws IOException {
         return new ArrayList<>(repositories.keySet());
     }
 
-    public synchronized void createBranch(String repository, String branch) {
+    public synchronized void createBranch(String repository, String branch) throws IOException {
         State state = new State();
-        repositories.get(repository).revisions.put(state.getHash(), state);
-        repositories.get(repository).heads.put(branch, state.getHash());
-    }
-
-    public synchronized void cloneBranch(String repository, String srcBranch, String dstBranch) {
-        repositories.get(repository).heads.put(dstBranch, repositories.get(repository).heads.get(srcBranch));
-    }
-
-    public synchronized void deleteBranch(String repository, String branch) {
-        repositories.get(repository).heads.remove(branch);
-    }
-
-    public synchronized List<String> listBranches(String repository) {
-        return new ArrayList<>(repositories.get(repository).heads.keySet());
-    }
-
-    public synchronized String getRevision(String repository, String branch) {
-        return repositories.get(repository).heads.get(branch);
-    }
-
-    public synchronized void addFile(String repository, String branch, String message, String path, byte[] content) {
-        Repository repo = repositories.get(repository);
-        State base = repo.revisions.get(repo.heads.get(branch));
-        State state = new State(base, message, Collections.singletonMap(path, content), Collections.<String>emptySet());
+        Repository repo = resolve(repository);
         repo.revisions.put(state.getHash(), state);
         repo.heads.put(branch, state.getHash());
     }
 
-    public synchronized void rmFile(String repository, String branch, String message, String path) {
-        Repository repo = repositories.get(repository);
-        State base = repo.revisions.get(repo.heads.get(branch));
+    public synchronized void cloneBranch(String repository, String srcBranch, String dstBranch) throws IOException {
+        Repository repo = resolve(repository);
+        repo.heads.put(dstBranch, repo.heads.get(srcBranch));
+    }
+
+    public synchronized void deleteBranch(String repository, String branch) throws IOException {
+        resolve(repository).heads.remove(branch);
+    }
+
+    public synchronized void createTag(String repository, String branch, String tag) throws IOException {
+        Repository repo = resolve(repository);
+        repo.tags.put(tag, resolve(repository, branch).getHash());
+    }
+
+    public synchronized void deleteTag(String repository, String tag) throws IOException {
+        resolve(repository).tags.remove(tag);
+    }
+
+    public synchronized Integer openChangeRequest(String repository, String branch) throws IOException {
+        Repository repo = resolve(repository);
+        String hash = resolve(repository, branch).getHash();
+        Integer crNum = ++repo.lastChangeRequest;
+        repo.changes.put(crNum, hash);
+        repo.changeBaselines.put(crNum, branch);
+        return crNum;
+    }
+
+    public synchronized void closeChangeRequest(String repository, Integer crNum) throws IOException {
+        resolve(repository).changes.remove(crNum);
+        resolve(repository).changeBaselines.remove(crNum);
+    }
+
+    public synchronized String getTarget(String repository, Integer crNum) throws IOException {
+        return resolve(repository).changeBaselines.get(crNum);
+    }
+
+    public synchronized List<String> listBranches(String repository) throws IOException {
+        return new ArrayList<>(resolve(repository).heads.keySet());
+    }
+
+    public synchronized List<String> listTags(String repository) throws IOException {
+        return new ArrayList<>(resolve(repository).tags.keySet());
+    }
+
+    public synchronized List<Integer> listChangeRequests(String repository) throws IOException {
+        return new ArrayList<>(resolve(repository).changes.keySet());
+    }
+
+    public synchronized String getRevision(String repository, String branch) throws IOException {
+        return resolve(repository, branch).getHash();
+    }
+
+    public synchronized void addFile(String repository, String branchOrCR, String message, String path, byte[] content)
+            throws IOException {
+        Repository repo = resolve(repository);
+        String branchName;
+        Integer crNum;
+        String hash;
+        // check branch first
+        hash = repo.heads.get(branchOrCR);
+        if (hash == null) {
+            branchName = null;
+            Matcher m = Pattern.compile("change-request/(\\d+)").matcher(branchOrCR);
+            if (m.matches()) {
+                crNum = Integer.valueOf(m.group(1));
+                hash = repo.changes.get(crNum);
+                if (hash == null) {
+                    throw new IOException("Unknown change request: " + crNum + " in repository " + repository);
+                }
+            } else {
+                throw new IOException("Unknown branch: " + branchOrCR + " in repository " + repository);
+            }
+        } else {
+            branchName = branchOrCR;
+            crNum = null;
+        }
+        State base = repo.revisions.get(hash);
+        State state = new State(base, message, Collections.singletonMap(path, content), Collections.<String>emptySet());
+        repo.revisions.put(state.getHash(), state);
+        if (branchName != null) {
+            repo.heads.put(branchName, state.getHash());
+        }
+        if (crNum != null) {
+            repo.changes.put(crNum, state.getHash());
+        }
+    }
+
+    public synchronized void rmFile(String repository, String branchOrCR, String message, String path)
+            throws IOException {
+        Repository repo = resolve(repository);
+        String branchName;
+        Integer crNum;
+        String hash;
+        // check branch first
+        hash = repo.heads.get(branchOrCR);
+        if (hash == null) {
+            branchName = null;
+            Matcher m = Pattern.compile("change-request/(\\d+)").matcher(branchOrCR);
+            if (m.matches()) {
+                crNum = Integer.valueOf(m.group(1));
+                hash = repo.changes.get(crNum);
+                if (hash == null) {
+                    throw new IOException("Unknown change request: " + crNum + " in repository " + repository);
+                }
+            } else {
+                throw new IOException("Unknown branch: " + branchOrCR + " in repository " + repository);
+            }
+        } else {
+            branchName = branchOrCR;
+            crNum = null;
+        }
+        State base = repo.revisions.get(hash);
         State state =
                 new State(base, message, Collections.<String, byte[]>emptyMap(), Collections.<String>singleton(path));
         repo.revisions.put(state.getHash(), state);
-        repo.heads.put(branch, state.getHash());
+        if (branchName != null) {
+            repo.heads.put(branchName, state.getHash());
+        }
+        if (crNum != null) {
+            repo.changes.put(crNum, state.getHash());
+        }
     }
 
 
-    public synchronized String checkout(File workspace, String repository, String branchOrHead) throws IOException {
-        State state = resolve(repository, branchOrHead);
+    public synchronized String checkout(File workspace, String repository, String identifier) throws IOException {
+        State state = resolve(repository, identifier);
 
         for (Map.Entry<String, byte[]> entry : state.files.entrySet()) {
             FileUtils.writeByteArrayToFile(new File(workspace, entry.getKey()), entry.getValue());
@@ -145,9 +244,9 @@ public class MockSCMController implements Closeable {
         return state.getHash();
     }
 
-    public synchronized String checkout(FilePath workspace, String repository, String branchOrHead)
+    public synchronized String checkout(FilePath workspace, String repository, String identifier)
             throws IOException, InterruptedException {
-        State state = resolve(repository, branchOrHead);
+        State state = resolve(repository, identifier);
 
         for (Map.Entry<String, byte[]> entry : state.files.entrySet()) {
             workspace.child(entry.getKey()).copyFrom(new ByteArrayInputStream(entry.getValue()));
@@ -155,14 +254,46 @@ public class MockSCMController implements Closeable {
         return state.getHash();
     }
 
-    private State resolve(String repository, String branchOrHead) {
-        return repositories.get(repository).revisions.get(
-                repositories.get(repository).heads.containsKey(branchOrHead) ? repositories.get(repository).heads.get(
-                        branchOrHead) : branchOrHead);
+    private synchronized State resolve(String repository, String identifier) throws IOException {
+        Repository repo = resolve(repository);
+        // check hash first
+        String hash = repo.revisions.containsKey(identifier) ? identifier : null;
+        if (hash != null) {
+            return repo.revisions.get(hash);
+        }
+        // now check for a named branch
+        hash = repo.heads.get(identifier);
+        if (hash != null) {
+            return repo.revisions.get(hash);
+        }
+        // now check for a named tag
+        hash = repo.tags.get(identifier);
+        if (hash != null) {
+            return repo.revisions.get(hash);
+        }
+        // now check for a change request
+        Matcher m = Pattern.compile("change-request/(\\d+)").matcher(identifier);
+        if (m.matches()) {
+            Integer crNum = Integer.valueOf(m.group(1));
+            hash = repo.changes.get(crNum);
+            if (hash != null) {
+                return repo.revisions.get(hash);
+            }
+            throw new IOException("Unknown change request: " + crNum + " in repository " + repository);
+        }
+        throw new IOException("Unknown branch/tag/revision: " + identifier + " in repository " + repository);
     }
 
-    public synchronized List<LogEntry> log(String repository, String branchOrHead) {
-        State state = resolve(repository, branchOrHead);
+    private Repository resolve(String repository) throws IOException {
+        Repository repo = repositories.get(repository);
+        if (repo == null) {
+            throw new IOException("Unknown repository: " + repository);
+        }
+        return repo;
+    }
+
+    public synchronized List<LogEntry> log(String repository, String identifier) throws IOException {
+        State state = resolve(repository, identifier);
         List<LogEntry> result = new ArrayList<>();
         while (state != null) {
             result.add(new LogEntry(state.getHash(), state.timestamp, state.message));
@@ -171,8 +302,8 @@ public class MockSCMController implements Closeable {
         return result;
     }
 
-    public synchronized SCMFile.Type stat(String repository, String branchOrHead, String path) {
-        State state = resolve(repository, branchOrHead);
+    public synchronized SCMFile.Type stat(String repository, String identifier, String path) throws IOException {
+        State state = resolve(repository, identifier);
         if (state == null) {
             return SCMFile.Type.NONEXISTENT;
         }
@@ -187,18 +318,25 @@ public class MockSCMController implements Closeable {
         return SCMFile.Type.NONEXISTENT;
     }
 
-    public synchronized long lastModified(String repository, String branchOrHead) {
-        State state = resolve(repository, branchOrHead);
-        if (state == null) {
+    public synchronized long lastModified(String repository, String identifier) {
+        try {
+            State state = resolve(repository, identifier);
+            if (state == null) {
+                return 0L;
+            }
+            return state.timestamp;
+        } catch (IOException e) {
             return 0L;
         }
-        return state.timestamp;
     }
 
     private static class Repository {
         private Map<String, State> revisions = new TreeMap<>();
         private Map<String, String> heads = new TreeMap<>();
-
+        private Map<String, String> tags = new TreeMap<>();
+        private Map<Integer, String> changes = new TreeMap<>();
+        private Map<Integer, String> changeBaselines = new TreeMap<>();
+        private int lastChangeRequest;
     }
 
     private static class State {

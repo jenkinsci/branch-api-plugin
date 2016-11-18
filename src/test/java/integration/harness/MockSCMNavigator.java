@@ -28,26 +28,39 @@ package integration.harness;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.util.ListBoxModel;
 import java.io.IOException;
 import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
+import jenkins.scm.api.SCMSourceCategory;
 import jenkins.scm.api.SCMSourceObserver;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public class MockSCMNavigator extends SCMNavigator {
 
     private final String controllerId;
+    private final boolean includeBranches;
+    private final boolean includeTags;
+    private final boolean includeChangeRequests;
     private transient MockSCMController controller;
 
     @DataBoundConstructor
-    public MockSCMNavigator(String id) {
-        this.controllerId = id;
+    public MockSCMNavigator(String controllerId, boolean includeBranches, boolean includeTags,
+                            boolean includeChangeRequests) {
+        this.controllerId = controllerId;
+        this.includeBranches = includeBranches;
+        this.includeTags = includeTags;
+        this.includeChangeRequests = includeChangeRequests;
     }
 
-    public MockSCMNavigator(MockSCMController controller) {
+    public MockSCMNavigator(MockSCMController controller, boolean includeBranches, boolean includeTags,
+                            boolean includeChangeRequests) {
         this.controllerId = controller.getId();
         this.controller = controller;
+        this.includeBranches = includeBranches;
+        this.includeTags = includeTags;
+        this.includeChangeRequests = includeChangeRequests;
     }
 
     public String getControllerId() {
@@ -61,12 +74,25 @@ public class MockSCMNavigator extends SCMNavigator {
         return controller;
     }
 
+    public boolean isIncludeBranches() {
+        return includeBranches;
+    }
+
+    public boolean isIncludeTags() {
+        return includeTags;
+    }
+
+    public boolean isIncludeChangeRequests() {
+        return includeChangeRequests;
+    }
+
     @Override
     public void visitSources(@NonNull SCMSourceObserver observer) throws IOException, InterruptedException {
         for (String name : controller().listRepositories()) {
             checkInterrupt();
             SCMSourceObserver.ProjectObserver po = observer.observe(name);
-            po.addSource(new MockSCMSource(null, controller, name));
+            po.addSource(new MockSCMSource(String.format("%s:%s", controllerId, name),
+                    controller, name, includeBranches, includeTags, includeChangeRequests));
             po.complete();
         }
     }
@@ -83,6 +109,14 @@ public class MockSCMNavigator extends SCMNavigator {
         @Override
         public SCMNavigator newInstance(@CheckForNull String name) {
             return null;
+        }
+
+        public ListBoxModel doFillControllerIdItems() {
+            ListBoxModel result = new ListBoxModel();
+            for (MockSCMController c : MockSCMController.all()) {
+                result.add(c.getId());
+            }
+            return result;
         }
     }
 }

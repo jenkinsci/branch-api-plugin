@@ -128,6 +128,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     private BranchProjectFactory<P, R> factory;
 
+    private transient String srcDigest, facDigest;
+
     /**
      * Constructor, mandated by {@link TopLevelItem}.
      *
@@ -170,6 +172,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         if (!(getIcon() instanceof MetadataActionFolderIcon)) {
             setIcon(newDefaultFolderIcon());
+        }
+        try {
+            srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
+        } catch (XStreamException e) {
+            srcDigest = null;
+        }
+        try {
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
+        } catch (XStreamException e) {
+            facDigest = null;
         }
     }
 
@@ -587,18 +599,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @Override
     protected void submit(StaplerRequest req, StaplerResponse rsp)
             throws IOException, ServletException, Descriptor.FormException {
-        String srcDigest;
-        try {
-            srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
-        } catch (XStreamException e) {
-            srcDigest = null;
-        }
-        String facDigest;
-        try {
-            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
-        } catch (XStreamException e) {
-            facDigest = null;
-        }
         super.submit(req, rsp);
         List<SCMSource> _sources = new ArrayList<>();
         synchronized (this) {
@@ -613,25 +613,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         for (SCMSource scmSource : _sources) {
             scmSource.afterSave();
         }
-        recalculateAfterSubmitted(srcDigest == null
-                || !srcDigest.equals(Util.getDigestOf(Items.XSTREAM2.toXML(sources))));
-        recalculateAfterSubmitted(facDigest == null
-                || !facDigest.equals(Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()))));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Exported
-    @NonNull
-    @SuppressWarnings("unused") // duck API for view container
-    @Override
-    public View getPrimaryView() {
-        if (getItems().isEmpty()) {
-            // when there are no branches nor pull requests to show, switch to the special welcome view
-            return getWelcomeView();
+        String srcDigest;
+        try {
+            srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
+        } catch (XStreamException e) {
+            srcDigest = null;
         }
-        return super.getPrimaryView();
+        String facDigest;
+        try {
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
+        } catch (XStreamException e) {
+            facDigest = null;
+        }
+        recalculateAfterSubmitted(!StringUtils.equals(srcDigest, this.srcDigest));
+        recalculateAfterSubmitted(!StringUtils.equals(facDigest, this.facDigest));
+        this.srcDigest = srcDigest;
+        this.facDigest = facDigest;
     }
 
     /**

@@ -26,10 +26,29 @@
 package integration.harness;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.Action;
+import java.util.ArrayList;
+import java.util.List;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.actions.TagAction;
 
 public class MockSCMHead extends SCMHead {
-    public MockSCMHead(@NonNull String name) {
+    private final TagAction tag;
+
+    public MockSCMHead(@NonNull String name, boolean tag) {
         super(name);
+        this.tag = tag ? new TagAction() : null;
+    }
+
+    @NonNull
+    @Override
+    public List<? extends Action> getAllActions() {
+        if (tag != null) {
+            List<Action> actions = new ArrayList<Action>(super.getAllActions());
+            actions.add(tag);
+            return actions;
+        } else {
+            return super.getAllActions();
+        }
     }
 }
