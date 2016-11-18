@@ -28,10 +28,13 @@ package integration.harness;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.Action;
 import hudson.model.TaskListener;
 import hudson.scm.SCM;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadCategory;
@@ -108,13 +111,14 @@ public class MockSCMSource extends SCMSource {
     @Override
     protected void retrieve(@CheckForNull SCMSourceCriteria criteria, @NonNull SCMHeadObserver observer,
                             @NonNull TaskListener listener) throws IOException, InterruptedException {
-        if (includeBranches)
-        for (final String branch : controller().listBranches(repository)) {
-            checkInterrupt();
-            String revision = controller().getRevision(repository, branch);
-            MockSCMHead head = new MockSCMHead(branch, false);
-            if (criteria == null || criteria.isHead(new MockSCMProbe(head, revision), listener)) {
-                observer.observe(head, new MockSCMRevision(head, revision));
+        if (includeBranches) {
+            for (final String branch : controller().listBranches(repository)) {
+                checkInterrupt();
+                String revision = controller().getRevision(repository, branch);
+                MockSCMHead head = new MockSCMHead(branch, false);
+                if (criteria == null || criteria.isHead(new MockSCMProbe(head, revision), listener)) {
+                    observer.observe(head, new MockSCMRevision(head, revision));
+                }
             }
         }
         if (includeTags) {
@@ -145,6 +149,33 @@ public class MockSCMSource extends SCMSource {
     public SCM build(@NonNull SCMHead head, @CheckForNull SCMRevision revision) {
         return new MockSCM(controller(), repository, head,
                 revision instanceof MockSCMRevision ? (MockSCMRevision) revision : null);
+    }
+
+
+    @NonNull
+    @Override
+    protected Map<Class<? extends Action>, Action> retrieveActions(@NonNull TaskListener listener)
+            throws IOException, InterruptedException {
+        return Collections.<Class<? extends Action>, Action>singletonMap(MockSCMLink.class,
+                new MockSCMLink("source"));
+    }
+
+    @NonNull
+    @Override
+    protected Map<Class<? extends Action>, Action> retrieveActions(@NonNull SCMRevision revision,
+                                                                   @NonNull TaskListener listener)
+            throws IOException, InterruptedException {
+        return Collections.<Class<? extends Action>, Action>singletonMap(MockSCMLink.class,
+                new MockSCMLink("revision"));
+    }
+
+    @NonNull
+    @Override
+    protected Map<Class<? extends Action>, Action> retrieveActions(@NonNull SCMHead head,
+                                                                   @NonNull TaskListener listener)
+            throws IOException, InterruptedException {
+        return Collections.<Class<? extends Action>, Action>singletonMap(MockSCMLink.class,
+                new MockSCMLink("branch"));
     }
 
     @Override

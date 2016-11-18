@@ -64,7 +64,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -96,7 +95,6 @@ import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-import org.kohsuke.stapler.export.Exported;
 
 /**
  * Abstract base class for multiple-branch based projects.
@@ -440,7 +438,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
             Branch b = _factory.getBranch(project);
             if (!(b instanceof Branch.Dead)) {
-                _factory.decorate(_factory.setBranch(project, new Branch.Dead(b.getHead(), b.getProperties())));
+                _factory.decorate(
+                        _factory.setBranch(project, new Branch.Dead(b.getHead(), b.getProperties(), b.getActions())));
             }
         }
         return super.orphanedItems(orphaned, listener);
@@ -1114,6 +1113,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace(listener.error("Could not fetch metadata of branch %s", rawName));
             }
+            if (headActions != null) {
+                branch.getActions().addAll(headActions.values());
+            }
             try {
                 List<Action> actions = new ArrayList<Action>();
                 for (Action a : source.fetchActions(revision, listener).values()) {
@@ -1133,7 +1135,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
                 Branch origBranch = _factory.getBranch(project);
                 boolean rebuild = origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead);
-                boolean needSave = !branch.equals(origBranch);
+                boolean needSave = !branch.equals(origBranch) || !branch.getActions().equals(origBranch.getActions());
                 _factory.decorate(_factory.setBranch(project, branch));
                 if (rebuild) {
                     listener.getLogger().format(
@@ -1168,44 +1170,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     }
                 }
 
-                BulkChange bc = new BulkChange(project);
                 try {
-                    // update any persistent revisionActions for the SCMHead
-                    for (Map.Entry<Class<? extends Action>, Action> entry : headActions.entrySet()) {
-                        // BEGIN TODO simplify once baseline has JENKINS-39404
-                        List<Action> actions = project.getActions();
-                        List<Action> forRemoval = new ArrayList<Action>(1);
-                        boolean found = false;
-                        for (Action a : actions) {
-                            if (found) {
-                                if (entry.getKey().isInstance(a)) {
-                                    forRemoval.add(a);
-                                }
-                            } else {
-                                if (a.equals(entry.getValue())) {
-                                    found = true;
-                                } else if (entry.getKey().isInstance(a)) {
-                                    forRemoval.add(a);
-                                }
-                            }
-                        }
-                        if (!forRemoval.isEmpty()) {
-                            needSave |= actions.removeAll(forRemoval);
-                        }
-                        if (!found) {
-                            project.addAction(entry.getValue());
-                            needSave = true;
-                        }
-                        // END TODO simplify once baseline has JENKINS-39404
-                    }
                     if (needSave) {
                         project.save();
                     }
-                    bc.commit();
                 } catch (IOException e) {
                     e.printStackTrace(listener.error("Could not save changes to " + rawName));
-                } finally {
-                    bc.abort();
                 }
                 return;
             }
@@ -1218,17 +1188,25 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 throw new IllegalStateException(
                         "Name of created project " + project + " did not match expected " + encodedName);
             }
-            if (!rawName.equals(encodedName) && project.getDisplayName().equals(encodedName)) {
-                try {
+            // HACK ALERT
+            // ==========
+            // We don't want to trigger a save, so we will do some trickery to ensure that observer.created(project)
+            // performs the save
+            BulkChange bc = new BulkChange(project);
+            try {
+                if (!rawName.equals(encodedName) && project.getDisplayName().equals(encodedName)) {
                     project.setDisplayName(rawName);
-                } catch (IOException e) {
-                    e.printStackTrace(listener.error("Could not save changes to " + rawName));
                 }
+            } catch (IOException e) {
+                // ignore even if it does happen we didn't want a save
+            } finally {
+                bc.abort();
             }
+            // decorate contract is to ensure it dowes not trigger a save
             _factory.decorate(project);
+            // ok it is now up to the observer to ensure it does the actual save.
             observer.created(project);
-            scheduleBuild(_factory, project, revision, listener, rawName, cause,
-                    revisionActions);
+            scheduleBuild(_factory, project, revision, listener, rawName, cause, revisionActions);
         }
     }
 }

@@ -23,11 +23,22 @@
  */
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.Extension;
 import hudson.Util;
+import hudson.model.AbstractProject;
+import hudson.model.Action;
+import hudson.model.Job;
 import hudson.scm.NullSCM;
 import hudson.scm.SCM;
+import java.io.ObjectStreamException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import javax.annotation.Nonnull;
+import jenkins.model.TransientActionFactory;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.impl.NullSCMSource;
 import org.kohsuke.stapler.export.Exported;
@@ -58,7 +69,12 @@ public class Branch {
     /**
      * The properties of this branch.
      */
-    private final List<BranchProperty> properties = new CopyOnWriteArrayList<BranchProperty>();
+    private final CopyOnWriteArrayList<BranchProperty> properties = new CopyOnWriteArrayList<BranchProperty>();
+
+    /**
+     * The actions to associate with this branch.
+     */
+    private final CopyOnWriteArrayList<Action> actions = new CopyOnWriteArrayList<>();
 
     /**
      * Constructs a branch instance.
@@ -72,6 +88,19 @@ public class Branch {
         this.head = head;
         this.scm = scm;
         this.properties.addAll(properties);
+    }
+
+    /**
+     * Ensure actions is never null.
+     *
+     * @return the deserialized object.
+     * @throws ObjectStreamException if things go wrong.
+     */
+    private Object readResolve() throws ObjectStreamException {
+        if (actions == null) {
+            return new Branch(sourceId, head, scm, properties);
+        }
+        return this;
     }
 
     /**
@@ -95,6 +124,7 @@ public class Branch {
 
     /**
      * Gets a branch name suitable for use in paths.
+     *
      * @return {@link #getName} with URL-unsafe characters escaped
      * @since 0.2-beta-7
      */
@@ -133,8 +163,12 @@ public class Branch {
     }
 
     /**
-     * Gets the specific property, or null if no such property is found.
+     * Gets the specific property, or {@code null} if no such property is found.
+     *
+     * @param clazz the type of property.
+     * @return the the specific property, or {@code null} if no such property is found.
      */
+    @CheckForNull
     public <T extends BranchProperty> T getProperty(Class<T> clazz) {
         for (BranchProperty p : properties) {
             if (clazz.isInstance(p)) {
@@ -147,8 +181,32 @@ public class Branch {
     /**
      * Gets all the properties.
      */
+    @NonNull
     public List<BranchProperty> getProperties() {
         return properties;
+    }
+
+    /**
+     * Gets all the actions.
+     *
+     * @return all the actions
+     */
+    @NonNull
+    public List<Action> getActions() {
+        return actions;
+    }
+
+    /**
+     * Gets the specific action, or null if no such property is found.
+     */
+    @CheckForNull
+    public <T extends Action> T getAction(Class<T> clazz) {
+        for (Action p : actions) {
+            if (clazz.isInstance(p)) {
+                return clazz.cast(p);
+            }
+        }
+        return null;
     }
 
     /**
@@ -201,10 +259,38 @@ public class Branch {
         /**
          * Constructor.
          *
-         * @param name branch name.
+         * @param name       branch name.
+         * @param properties the initial branch properties
          */
         public Dead(SCMHead name, List<? extends BranchProperty> properties) {
             super(NullSCMSource.ID, name, new NullSCM(), properties);
+        }
+
+        /**
+         * Constructor.
+         *
+         * @param name       branch name.
+         * @param properties the initial branch properties
+         * @param actions    the initial branch actions.
+         * @since FIXME
+         */
+        public Dead(SCMHead name, List<? extends BranchProperty> properties, List<? extends Action> actions) {
+            super(NullSCMSource.ID, name, new NullSCM(), properties);
+            this.getActions().addAll(actions);
+        }
+
+        /**
+         * Ensure actions is never null.
+         *
+         * @return the deserialized object.
+         * @throws ObjectStreamException if things go wrong.
+         */
+        @SuppressWarnings("ConstantConditions")
+        private Object readResolve() throws ObjectStreamException {
+            if (getActions() == null) {
+                return new Branch.Dead(getHead(), getProperties());
+            }
+            return this;
         }
 
         /**
@@ -213,6 +299,42 @@ public class Branch {
         @Override
         public boolean isBuildable() {
             return false;
+        }
+    }
+
+    /**
+     * Ensures that the {@link Branch#getActions()} are always present in the {@link Job#getAllActions()}.
+     * NOTE: We need to use a transient action factory as {@link AbstractProject#getActions()} is unmodifiable
+     * and consequently {@link AbstractProject#addAction(Action)} will always fail.
+     *
+     * @since FIXME
+     */
+    @Extension
+    public static class TransientJobActionsFactoryImpl extends TransientActionFactory<Job> {
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Class<Job> type() {
+            return Job.class;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Nonnull
+        @Override
+        public Collection<? extends Action> createFor(@Nonnull Job target) {
+            if (target.getParent() instanceof MultiBranchProject) {
+                MultiBranchProject p = (MultiBranchProject) target.getParent();
+                BranchProjectFactory factory = p.getProjectFactory();
+                if (factory.isProject(target)) {
+                    Branch b = factory.getBranch(factory.asProject(target));
+                    return b.getActions();
+                }
+            }
+            return Collections.emptyList();
         }
     }
 

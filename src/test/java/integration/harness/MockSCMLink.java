@@ -25,40 +25,51 @@
 
 package integration.harness;
 
-import hudson.Extension;
 import hudson.model.Action;
-import hudson.model.FreeStyleProject;
-import hudson.model.JobProperty;
-import hudson.model.JobPropertyDescriptor;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import javax.annotation.Nonnull;
-import jenkins.branch.Branch;
 
-public class BasicBranchProperty extends JobProperty<FreeStyleProject> {
+public class MockSCMLink implements Action {
+    private final String id;
 
-    private Branch b;
-
-    public BasicBranchProperty(Branch b) {
-        this.b = b;
-    }
-
-    public Branch getBranch() {
-        return b;
+    public MockSCMLink(String id) {
+        this.id = id;
     }
 
     @Override
-    public JobPropertyDescriptor getDescriptor() {
-        return new DescriptorImpl();
+    public String getIconFileName() {
+        return "help.png";
     }
 
-    @Extension
-    public static class DescriptorImpl extends JobPropertyDescriptor {
+    @Override
+    public String getDisplayName() {
+        return "Mock SCM";
+    }
 
-        @Override
-        public String getDisplayName() {
-            return "BasicBranchProperty";
+    @Override
+    public String getUrlName() {
+        return "mock-scm";
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
         }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        MockSCMLink that = (MockSCMLink) o;
+
+        return id != null ? id.equals(that.id) : that.id == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
     }
 }
