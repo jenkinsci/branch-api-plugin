@@ -53,7 +53,7 @@ public class BasicMultiBranchProject extends MultiBranchProject<FreeStyleProject
 
     @Override
     protected BranchProjectFactory<FreeStyleProject, FreeStyleBuild> newProjectFactory() {
-        return new BasicBranchProjectFactory();
+        return new BasicBranchProjectFactory(false);
     }
 
     @Override

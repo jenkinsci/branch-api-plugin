@@ -52,6 +52,7 @@ package integration.harness;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Action;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -90,6 +91,15 @@ public class MockChangeRequestSCMHead extends ChangeRequestSCMHead {
         @Override
         public String getId() {
             return Integer.toString(number);
+        }
+
+        @Override
+        public URL getURL() {
+            try {
+                return new URL("http://changes.example.com/" + number);
+            } catch (MalformedURLException e) {
+                return null;
+            }
         }
 
         @Override
