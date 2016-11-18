@@ -76,10 +76,13 @@ public class DescriptionColumn extends ListViewColumn {
      */
     @Restricted(NoExternalUse.class)
     @SuppressWarnings("unused") // used via Jelly EL binding
-    public String description(@CheckForNull MetadataAction p, @NonNull Job<?, ?> job) {
-        return p == null
-                ? job.getDescription()
-                : StringUtils.defaultIfBlank(p.getObjectDescription(), job.getDescription());
+    public String description(@CheckForNull Object p, @NonNull Object job) {
+        if (p instanceof MetadataAction) {
+            return StringUtils.defaultIfBlank(((MetadataAction) p).getObjectDescription(),
+                    job instanceof Job ? ((Job) job).getDescription() : "");
+        } else {
+            return job instanceof Job ? ((Job) job).getDescription() : "";
+        }
     }
 
     /**

@@ -34,6 +34,7 @@ import hudson.scm.SCM;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMHead;
@@ -156,8 +157,16 @@ public class MockSCMSource extends SCMSource {
     @Override
     protected Map<Class<? extends Action>, Action> retrieveActions(@NonNull TaskListener listener)
             throws IOException, InterruptedException {
-        return Collections.<Class<? extends Action>, Action>singletonMap(MockSCMLink.class,
-                new MockSCMLink("source"));
+        Map<Class<? extends Action>, Action> result = new HashMap<>();
+        result.put(MockSCMLink.class, new MockSCMLink("source"));
+        String description = controller().getDescription(repository);
+        String displayName = controller().getDisplayName(repository);
+        String url = controller().getUrl(repository);
+        String iconClassName = controller().getRepoIconClassName();
+        if (description != null || displayName != null || url != null || iconClassName != null) {
+            result.put(MockMetadataAction.class, new MockMetadataAction(description, displayName, url, iconClassName));
+        }
+        return result;
     }
 
     @NonNull

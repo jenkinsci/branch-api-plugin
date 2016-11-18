@@ -55,6 +55,11 @@ public class MockSCMController implements Closeable {
     private String id = UUID.randomUUID().toString();
 
     private Map<String, Repository> repositories = new TreeMap<>();
+    private String displayName;
+    private String description;
+    private String url;
+    private String repoIconClassName;
+    private String orgIconClassName;
 
     private MockSCMController() {
     }
@@ -91,6 +96,46 @@ public class MockSCMController implements Closeable {
         repositories.clear();
     }
 
+    public String getRepoIconClassName() {
+        return repoIconClassName;
+    }
+
+    public void setRepoIconClassName(String repoIconClassName) {
+        this.repoIconClassName = repoIconClassName;
+    }
+
+    public String getOrgIconClassName() {
+        return orgIconClassName;
+    }
+
+    public void setOrgIconClassName(String orgIconClassName) {
+        this.orgIconClassName = orgIconClassName;
+    }
+
+    public String getDescription() throws IOException {
+        return description;
+    }
+
+    public void setDescription(String description) throws IOException {
+        this.description = description;
+    }
+
+    public String getDisplayName() throws IOException {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) throws IOException {
+        this.displayName = displayName;
+    }
+
+    public String getUrl() throws IOException {
+        return url;
+    }
+
+    public void setUrl(String url) throws IOException {
+        this.url = url;
+    }
+
     public synchronized void createRepository(String name) throws IOException {
         repositories.put(name, new Repository());
         createBranch(name, "master");
@@ -102,6 +147,30 @@ public class MockSCMController implements Closeable {
 
     public synchronized List<String> listRepositories() throws IOException {
         return new ArrayList<>(repositories.keySet());
+    }
+
+    public String getDescription(String repository) throws IOException {
+        return resolve(repository).description;
+    }
+
+    public void setDescription(String repository, String description) throws IOException {
+        resolve(repository).description = description;
+    }
+
+    public String getDisplayName(String repository) throws IOException {
+        return resolve(repository).displayName;
+    }
+
+    public void setDisplayName(String repository, String displayName) throws IOException {
+        resolve(repository).displayName = displayName;
+    }
+
+    public String getUrl(String repository) throws IOException {
+        return resolve(repository).url;
+    }
+
+    public void setUrl(String repository, String url) throws IOException {
+        resolve(repository).url = url;
     }
 
     public synchronized void createBranch(String repository, String branch) throws IOException {
@@ -337,6 +406,9 @@ public class MockSCMController implements Closeable {
         private Map<Integer, String> changes = new TreeMap<>();
         private Map<Integer, String> changeBaselines = new TreeMap<>();
         private int lastChangeRequest;
+        private String description;
+        private String displayName;
+        private String url;
     }
 
     private static class State {

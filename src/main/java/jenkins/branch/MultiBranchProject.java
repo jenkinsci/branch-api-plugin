@@ -146,7 +146,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     public void onLoad(ItemGroup<? extends Item> parent, String name) throws IOException {
         super.onLoad(parent, name);
         init2();
-
+        try {
+            srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
+        } catch (XStreamException e) {
+            srcDigest = null;
+        }
+        try {
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
+        } catch (XStreamException e) {
+            facDigest = null;
+        }
     }
 
     /**
@@ -170,16 +179,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         if (!(getIcon() instanceof MetadataActionFolderIcon)) {
             setIcon(newDefaultFolderIcon());
-        }
-        try {
-            srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
-        } catch (XStreamException e) {
-            srcDigest = null;
-        }
-        try {
-            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
-        } catch (XStreamException e) {
-            facDigest = null;
         }
     }
 
@@ -544,8 +543,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         String displayName = getDisplayNameOrNull();
         if (displayName == null) {
             MetadataAction action = getAction(MetadataAction.class);
-            if (action != null && StringUtils.isNotBlank(action.getDisplayName())) {
-                return action.getDisplayName();
+            if (action != null && StringUtils.isNotBlank(action.getObjectDisplayName())) {
+                return action.getObjectDisplayName();
             }
         }
         return super.getDisplayName();
@@ -1194,7 +1193,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             // performs the save
             BulkChange bc = new BulkChange(project);
             try {
-                if (!rawName.equals(encodedName) && project.getDisplayName().equals(encodedName)) {
+                if (project.getDisplayNameOrNull() == null && !rawName.equals(encodedName)) {
                     project.setDisplayName(rawName);
                 }
             } catch (IOException e) {

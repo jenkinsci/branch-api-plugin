@@ -28,12 +28,16 @@ package integration.harness;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.Action;
+import hudson.model.TaskListener;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
-import jenkins.scm.api.SCMSourceCategory;
+import jenkins.scm.api.SCMNavigatorOwner;
 import jenkins.scm.api.SCMSourceObserver;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -95,6 +99,23 @@ public class MockSCMNavigator extends SCMNavigator {
                     controller, name, includeBranches, includeTags, includeChangeRequests));
             po.complete();
         }
+    }
+
+    @NonNull
+    @Override
+    public Map<Class<? extends Action>, Action> retrieveActions(@NonNull SCMNavigatorOwner owner,
+                                                                @NonNull TaskListener listener)
+            throws IOException, InterruptedException {
+        Map<Class<? extends Action>, Action> result = new HashMap<>();
+        result.put(MockSCMLink.class, new MockSCMLink("organization"));
+        String description = controller().getDescription();
+        String displayName = controller().getDisplayName();
+        String url = controller().getUrl();
+        String iconClassName = controller().getOrgIconClassName();
+        if (description != null || displayName != null || url != null || iconClassName != null) {
+            result.put(MockMetadataAction.class, new MockMetadataAction(description, displayName, url, iconClassName));
+        }
+        return result;
     }
 
     @Extension
