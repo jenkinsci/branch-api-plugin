@@ -251,7 +251,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
                 if (parent instanceof MultiBranchProject) {
                     BranchProjectFactory projectFactory = ((MultiBranchProject) parent).getProjectFactory();
                     if (projectFactory.isProject(item)) {
-                        return projectFactory.getBranch((Job) item).getHead();
+                        return projectFactory.getBranch(projectFactory.asProject(item)).getHead();
                     }
                 }
             }

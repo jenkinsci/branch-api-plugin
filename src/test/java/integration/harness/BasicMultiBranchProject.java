@@ -37,7 +37,6 @@ import jenkins.branch.BranchProjectFactory;
 import jenkins.branch.BranchSource;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.MultiBranchProjectDescriptor;
-import jenkins.branch.harness.BranchProjectFactoryImpl;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
 
@@ -53,7 +52,7 @@ public class BasicMultiBranchProject extends MultiBranchProject<FreeStyleProject
 
     @Override
     protected BranchProjectFactory<FreeStyleProject, FreeStyleBuild> newProjectFactory() {
-        return new BasicBranchProjectFactory(false);
+        return new BasicBranchProjectFactory();
     }
 
     @Override

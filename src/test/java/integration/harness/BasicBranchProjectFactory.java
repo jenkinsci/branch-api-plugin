@@ -43,24 +43,14 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 public class BasicBranchProjectFactory extends BranchProjectFactory<FreeStyleProject, FreeStyleBuild> {
 
-    private final boolean withDummyStep;
-
     @DataBoundConstructor
-    public BasicBranchProjectFactory(boolean withDummyStep) {
-        this.withDummyStep = withDummyStep;
-    }
-
-    public boolean isWithDummyStep() {
-        return withDummyStep;
+    public BasicBranchProjectFactory() {
     }
 
     @Override
     public FreeStyleProject newInstance(Branch branch) {
         FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getEncodedName());
         setBranch(job, branch);
-        if (withDummyStep) {
-            job.getBuildersList().add(Functions.isWindows() ? new BatchFile("set") : new Shell("set"));
-        }
         return job;
     }
 
