@@ -37,7 +37,6 @@ import hudson.tasks.BatchFile;
 import hudson.tasks.Shell;
 import java.util.List;
 import javax.annotation.Nonnull;
-import jenkins.branch.Branch;
 import jenkins.branch.BranchProperty;
 import jenkins.branch.BranchPropertyDescriptor;
 import jenkins.branch.JobDecorator;

@@ -26,14 +26,9 @@
 package integration.harness;
 
 import hudson.Extension;
-import hudson.model.Action;
 import hudson.model.FreeStyleProject;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import javax.annotation.Nonnull;
 import jenkins.branch.Branch;
 
 public class BasicBranchProperty extends JobProperty<FreeStyleProject> {

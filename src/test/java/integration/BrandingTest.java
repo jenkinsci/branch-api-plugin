@@ -84,7 +84,6 @@ import hudson.views.StatusColumn;
 import hudson.views.WeatherColumn;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
-import integration.harness.BasicSCMSourceCriteria;
 import integration.harness.MockMetadataAction;
 import integration.harness.MockSCMController;
 import integration.harness.MockSCMLink;

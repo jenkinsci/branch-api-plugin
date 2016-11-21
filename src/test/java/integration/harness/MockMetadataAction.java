@@ -25,7 +25,6 @@
 
 package integration.harness;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.branch.MetadataAction;
 
 public class MockMetadataAction extends MetadataAction {

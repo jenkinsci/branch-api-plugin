@@ -51,15 +51,11 @@
 package integration.harness;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.model.Action;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 import jenkins.scm.api.ChangeRequestSCMHead;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.actions.ChangeRequestAction;
-import jenkins.scm.api.actions.TagAction;
 
 public class MockChangeRequestSCMHead extends ChangeRequestSCMHead {
     private final ChangeRequestActionImpl action;

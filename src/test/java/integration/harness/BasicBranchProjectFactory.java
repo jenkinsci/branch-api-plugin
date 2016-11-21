@@ -27,18 +27,14 @@ package integration.harness;
 
 import hudson.BulkChange;
 import hudson.Extension;
-import hudson.Functions;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Item;
-import hudson.tasks.BatchFile;
-import hudson.tasks.Shell;
 import java.io.IOException;
 import jenkins.branch.Branch;
 import jenkins.branch.BranchProjectFactory;
 import jenkins.branch.BranchProjectFactoryDescriptor;
 import jenkins.branch.MultiBranchProject;
-import jenkins.branch.harness.BranchProperty;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public class BasicBranchProjectFactory extends BranchProjectFactory<FreeStyleProject, FreeStyleBuild> {

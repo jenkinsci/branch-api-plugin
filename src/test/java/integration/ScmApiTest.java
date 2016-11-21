@@ -100,47 +100,28 @@
 
 package integration;
 
-import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import hudson.model.FreeStyleProject;
-import hudson.model.ListView;
 import hudson.model.TopLevelItem;
-import hudson.views.JobColumn;
-import hudson.views.StatusColumn;
-import hudson.views.WeatherColumn;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
 import integration.harness.MockChangeRequestSCMHead;
-import integration.harness.MockMetadataAction;
 import integration.harness.MockSCM;
 import integration.harness.MockSCMController;
 import integration.harness.MockSCMHead;
-import integration.harness.MockSCMLink;
 import integration.harness.MockSCMNavigator;
 import integration.harness.MockSCMRevision;
 import integration.harness.MockSCMSource;
-import integration.harness.MockSCMSourceEvent;
-import java.util.Arrays;
 import java.util.Collections;
 import jenkins.branch.BranchSource;
-import jenkins.branch.DescriptionColumn;
 import jenkins.branch.OrganizationFolder;
-import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMHead;
-import jenkins.scm.api.SCMSourceEvent;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
