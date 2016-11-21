@@ -26,7 +26,7 @@ package jenkins.branch;
 import hudson.model.Descriptor;
 
 /**
- * @author Stephen Connolly
+ * Base class for all {@link BranchProjectFactory} instances.
  */
 public abstract class BranchProjectFactoryDescriptor extends Descriptor<BranchProjectFactory<?, ?>> {
 

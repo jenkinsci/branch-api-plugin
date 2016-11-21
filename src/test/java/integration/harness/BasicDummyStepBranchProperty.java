@@ -43,8 +43,13 @@ import jenkins.branch.JobDecorator;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.MultiBranchProjectDescriptor;
 import jenkins.branch.ProjectDecorator;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 public class BasicDummyStepBranchProperty extends BranchProperty {
+    @DataBoundConstructor
+    public BasicDummyStepBranchProperty() {
+    }
+
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
         if (FreeStyleProject.class.isAssignableFrom(clazz)) {

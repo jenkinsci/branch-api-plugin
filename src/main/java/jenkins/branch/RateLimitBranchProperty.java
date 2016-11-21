@@ -40,6 +40,8 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.jvnet.localizer.ResourceBundleHolder;
@@ -54,6 +56,11 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 @SuppressWarnings("unused") // instantiated by stapler
 public class RateLimitBranchProperty extends BranchProperty {
+
+    /**
+     * Our logger.
+     */
+    private static final Logger LOGGER = Logger.getLogger(RateLimitBranchProperty.class.getName());
 
     /**
      * The durations that we know about.
@@ -382,11 +389,13 @@ public class RateLimitBranchProperty extends BranchProperty {
                 Job<?,?> job = (Job) item.task;
                 JobPropertyImpl property = job.getProperty(JobPropertyImpl.class);
                 if (property != null) {
+                    LOGGER.log(Level.FINER, "{0} has a rate limit of {1} builds per {2}", new Object[]{job.getFullName(), property.getCount(), property.getDurationName()});
                     Run lastBuild = job.getLastBuild();
                     if (lastBuild != null) {
                         long timeSinceLastBuild = System.currentTimeMillis() - lastBuild.getTimeInMillis();
                         long betweenBuilds = property.getMillisecondsBetweenBuilds();
                         if (timeSinceLastBuild < betweenBuilds) {
+                            LOGGER.log(Level.FINE, "{0} will be delayed for another {1}ms as it is {2}ms since last build and ideal rate is {3}ms between builds", new Object[]{job.getFullName(), betweenBuilds - timeSinceLastBuild, timeSinceLastBuild, betweenBuilds});
                             return CauseOfBlockage.fromMessage(Messages._RateLimitBranchProperty_BuildBlocked(
                                     new Date(lastBuild.getTimeInMillis() + betweenBuilds))
                             );
