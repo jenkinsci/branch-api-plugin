@@ -42,12 +42,13 @@ import jenkins.branch.BranchPropertyDescriptor;
 import jenkins.branch.JobDecorator;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.MultiBranchProjectDescriptor;
+import jenkins.branch.ProjectDecorator;
 
 public class BasicDummyStepBranchProperty extends BranchProperty {
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
         if (FreeStyleProject.class.isAssignableFrom(clazz)) {
-            return (JobDecorator<P, B>) new JobDecorator<FreeStyleProject, FreeStyleBuild>() {
+            return (JobDecorator<P, B>) new ProjectDecorator<FreeStyleProject, FreeStyleBuild>() {
                 @NonNull
                 @Override
                 public List<JobProperty<? super FreeStyleProject>> jobProperties(
