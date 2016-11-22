@@ -194,6 +194,10 @@ public class Branch {
         return result;
     }
 
+    public String getRemoteName() {
+        return "refs/heads/" + head.getName();
+    }
+
     /**
      * Represents a dead branch.
      */
