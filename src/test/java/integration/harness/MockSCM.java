@@ -89,6 +89,13 @@ public class MockSCM extends SCM {
         this.revision = revision == null ? null : new MockSCMRevision(this.head, revision);
     }
 
+    public MockSCM(MockSCMSource config, SCMHead head, MockSCMRevision revision) {
+        this.controllerId = config.getControllerId();
+        this.repository = config.getRepository();
+        this.head = head;
+        this.revision = revision;
+    }
+
     public MockSCM(MockSCMController controller, String repository, SCMHead head, MockSCMRevision revision) {
         this.controllerId = controller.getId();
         this.controller = controller;

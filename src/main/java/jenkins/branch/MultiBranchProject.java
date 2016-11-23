@@ -93,6 +93,7 @@ import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
+import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -104,7 +105,7 @@ import org.kohsuke.stapler.StaplerResponse;
  */
 public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         R extends Run<P, R>>
-        extends ComputedFolder<P> implements SCMSourceOwner {
+        extends ComputedFolder<P> implements SCMSourceOwner, IconSpec {
 
     /**
      * Our logger.
@@ -196,6 +197,30 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @Override
     protected FolderIcon newDefaultFolderIcon() {
         return new MetadataActionFolderIcon();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getIconClassName() {
+        String result;
+        if (sources.size() == 1) {
+            result = sources.get(0).getSource().getDescriptor().getIconClassName();
+        } else {
+            result = null;
+            for (int i = 0; i < sources.size(); i++) {
+                String iconClassName = sources.get(i).getSource().getDescriptor().getIconClassName();
+                if (i == 0) {
+                    result = iconClassName;
+                } else if (!StringUtils.equals(result, iconClassName)) {
+                    result = null;
+                    break;
+                }
+            }
+        }
+
+        return result != null ? result : getDescriptor().getIconClassName();
     }
 
     /**

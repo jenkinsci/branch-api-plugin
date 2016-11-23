@@ -148,8 +148,7 @@ public class MockSCMSource extends SCMSource {
     @NonNull
     @Override
     public SCM build(@NonNull SCMHead head, @CheckForNull SCMRevision revision) {
-        return new MockSCM(controller(), repository, head,
-                revision instanceof MockSCMRevision ? (MockSCMRevision) revision : null);
+        return new MockSCM(this, head, revision instanceof MockSCMRevision ? (MockSCMRevision) revision : null);
     }
 
 

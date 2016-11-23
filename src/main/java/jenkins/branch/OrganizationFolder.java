@@ -91,6 +91,7 @@ import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.Icon;
 import org.jenkins.ui.icon.IconSet;
+import org.jenkins.ui.icon.IconSpec;
 import org.jvnet.localizer.LocaleProvider;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -105,7 +106,8 @@ import static jenkins.scm.api.SCMEvent.Type.UPDATED;
  */
 @Restricted(NoExternalUse.class) // not currently intended as an API
 @SuppressWarnings({"unchecked", "rawtypes"}) // mistakes in various places
-public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<?,?>> implements SCMNavigatorOwner {
+public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<?,?>>
+        implements SCMNavigatorOwner, IconSpec {
 
     /**
      * Our logger.
@@ -285,6 +287,30 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     @Override
     protected FolderIcon newDefaultFolderIcon() {
         return new MetadataActionFolderIcon();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getIconClassName() {
+        String result;
+        if (navigators.size() == 1) {
+            result = navigators.get(0).getDescriptor().getIconClassName();
+        } else {
+            result = null;
+            for (int i = 0; i < navigators.size(); i++) {
+                String iconClassName = navigators.get(i).getDescriptor().getIconClassName();
+                if (i == 0) {
+                    result = iconClassName;
+                } else if (!StringUtils.equals(result, iconClassName)) {
+                    result = null;
+                    break;
+                }
+            }
+        }
+
+        return result != null ? result : getDescriptor().getIconClassName();
     }
 
     /**

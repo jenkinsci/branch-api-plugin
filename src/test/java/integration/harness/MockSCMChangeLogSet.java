@@ -41,7 +41,9 @@ public class MockSCMChangeLogSet extends ChangeLogSet<MockSCMChangeLogEntry> {
         super(build, browser);
         this.entries = new ArrayList<>(entries.size());
         for (MockSCMController.LogEntry e : entries) {
-            this.entries.add(new MockSCMChangeLogEntry(e));
+            MockSCMChangeLogEntry entry = new MockSCMChangeLogEntry(e);
+            entry.setParent(this);
+            this.entries.add(entry);
         }
     }
 

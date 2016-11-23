@@ -38,6 +38,10 @@ public class MockSCMChangeLogEntry extends ChangeLogSet.Entry {
         this.delegate = delegate;
     }
 
+    protected void setParent(MockSCMChangeLogSet parent) {
+        super.setParent(parent);
+    }
+
     @Override
     public String getCommitId() {
         return delegate.getHash();

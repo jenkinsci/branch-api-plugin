@@ -30,7 +30,11 @@ import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Hudson;
+import java.util.List;
 import javax.annotation.Nonnull;
+import jenkins.scm.api.SCMSource;
+import org.apache.commons.lang.StringUtils;
+import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
 
@@ -86,6 +90,12 @@ public class MetadataActionFolderIcon extends FolderIcon {
                     return null;
                 }
                 // otherwise the metadata doesn't want to control the icon, so fall back to the descriptor's default
+            }
+            if (owner instanceof IconSpec) {
+                String result = ((IconSpec) owner).getIconClassName();
+                if (result != null) {
+                    return result;
+                }
             }
             return owner.getDescriptor().getIconClassName();
         }
