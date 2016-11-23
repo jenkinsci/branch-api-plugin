@@ -828,9 +828,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     final BranchProjectFactory _factory = p.getProjectFactory();
                     for (SCMSource source : p.getSCMSources()) {
                         if (event.isMatch(source)) {
-                            haveMatch = true;
-                            global.getLogger().format("Found match against %s%n", p.getFullName());
-                            break;
+                            for (SCMHead h: event.heads(source).keySet()) {
+                                if (p.getItem(h.getName()) == null) {
+                                    // only interested in create events that actually could create a new branch
+                                    haveMatch = true;
+                                    break;
+                                }
+                            }
+                            if (haveMatch) {
+                                global.getLogger().format("Found match against %s%n", p.getFullName());
+                                break;
+                            }
                         }
                     }
                     if (haveMatch) {
@@ -904,6 +912,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 Map<SCMHead, SCMRevision> revisionMap = event.heads(src);
                                 SCMHead head = branch.getHead();
                                 if (revisionMap.containsKey(head)) {
+                                    if (SCMEvent.Type.UPDATED == event.getType()) {
+                                        SCMRevision revision = revisionMap.get(head);
+                                        if (revision != null && revision.isDeterministic()) {
+                                            SCMRevision lastBuild = _factory.getRevision(i);
+                                            if (revision.equals(lastBuild)) {
+                                                // we are not interested in events that tell us a revision
+                                                // we have already seen
+                                                continue;
+                                            }
+                                        }
+                                    }
                                     matches.put(src, head);
                                     jobs.add(i);
                                 }
@@ -975,8 +994,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         boolean haveMatch = false;
                         for (SCMSource source : p.getSCMSources()) {
                             if (event.isMatch(source)) {
-                                haveMatch = true;
-                                global.getLogger().format("Found match against %s%n", p.getFullName());
+                                for (SCMHead h : event.heads(source).keySet()) {
+                                    if (p.getItem(h.getName()) == null) {
+                                        // only interested in create events that actually could create a new branch
+                                        haveMatch = true;
+                                        break;
+                                    }
+                                }
+                                if (haveMatch) {
+                                    global.getLogger().format("Found match against %s%n", p.getFullName());
+                                    break;
+                                }
                                 break;
                             }
                         }

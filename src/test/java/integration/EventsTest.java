@@ -26,6 +26,7 @@
 package integration;
 
 import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
+import hudson.Util;
 import hudson.model.FreeStyleProject;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProject;
@@ -302,6 +303,68 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild(), notNullValue());
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithSources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            FreeStyleProject master = prj.getItem("master");
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            c.addFile("foo", "master", "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(2));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithSources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            FreeStyleProject master = prj.getItem("master");
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            String revision = c.getRevision("foo", "master");
+            c.addFile("foo", "master", "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", revision));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was not built", master.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithSources_when_createEventForExistingBranch_then_eventIgnored() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.scheduleBuild2(0).getFuture().get();
+            FreeStyleProject master = prj.getItem("master");
+            r.waitUntilNoActivity();
+            // we have not received any events so far, so in fact this should be 0L
+            long lastModified = prj.getComputation().getEventsFile().lastModified();
+            // we add a file so that the create event can contain a legitimate new revision
+            // but the branch is one that we already have, so the event should be ignored by this project
+            // and never even hit the events log
+            c.addFile("foo", "master", "adding file", "file", new byte[0]);
+
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was not built", master.getLastBuild().getNumber(), is(1));
+            assertThat(prj.getComputation().getEventsFile().lastModified(), is(lastModified));
         }
     }
 
