@@ -204,8 +204,9 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor i
                     if (d instanceof SingleSCMNavigator.DescriptorImpl) {
                         continue;
                     }
-                    if (haveOne) {
-                        // there is more than one, therefore we should display the generic option also
+                    if (haveOne || d.newInstance((String) null) == null) {
+                        // there is more than one, or there is one that cannot use name inference
+                        // therefore we should display the generic option also
                         return true;
                     }
                     haveOne = true;
