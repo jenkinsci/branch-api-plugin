@@ -26,6 +26,7 @@
 package integration.harness;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.scm.SCM;
 import java.util.Collections;
 import java.util.Map;
 import jenkins.scm.api.SCMHead;
@@ -82,5 +83,16 @@ public class MockSCMHeadEvent extends SCMHeadEvent<String> {
                 key,
                 revision != null ? new MockSCMRevision(key, revision) : null
         );
+    }
+
+    @Override
+    public boolean isMatch(@NonNull SCM scm) {
+        if (scm instanceof MockSCM) {
+            MockSCM mockSCM = (MockSCM) scm;
+            return controller.getId().equals(mockSCM.getControllerId())
+                    && repository.equals(mockSCM.getRepository())
+                    && head.equals(mockSCM.getHead());
+        }
+        return false;
     }
 }

@@ -726,8 +726,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
                                 start, event.getType().name(), event.getTimestamp());
                         try {
-                            navigator.visitSource(event.getSourceName(),
-                                    p.new SCMSourceObserverImpl(listener, childObserver));
+                            navigator.visitSources(p.new SCMSourceObserverImpl(listener, childObserver), event);
                         } catch (IOException | InterruptedException e) {
                             e.printStackTrace(listener.error(e.getMessage()));
                         } finally {
@@ -771,8 +770,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             for (SCMNavigator n : p.getSCMNavigators()) {
                                 if (event.isMatch(n)) {
                                     try {
-                                        n.visitSource(event.getSourceName(),
-                                                p.new SCMSourceObserverImpl(listener, childObserver));
+                                        n.visitSources(p.new SCMSourceObserverImpl(listener, childObserver), event);
                                     } catch (IOException e) {
                                         e.printStackTrace(listener.error(e.getMessage()));
                                     }

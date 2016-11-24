@@ -880,17 +880,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         try {
                             for (SCMSource source : p.getSCMSources()) {
                                 if (event.isMatch(source)) {
-                                    source.fetch(
-                                            p.getSCMSourceCriteria(source),
-                                            event.filter(
-                                                    source,
-                                                    p.new SCMHeadObserverImpl(
-                                                            source,
-                                                            childObserver,
-                                                            listener,
-                                                            _factory, new BranchEventCause(event)
-                                                    )
-                                            ),
+                                    source.fetch(p.getSCMSourceCriteria(source), p.new SCMHeadObserverImpl(
+                                            source,
+                                            childObserver,
+                                            listener,
+                                            _factory, new BranchEventCause(event)
+                                    ), event,
                                             listener
                                     );
                                 }
@@ -1048,16 +1043,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 for (SCMSource source : p.getSCMSources()) {
                                     if (event.isMatch(source)) {
                                         source.fetch(
-                                                p.getSCMSourceCriteria(source),
-                                                event.filter(
+                                                p.getSCMSourceCriteria(source), p.new SCMHeadObserverImpl(
                                                         source,
-                                                        p.new SCMHeadObserverImpl(
-                                                                source,
-                                                                childObserver,
-                                                                listener,
-                                                                _factory, new BranchEventCause(event)
-                                                        )
-                                                ),
+                                                        childObserver,
+                                                        listener,
+                                                        _factory, new BranchEventCause(event)
+                                                ), event,
                                                 listener
                                         );
                                     }

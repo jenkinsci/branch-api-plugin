@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadCategory;
@@ -112,11 +113,15 @@ public class MockSCMSource extends SCMSource {
     @Override
     protected void retrieve(@CheckForNull SCMSourceCriteria criteria, @NonNull SCMHeadObserver observer,
                             @NonNull TaskListener listener) throws IOException, InterruptedException {
+        Set<SCMHead> includes = observer.getIncludes();
         if (includeBranches) {
             for (final String branch : controller().listBranches(repository)) {
                 checkInterrupt();
                 String revision = controller().getRevision(repository, branch);
                 MockSCMHead head = new MockSCMHead(branch, false);
+                if (includes != null && !includes.contains(head)) {
+                    continue;
+                }
                 if (criteria == null || criteria.isHead(new MockSCMProbe(head, revision), listener)) {
                     observer.observe(head, new MockSCMRevision(head, revision));
                 }
@@ -127,6 +132,9 @@ public class MockSCMSource extends SCMSource {
                 checkInterrupt();
                 String revision = controller().getRevision(repository, tag);
                 MockSCMHead head = new MockSCMHead(tag, true);
+                if (includes != null && !includes.contains(head)) {
+                    continue;
+                }
                 if (criteria == null || criteria.isHead(new MockSCMProbe(head, revision), listener)) {
                     observer.observe(head, new MockSCMRevision(head, revision));
                 }
@@ -138,6 +146,9 @@ public class MockSCMSource extends SCMSource {
                 String revision = controller().getRevision(repository, "change-request/" + number);
                 String target = controller().getTarget(repository, number);
                 MockChangeRequestSCMHead head = new MockChangeRequestSCMHead(number, target);
+                if (includes != null && !includes.contains(head)) {
+                    continue;
+                }
                 if (criteria == null || criteria.isHead(new MockSCMProbe(head, revision), listener)) {
                     observer.observe(head, new MockSCMRevision(head, revision));
                 }
