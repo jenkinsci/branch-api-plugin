@@ -422,8 +422,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
             }
             for (final SCMSource source : scmSources) {
-                source.fetch(new SCMHeadObserverImpl(source, observer, listener, _factory, new BranchIndexingCause()),
-                        listener);
+                source.fetch(new SCMHeadObserverImpl(source, observer, listener, _factory,
+                        new IndexingCauseFactory()), listener);
             }
         } finally {
             long end = System.currentTimeMillis();
@@ -433,7 +433,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     private void scheduleBuild(BranchProjectFactory<P, R> factory, final P item, SCMRevision revision,
-                               TaskListener listener, String name, Cause cause, Action... actions) {
+                               TaskListener listener, String name, Cause[] cause, Action... actions) {
         Action[] _actions = new Action[actions.length+1];
         _actions[0] = new CauseAction(cause);
         System.arraycopy(actions, 0, _actions, 1, actions.length);
@@ -839,7 +839,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
 
         @Override
-        public void onSCMHeadEvent(SCMHeadEvent<?> event) {
+        public void onSCMHeadEvent(final SCMHeadEvent<?> event) {
             TaskListener global = globalEventsListener();
             global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
@@ -884,8 +884,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                             source,
                                             childObserver,
                                             listener,
-                                            _factory, new BranchEventCause(event)
-                                    ), event,
+                                            _factory, new EventCauseFactory(event)), event,
                                             listener
                                     );
                                 }
@@ -970,7 +969,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                                         m.getKey(),
                                                         childObserver,
                                                         listener,
-                                                        _factory, new BranchEventCause(event)
+                                                        _factory, new EventCauseFactory(event)
                                                 ),
                                                 m.getValue()
                                         ),
@@ -1047,7 +1046,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                                         source,
                                                         childObserver,
                                                         listener,
-                                                        _factory, new BranchEventCause(event)
+                                                        _factory, new EventCauseFactory(event)
                                                 ), event,
                                                 listener
                                         );
@@ -1125,6 +1124,66 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
             }
         }
+
+    }
+
+    /**
+     * We need to be able to inject causes which may include causes contributed by the triggering event.
+     */
+    private static abstract class CauseFactory {
+        /**
+         * Create the cause instances on demand. The instances in the array probably need to be new instances
+         * for each build as we cannot know the assumptions that plugin authors have made in
+         * {@link Cause#onAddedTo(Run)}.
+         *
+         * @return an array of new cause instances.
+         */
+        @NonNull
+        abstract Cause[] create();
+    }
+
+    /**
+     * A cause factory for {@link BranchIndexingCause}.
+     */
+    private static class IndexingCauseFactory extends CauseFactory {
+        /**
+         * {@inheritDoc}
+         */
+        @NonNull
+        @Override
+        Cause[] create() {
+            return new Cause[]{new BranchIndexingCause()};
+        }
+    }
+
+    /**
+     * A cause factory for {@link BranchEventCause}.
+     */
+    private static class EventCauseFactory extends CauseFactory {
+        /**
+         * The event.
+         */
+        @NonNull
+        private final SCMHeadEvent<?> event;
+
+        EventCauseFactory(SCMHeadEvent<?> event) {
+            this.event = event;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @NonNull
+        @Override
+        Cause[] create() {
+            Cause[] eventCauses = event.asCauses();
+            Cause[] result = new Cause[eventCauses.length + 1];
+            result[0] = new BranchEventCause(event);
+            if (eventCauses.length > 0) {
+                System.arraycopy(eventCauses, 0, result, 1, eventCauses.length);
+            }
+            return result;
+        }
     }
 
     private class SCMHeadObserverImpl extends SCMHeadObserver {
@@ -1132,15 +1191,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         private final ChildObserver<P> observer;
         private final TaskListener listener;
         private final BranchProjectFactory<P, R> _factory;
-        private final Cause cause;
+        private final CauseFactory causeFactory;
 
         public SCMHeadObserverImpl(SCMSource source, ChildObserver<P> observer, TaskListener listener,
-                                   BranchProjectFactory<P, R> _factory, Cause cause) {
+                                   BranchProjectFactory<P, R> _factory, CauseFactory causeFactory) {
             this.source = source;
             this.observer = observer;
             this.listener = listener;
             this._factory = _factory;
-            this.cause = cause;
+            this.causeFactory = causeFactory;
         }
 
         @Override
@@ -1188,13 +1247,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             revision
                     );
                     needSave = true;
-                    scheduleBuild(_factory, project, revision, listener, rawName, cause, revisionActions);
+                    scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(), revisionActions);
                 } else if (revision.isDeterministic()) {
                     SCMRevision lastBuild = _factory.getRevision(project);
                     if (!revision.equals(lastBuild)) {
                         listener.getLogger().format("Changes detected: %s (%s → %s)%n", rawName, lastBuild, revision);
                         needSave = true;
-                        scheduleBuild(_factory, project, revision, listener, rawName, cause, revisionActions);
+                        scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(), revisionActions);
                     } else {
                         listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
                     }
@@ -1206,7 +1265,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         if (pollingResult.hasChanges()) {
                             listener.getLogger().format("Changes detected: %s%n", rawName);
                             needSave = true;
-                            scheduleBuild(_factory, project, revision, listener, rawName, cause, revisionActions);
+                            scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(), revisionActions);
                         } else {
                             listener.getLogger().format("No changes detected: %s%n", rawName);
                         }
@@ -1249,7 +1308,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             _factory.decorate(project);
             // ok it is now up to the observer to ensure it does the actual save.
             observer.created(project);
-            scheduleBuild(_factory, project, revision, listener, rawName, cause, revisionActions);
+            scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(), revisionActions);
         }
     }
 }
