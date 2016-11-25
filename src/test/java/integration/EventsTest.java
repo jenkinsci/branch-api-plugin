@@ -919,6 +919,33 @@ public class EventsTest {
     }
 
     @Test
+    public void given_orgFolder_when_eventTouchesADifferentBranchInAnUndiscoveredRepoWithAMatch_then_noProjectIsCreated() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            c.createRepository("foo");
+            c.cloneBranch("foo", "master", "feature");
+            c.addFile("foo", "feature", "adding marker", "marker.txt", "A marker".getBytes());
+            c.cloneBranch("foo", "feature", "sustaining");
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "ignored"));
+            assertThat("Event specified branch does not match",
+                    prj.getItem("foo"),
+                    nullValue());
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "ignored"));
+            BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
+            assertThat("We now have the one project matching", foo, notNullValue());
+            assertThat("We now have only the one project matching",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+            assertThat("The matching branch exists", foo.getItem("feature"), notNullValue());
+            assertThat("Á full index occurred when adding the repo", foo.getItem("sustaining"), notNullValue());
+            assertThat("The non-matching branch does not exists", foo.getItem("master"), nullValue());
+        }
+    }
+
+    @Test
     public void given_orgFolder_when_eventCreatesARepoWithoutAMatch_then_noProjectIsCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
