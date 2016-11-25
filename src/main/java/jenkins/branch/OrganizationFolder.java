@@ -57,9 +57,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -726,7 +724,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
                                 start, event.getType().name(), event.getTimestamp());
                         try {
-                            navigator.visitSources(p.new SCMSourceObserverImpl(listener, childObserver), event);
+                            navigator.visitSources(p.new SCMSourceObserverImpl(listener, childObserver, event), event);
                         } catch (IOException | InterruptedException e) {
                             e.printStackTrace(listener.error(e.getMessage()));
                         } finally {
@@ -793,10 +791,19 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     private class SCMSourceObserverImpl extends SCMSourceObserver {
         private final TaskListener listener;
         private final ChildObserver<MultiBranchProject<?, ?>> observer;
+        private final SCMHeadEvent<?> event;
 
         public SCMSourceObserverImpl(TaskListener listener, ChildObserver<MultiBranchProject<?, ?>> observer) {
             this.listener = listener;
             this.observer = observer;
+            this.event = null;
+        }
+
+        public SCMSourceObserverImpl(TaskListener listener,
+                                     ChildObserver<MultiBranchProject<?, ?>> observer, SCMHeadEvent<?> event) {
+            this.listener = listener;
+            this.observer = observer;
+            this.event = event;
         }
 
         @NonNull
@@ -842,15 +849,35 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     throw new IllegalArgumentException();
                 }
 
+                private boolean recognizes(Map<String, Object> attributes, MultiBranchProjectFactory candidateFactory)
+                        throws IOException, InterruptedException {
+                    if (event == null) {
+                        return candidateFactory.recognizes(
+                                OrganizationFolder.this,
+                                projectName,
+                                sources,
+                                attributes,
+                                listener
+                        );
+                    } else {
+                        return candidateFactory
+                                .recognizes(
+                                        OrganizationFolder.this,
+                                        projectName,
+                                        sources,
+                                        attributes,
+                                        event,
+                                        listener);
+                    }
+                }
+
                 @Override
                 public void complete() throws IllegalStateException, InterruptedException {
                     try {
                         MultiBranchProjectFactory factory = null;
                         Map<String, Object> attributes = Collections.<String, Object>emptyMap();
                         for (MultiBranchProjectFactory candidateFactory : projectFactories) {
-                            if (candidateFactory.recognizes(
-                                    OrganizationFolder.this, projectName, sources, attributes, listener
-                            )) {
+                            if (recognizes(attributes, candidateFactory)) {
                                 factory = candidateFactory;
                                 break;
                             }
