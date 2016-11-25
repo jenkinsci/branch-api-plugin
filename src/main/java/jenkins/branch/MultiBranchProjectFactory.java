@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMHeadObserver;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
@@ -43,7 +44,7 @@ import jenkins.scm.api.SCMSourceOwner;
 
 /**
  * Creates {@link MultiBranchProject}s for repositories where recognized.
- * 
+ *
  * Please define a 'getting-started' view for a subclass, if you would like to provide specific information to the user
  * how to get started using the type of project factory. This view is displayed when there are no subfolders found.
  *
@@ -67,6 +68,27 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
         } else {
             throw new AbstractMethodError(getClass().getName() + " must override recognizes");
         }
+    }
+
+    /**
+     * Determines whether this factory recognizes a given configuration scoped to a specific {@link SCMHeadEvent}.
+     *
+     * @param parent     a folder
+     * @param name       a project name
+     * @param scmSources a set of SCM sources as added by
+     *                   {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addSource}
+     * @param attributes a set of metadata attributes as added by
+     *                   {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addAttribute}
+     * @param event      the {@link SCMHeadEvent} that the recognition test should be restricted to.
+     * @param listener   a way of reporting progress
+     * @return true if recognized
+     * @since FIXME
+     */
+    public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
+                              @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String, Object> attributes,
+                              @NonNull SCMHeadEvent<?> event,
+                              @NonNull TaskListener listener) throws IOException, InterruptedException {
+        return recognizes(parent, name, scmSources, attributes, listener);
     }
 
     /**
@@ -159,6 +181,23 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
             return false;
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
+                                  @NonNull List<? extends SCMSource> scmSources,
+                                  @NonNull Map<String, Object> attributes,
+                                  @NonNull SCMHeadEvent<?> event, @NonNull TaskListener listener)
+                throws IOException, InterruptedException {
+            for (final SCMSource scmSource : scmSources) {
+                if (scmSource.fetch(getSCMSourceCriteria(scmSource), SCMHeadObserver.any(), event, listener)
+                        .getRevision() != null) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
 }
