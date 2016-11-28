@@ -1,0 +1,263 @@
+== Implementation Guide
+
+This document provides the guidelines for a correct optimal implementation of the Branch API.
+
+This document is structured as follows:
+
+* The first section provides some background and history
+
+* The second section describes the use-case that the Branch API is designed to solve.
+
+* The subsequent sections provides an overview of the extension points provided by the Branch API.
+
+=== Background
+
+The first known usage of the phrase Continuous Integration was in 1994 by Grady Booch in  Object-Oriented Analysis and Design with Applications (2nd edition).
+It took until 2001 for CruiseControl to be released as the first easily available continuous integration server.
+The Jenkins project's history dates back to 2004.
+
+At that time, Continuous Integration had a primary focus on a small number of critical branches.
+
+The major source control systems in use at the time, tended to have relatively heavyweight processes around the creation of branches, but more critically, tended to have poor merge strategies.
+
+If you are developing a system for Continuous Integration at that time, it makes sense to focus on the small number of important branches and focus the Continuous Integration resources on those important branches.
+
+Since that time, however, two technological changes have changed the status quo:
+
+* The Git version control system
+* The cloud
+
+Git is not the only distributed version control system, but the advent of Git with its superior merge strategies, has caused a pressure on existing version control systems and resulted in:
+
+* Merging between branches is usually a lot easier requiring less manual interventions;
+* Creation of branches is a lot more lightweight
+
+The cloud makes it easier to access computing resources flexibly on demand.
+
+The combination of these factors together means that CI users now want to get the benefits of CI not just for the few critical branches, but for all the feature branches that are being created (and subsequently destroyed when the feature is merged).
+
+The original design for Jenkins is ill-suited to such a dynamic environment.
+
+The Branch API plugin is designed to provide one vision of a better solution to the needs of these kinds of dynamic developement methodologies.
+
+=== Use-cases
+
+As a Jenkins User, I would like Jenkins to track a repository in a source control system and automatically create jobs for each branch that gets created.
+
+As a Jenkins User, I would like Jenkins to track a collection of repositories and automatically create jobs that track the branches in each repository.
+
+As a Jenkins Administrator, I would like to define a policy for the retention of each these jobs so that the build history for these jobs can be retained in accordance with the organization's needs.
+
+=== Implementing `jenkins.branch.BranchProjectFactory`
+
+There are two extension points that you need to implement in order to have a multi-branch project: `jenkins.branch.BranchProjectFactory` and `jenkins.branch.MultiBranchProject`.
+
+The bulk of the implementation is the `BranchProjectFactory`.
+There are two strategies for implementing a branch project factory:
+
+. Create a job type specifically for use within the multi-branch projects.
+This job type will have two methods: `getBranch()` and `setBranch(_branch_)` and the implementation of the branch project factory becomes relatively straightforward -- although you have essentially just moved things to the job type
++
+[source,java]
+----
+public class MyBranchProjectFactory extends BranchProjectFactory<MyBranchJob, MyBranchRun> {
+
+    @DataBoundConstructor
+    public MyBranchProjectFactory() {
+    }
+
+    @Override
+    public MyBranchJob newInstance(Branch branch) {
+        return new MyBranchJob(getOwner(), branch.getEncodedName(), branch);
+    }
+
+    @Override
+    public Branch getBranch(MyBranchJob project) {
+        return project.getBranch();
+    }
+
+    @Override
+    public MyBranchJob setBranch(MyBranchJob project, Branch branch) {
+        BulkChange bc = new BulkChange(project);
+        try {
+        project.setBranch(branch);
+            if (branch instanceof Branch.Dead) {
+                if (!project.isDisabled()) {
+                    project.disable();
+                }
+            } else {
+                if (project.isDisabled()) {
+                    project.enable();
+                }
+            }
+            bc.commit();
+        } catch (IOException e) {
+            // ignore
+        } finally {
+            bc.abort();
+        }
+        return project;
+    }
+
+    @Override
+    public boolean isProject(Item item) {
+        return item instanceof MyBranchJob;
+    }
+
+    @Override
+    public MyBranchJob decorate(MyBranchJob project) {
+        // ...
+    }
+
+    @Extension
+    public static class DescriptorImpl extends BranchProjectFactoryDescriptor {
+
+        @Override
+        public boolean isApplicable(Class<? extends MultiBranchProject> clazz) {
+            return MultiBranchProject.class.isAssignableFrom(clazz);
+        }
+
+        @Override
+        public String getDisplayName() {
+            return "MyBranchProjectFactory";
+        }
+    }
+}
+----
+
+. Reuse an existing job type and store the branch information using something like a `JobProperty`
++
+[source,java]
+----
+public class MyBranchProjectFactory extends BranchProjectFactory<FreeStyleProject, FreeStyleBuild> {
+
+    @DataBoundConstructor
+    public MyBranchProjectFactory() {
+    }
+
+    @Override
+    public FreeStyleProject newInstance(Branch branch) {
+        FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getEncodedName());
+        setBranch(job, branch);
+        return job;
+    }
+
+    @Override
+    public Branch getBranch(FreeStyleProject project) {
+        return project.getProperty(MyFreeStyleJobProperty.class).getBranch();
+    }
+
+    @Override
+    public FreeStyleProject setBranch(FreeStyleProject project, Branch branch) {
+        BulkChange bc = new BulkChange(project);
+        try {
+            project.addProperty(new MyFreeStyleJobProperty(branch));
+            if (branch instanceof Branch.Dead) {
+                if (!project.isDisabled()) {
+                    project.disable();
+                }
+            } else {
+                if (project.isDisabled()) {
+                    project.enable();
+                }
+            }
+            bc.commit();
+        } catch (IOException e) {
+            // ignore
+        } finally {
+            bc.abort();
+        }
+        return project;
+    }
+
+    @Override
+    public boolean isProject(Item item) {
+        return item instanceof FreeStyleProject
+                && ((FreeStyleProject) item).getProperty(MyFreeStyleJobProperty.class) != null;
+    }
+
+    @Override
+    public FreeStyleProject decorate(FreeStyleProject project) {
+        // ...
+    }
+
+    @Extension
+    public static class DescriptorImpl extends BranchProjectFactoryDescriptor {
+        @Override
+        public boolean isApplicable(Class<? extends MultiBranchProject> clazz) {
+            return MultiBranchProject.class.isAssignableFrom(clazz);
+        }
+
+        @Override
+        public String getDisplayName() {
+            return "MyBranchProjectFactory";
+        }
+    }
+}
+----
+
+In either case, the `decorate(_project_)` method will be important to ensure that `BranchProperty` implementations can customize the jobs that have been created.
+
+
+=== Implementing `jenkins.branch.MultiBranchProject`
+
+Once you have the branch project factory, the implementation of the multi-branch project type itself becomes relatively straightforward:
+
+[source,java]
+----
+public class MyMultiBranchProject extends MultiBranchProject<MyBranchJob, MyBranchRun> {
+
+    public MyMultiBranchProject(ItemGroup parent, String name) {
+        super(parent, name);
+    }
+
+    @Override
+    protected MyBranchProjectFactory newProjectFactory() {
+        return new MyBranchProjectFactory();
+    }
+
+    @Override
+    public SCMSourceCriteria getSCMSourceCriteria(@NonNull SCMSource source) {
+        // ...
+    }
+
+    @Extension
+    public static class DescriptorImpl extends MultiBranchProjectDescriptor {
+
+        @Override
+        public String getDisplayName() {
+            return "My multi-branch project";
+        }
+
+        @Override
+        public TopLevelItem newInstance(ItemGroup parent, String name) {
+            return new MyBranchJob(parent, name);
+        }
+    }
+}
+----
+
+Namly we just have two pieces of information to resolve:
+
+. How do we identify source branches that this project type applies to.
+You can use a fixed criteria or you could make the criteria configurable through an extension point.
+You can even use different criteria for different sources.
+In either case, unless your implementation can work against absolutely any branch, you should return the criteria from `getSCMSourceCriteria(_source_)`.
+
+. How do we create the branch projects.
+You could also make this a configurable extension point or re-use a singleton instance.
+In general, it is better to control project creation using `BranchProperty` instances that get applied through the `BranchProjectFactory.decorate(_project_)` method.
+
+=== Testing your multi-branch project implementation
+
+=== Implementing `jenkins.branch.BranchProperty`
+
+=== Testing your branch property
+
+=== Implementing `jenkins.branch.BranchPropertyStrategy`
+
+=== Testing your branch property strategy
+
+=== Implementing `jenkins.branch.MultiBranchProjectFactory`
+
+=== Testing your multi-branch project factory
