@@ -83,6 +83,7 @@ import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.api.SCMSourceOwner;
+import jenkins.scm.api.actions.MetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
 import org.apache.commons.io.Charsets;

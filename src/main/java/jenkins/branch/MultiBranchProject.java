@@ -87,6 +87,7 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceOwner;
+import jenkins.scm.api.actions.MetadataAction;
 import jenkins.scm.impl.NullSCMSource;
 import jenkins.triggers.SCMTriggerItem;
 import net.sf.json.JSONObject;

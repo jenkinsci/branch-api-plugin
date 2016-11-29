@@ -24,10 +24,7 @@
 
 package jenkins.branch;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.Actionable;
 import hudson.model.BallColor;
 import hudson.model.Item;
 import hudson.model.Job;
@@ -36,7 +33,7 @@ import hudson.views.ListViewColumnDescriptor;
 import hudson.views.StatusColumn;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import org.apache.commons.lang.StringUtils;
+import jenkins.scm.api.actions.MetadataAction;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;

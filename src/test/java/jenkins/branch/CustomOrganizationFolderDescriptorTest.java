@@ -31,10 +31,8 @@ import hudson.model.Items;
 import hudson.model.TopLevelItemDescriptor;
 import hudson.model.View;
 import integration.harness.BasicMultiBranchProjectFactory;
-import integration.harness.MockSCMNavigator;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
@@ -42,10 +40,7 @@ import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.impl.SingleSCMNavigator;
-
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.junit.Assert.*;
-
+import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,6 +48,12 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.TestExtension;
+
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class CustomOrganizationFolderDescriptorTest {
 

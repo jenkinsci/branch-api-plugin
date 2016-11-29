@@ -25,7 +25,6 @@
 
 package jenkins.branch;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
@@ -33,12 +32,9 @@ import hudson.model.Run;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
 import hudson.scm.SCM;
-import integration.harness.MockSCMHead;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import javax.annotation.Nonnull;
 import jenkins.scm.api.SCMHeadCategory;
@@ -47,11 +43,14 @@ import jenkins.scm.api.SCMSourceDescriptor;
 import jenkins.scm.impl.ChangeRequestSCMHeadCategory;
 import jenkins.scm.impl.TagSCMHeadCategory;
 import jenkins.scm.impl.UncategorizedSCMHeadCategory;
+import jenkins.scm.impl.mock.MockSCMHead;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class BranchCategoryFilterTest {
     @Test

@@ -30,10 +30,8 @@ import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Hudson;
-import java.util.List;
 import javax.annotation.Nonnull;
-import jenkins.scm.api.SCMSource;
-import org.apache.commons.lang.StringUtils;
+import jenkins.scm.api.actions.MetadataAction;
 import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
@@ -74,13 +72,13 @@ public class MetadataActionFolderIcon extends FolderIcon {
         if (owner != null) {
             MetadataAction action = owner.getAction(MetadataAction.class);
             if (action != null) {
-                String result = action.getFolderIconClassName();
+                String result = action.getAvatarIconClassName();
                 if (result != null) {
                     // if the className is non-null, return that
                     return result;
                 }
                 if (Util.isOverridden(MetadataAction.class, action.getClass(), "getFolderIconImageOf", String.class)
-                        && action.getFolderIconImageOf("32x32") != null) {
+                        && action.getAvatarImageOf("32x32") != null) {
                     // if the metadata action has a custom getFolderIconImageOf then it may be using that to return
                     // a custom image URL rather than an Icon, in which case we need to check to see if the
                     // getFolderIconImageOf is returning a non-null value which would necessitate returning null
@@ -109,7 +107,7 @@ public class MetadataActionFolderIcon extends FolderIcon {
         if (owner != null) {
             MetadataAction action = owner.getAction(MetadataAction.class);
             if (action != null) {
-                String result = action.getFolderIconImageOf(size);
+                String result = action.getAvatarImageOf(size);
                 if (result != null) {
                     return result;
                 }
@@ -130,7 +128,7 @@ public class MetadataActionFolderIcon extends FolderIcon {
         if (owner != null) {
             MetadataAction action = owner.getAction(MetadataAction.class);
             if (action != null) {
-                String result = action.getFolderIconDescription();
+                String result = action.getAvatarDescription();
                 if (result != null) {
                     return result;
                 }

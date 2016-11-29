@@ -26,17 +26,15 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.model.FreeStyleProject;
 import hudson.model.Job;
 import hudson.model.ParameterDefinition;
-import hudson.model.Run;
 import hudson.model.StringParameterDefinition;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicDummyStepBranchProperty;
 import integration.harness.BasicMultiBranchProject;
-import integration.harness.MockSCMController;
-import integration.harness.MockSCMSource;
 import java.util.Collections;
+import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMSource;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -50,7 +48,7 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 public class ParameterDefinitionBranchPropertyTest {
     /**
