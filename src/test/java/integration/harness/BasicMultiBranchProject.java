@@ -64,12 +64,6 @@ public class BasicMultiBranchProject extends MultiBranchProject<FreeStyleProject
         this.criteria = criteria;
     }
 
-    @NonNull
-    @Override
-    public List<BranchSource> getSources() {
-        return super.getSources();
-    }
-
     @Override
     public boolean scheduleBuild() {
         LOGGER.info("Indexing multibranch project: " + getDisplayName());
