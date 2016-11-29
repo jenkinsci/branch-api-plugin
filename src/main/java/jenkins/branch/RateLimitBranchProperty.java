@@ -32,6 +32,7 @@ import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
+import hudson.tasks.BuildStepMonitor;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.util.TimeUnit2;
@@ -389,15 +390,54 @@ public class RateLimitBranchProperty extends BranchProperty {
                 Job<?,?> job = (Job) item.task;
                 JobPropertyImpl property = job.getProperty(JobPropertyImpl.class);
                 if (property != null) {
-                    LOGGER.log(Level.FINER, "{0} has a rate limit of {1} builds per {2}", new Object[]{job.getFullName(), property.getCount(), property.getDurationName()});
+                    LOGGER.log(Level.FINER, "{0} has a rate limit of {1} builds per {2}",
+                            new Object[]{
+                                    job.getFullName(),
+                                    property.getCount(),
+                                    property.getDurationName()
+                            }
+                    );
                     Run lastBuild = job.getLastBuild();
                     if (lastBuild != null) {
+                        // we don't mind if the project type allows concurrent builds
+                        // we assume that the last build was started at a time that respects the rate
+                        // thus the next build to start will start such that the time between starts matches the rate
+                        // it doesn't matter if the duration of the build is longer than the time between starts
+                        // only that we linearise the starts and keep a consistent minimum duration between *starts*
                         long timeSinceLastBuild = System.currentTimeMillis() - lastBuild.getTimeInMillis();
                         long betweenBuilds = property.getMillisecondsBetweenBuilds();
                         if (timeSinceLastBuild < betweenBuilds) {
-                            LOGGER.log(Level.FINE, "{0} will be delayed for another {1}ms as it is {2}ms since last build and ideal rate is {3}ms between builds", new Object[]{job.getFullName(), betweenBuilds - timeSinceLastBuild, timeSinceLastBuild, betweenBuilds});
+                            LOGGER.log(Level.FINE, "{0} will be delayed for another {1}ms as it is {2}ms since "
+                                            + "last build and ideal rate is {3}ms between builds",
+                                    new Object[]{
+                                            job.getFullName(),
+                                            betweenBuilds - timeSinceLastBuild,
+                                            timeSinceLastBuild,
+                                            betweenBuilds
+                                    }
+                            );
                             return CauseOfBlockage.fromMessage(Messages._RateLimitBranchProperty_BuildBlocked(
                                     new Date(lastBuild.getTimeInMillis() + betweenBuilds))
+                            );
+                        }
+                    }
+                    // ensure items leave the queue in the order they were scheduled
+                    List<Queue.Item> items = Jenkins.getActiveInstance().getQueue().getItems(item.task);
+                    if (items.size() == 1 && item == items.get(0)) {
+                        return null;
+                    }
+                    for (Queue.Item i: items) {
+                        if (i.getId() < item.getId()) {
+                            LOGGER.log(Level.FINE, "{0} with queue id {1} blocked by queue id {2} was first",
+                                    new Object[]{
+                                        job.getFullName(),
+                                        item.getId(),
+                                        i.getId()
+                                    }
+                            );
+                            long betweenBuilds = property.getMillisecondsBetweenBuilds();
+                            return CauseOfBlockage.fromMessage(Messages._RateLimitBranchProperty_BuildBlocked(
+                                    new Date(System.currentTimeMillis() + betweenBuilds))
                             );
                         }
                     }

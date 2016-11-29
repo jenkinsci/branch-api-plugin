@@ -25,19 +25,33 @@
 
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.Action;
+import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.Job;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
 import hudson.model.Queue;
+import hudson.model.Run;
+import hudson.model.StringParameterDefinition;
+import hudson.model.StringParameterValue;
 import hudson.model.TopLevelItem;
 import hudson.model.queue.QueueTaskFuture;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.MockSCMController;
 import integration.harness.MockSCMSource;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.Future;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
 
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
@@ -47,6 +61,7 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
@@ -109,7 +124,7 @@ public class RateLimitBranchPropertyTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, false, false));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
-                    new RateLimitBranchProperty(rate, "hour") // once every 6 seconds
+                    new RateLimitBranchProperty(rate, "hour")
             }));
             prj.getSourcesList().add(source);
             prj.scheduleBuild2(0).getFuture().get();
@@ -170,6 +185,94 @@ public class RateLimitBranchPropertyTest {
     }
 
     @Test
+    public void rateLimitsConcurrentBuilds() throws Exception {
+        int rate = 1000;
+        try (final MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, false, false));
+            BasicParameterDefinitionBranchProperty p = new BasicParameterDefinitionBranchProperty();
+            p.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(new StringParameterDefinition("FOO", "BAR")));
+            source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
+                    new RateLimitBranchProperty(rate, "hour"),
+                    new ConcurrentBuildBranchProperty(),
+                    p
+            }));
+            prj.getSourcesList().add(source);
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+
+            FreeStyleProject master = prj.getItem("master");
+            master.setQuietPeriod(0);
+            assertThat(master.getProperties(),
+                    hasEntry(
+                            instanceOf(RateLimitBranchProperty.JobPropertyImpl.DescriptorImpl.class),
+                            allOf(
+                                    instanceOf(RateLimitBranchProperty.JobPropertyImpl.class),
+                                    hasProperty("count", is(rate)),
+                                    hasProperty("durationName", is("hour"))
+                            )
+                    )
+            );
+            assertThat(master.isInQueue(), is(false));
+            assertThat(master.getQueueItem(), nullValue());
+            QueueTaskFuture<FreeStyleBuild> future = master.scheduleBuild2(0);
+            QueueTaskFuture<FreeStyleBuild> future2 = master.scheduleBuild2(0, (Cause)null, (Action)new ParametersAction(Collections.<ParameterValue>singletonList(new StringParameterValue("FOO", "MANCHU"))));
+            assertThat(future, not(is(future2)));
+
+            // let the item get added to the queue
+            while (!master.isInQueue()) {
+                Thread.yield();
+            }
+            long startTime = System.currentTimeMillis();
+            assertThat(master.isInQueue(), is(true));
+
+            // while it is in the queue, until queue maintenance takes place, it will not be flagged as blocked
+            // since we cannot know when queue maintenance happens from the periodic task
+            // we cannot assert any value of isBlocked() on this side of maintenance
+            Queue.getInstance().maintain();
+            assertThat(master.getQueueItem().isBlocked(), is(true));
+            assertThat(master.getQueueItem().getCauseOfBlockage().getShortDescription().toLowerCase(),
+ containsString("throttle"));
+
+            // now we wait for the start... invoking queue maintain every 100ms so that the queue
+            // will pick up more responsively than the default 5s
+            Future<FreeStyleBuild> startCondition = future.getStartCondition();
+            long midTime = startTime + 60*60/rate*1000L*5; // at least 5 times the expected delay
+            while (!startCondition.isDone() && System.currentTimeMillis() < midTime) {
+                Queue.getInstance().maintain();
+                Thread.sleep(100);
+            }
+            assertThat(startCondition.isDone(), is(true));
+            assertThat(master.isInQueue(), is(true));
+            FreeStyleBuild firstBuild = startCondition.get();
+            // now we wait for the start... invoking queue maintain every 100ms so that the queue
+            // will pick up more responsively than the default 5s
+            startCondition = future2.getStartCondition();
+            long endTime = startTime + 60*60/rate*1000L*5; // at least 5 times the expected delay
+            while (!startCondition.isDone() && System.currentTimeMillis() < midTime) {
+                Queue.getInstance().maintain();
+                Thread.sleep(100);
+            }
+            assertThat(startCondition.isDone(), is(true));
+            assertThat(master.isInQueue(), is(false));
+            FreeStyleBuild secondBuild = startCondition.get();
+            // it can take more than the requested delay... that's ok, but it should not be
+            // more than 500ms longer (i.e. 5 of our Queue.maintain loops above)
+            assertThat("At least the rate implied delay but no more than 500ms longer",
+                    secondBuild.getStartTimeInMillis() - firstBuild.getStartTimeInMillis(),
+                    allOf(
+                            greaterThanOrEqualTo(60 * 60 / rate * 1000L),
+                            lessThanOrEqualTo(60 * 60 / rate * 1000L * 500L)
+                    )
+            );
+            future.get();
+        }
+
+    }
+
+    @Test
     public void configRoundtrip() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -188,6 +291,49 @@ public class RateLimitBranchPropertyTest {
             RateLimitBranchProperty property = (RateLimitBranchProperty)strategy.getProps().get(0);
             assertThat(property.getCount(), is(10));
             assertThat(property.getDurationName(), is("day"));
+        }
+    }
+
+    public static class ConcurrentBuildBranchProperty extends BranchProperty {
+        @Override
+        public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(
+                Class<P> clazz) {
+            if (FreeStyleProject.class.isAssignableFrom(clazz)) {
+                return (JobDecorator<P, B>) new ProjectDecorator<FreeStyleProject, FreeStyleBuild>(){
+                    @NonNull
+                    @Override
+                    public FreeStyleProject project(@NonNull FreeStyleProject project) {
+                        try {
+                            project.setConcurrentBuild(true);
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                        return super.project(project);
+                    }
+                };
+            }
+            return null;
+        }
+
+        @TestExtension
+        public static class DescriptorImpl extends BranchPropertyDescriptor {
+            @Override
+            protected boolean isApplicable(@NonNull MultiBranchProjectDescriptor projectDescriptor) {
+                return projectDescriptor instanceof BasicMultiBranchProject.DescriptorImpl;
+            }
+        }
+    }
+
+    public static class BasicParameterDefinitionBranchProperty extends ParameterDefinitionBranchProperty {
+        public BasicParameterDefinitionBranchProperty() {
+        }
+
+        @TestExtension
+        public static class DescriptorImpl extends BranchPropertyDescriptor {
+            @Override
+            protected boolean isApplicable(@NonNull MultiBranchProjectDescriptor projectDescriptor) {
+                return projectDescriptor instanceof BasicMultiBranchProject.DescriptorImpl;
+            }
         }
     }
 }
