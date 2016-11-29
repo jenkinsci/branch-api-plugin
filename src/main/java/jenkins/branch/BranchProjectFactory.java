@@ -238,6 +238,27 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
         return project;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public BranchProjectFactoryDescriptor getDescriptor() {
+        return (BranchProjectFactoryDescriptor) super.getDescriptor();
+    }
+
+    /**
+     * Returns the base class of the projects that are produced by this factory.
+     *
+     * @return the base class of the projects that are produced by this factory.
+     * @since FIXME
+     */
+    @SuppressWarnings("unchecked")
+    @NonNull
+    public final Class<P> getProjectClass() {
+        return (Class<P>) getDescriptor().getProjectClass();
+    }
+
     @Restricted(DoNotUse.class)
     @Extension
     public static class HeadByItemImpl extends HeadByItem {

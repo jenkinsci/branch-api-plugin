@@ -26,7 +26,6 @@
 package integration;
 
 import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
-import hudson.Util;
 import hudson.model.FreeStyleProject;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProject;
@@ -55,6 +54,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -75,6 +75,15 @@ public class EventsTest {
     public void cleanOutAllItems() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
+        }
+    }
+
+    @Test
+    public void given_multibranch_when_inspectingProjectFactory_then_branchProjectTypeCorrectlyInferred() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            assertThat(prj.getProjectFactory().getProjectClass(), equalTo((Class)FreeStyleProject.class));
         }
     }
 
