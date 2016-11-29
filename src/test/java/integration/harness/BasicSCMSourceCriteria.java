@@ -53,4 +53,23 @@ public class BasicSCMSourceCriteria extends AbstractDescribableImpl<BasicSCMSour
         listener.getLogger().format("Checking for %s%n", fileName);
         return probe.stat(fileName).exists();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        BasicSCMSourceCriteria that = (BasicSCMSourceCriteria) o;
+
+        return fileName.equals(that.fileName);
+    }
+
+    @Override
+    public int hashCode() {
+        return fileName.hashCode();
+    }
 }

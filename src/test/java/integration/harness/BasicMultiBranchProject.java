@@ -64,6 +64,10 @@ public class BasicMultiBranchProject extends MultiBranchProject<FreeStyleProject
         this.criteria = criteria;
     }
 
+    public SCMSourceCriteria getCriteria() {
+        return criteria;
+    }
+
     @Override
     public boolean scheduleBuild() {
         LOGGER.info("Indexing multibranch project: " + getDisplayName());

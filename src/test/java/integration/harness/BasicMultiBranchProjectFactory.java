@@ -28,6 +28,8 @@ package integration.harness;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.ItemGroup;
+import hudson.model.TaskListener;
+import java.io.IOException;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import jenkins.branch.MultiBranchProject;
@@ -57,6 +59,18 @@ public class BasicMultiBranchProjectFactory extends MultiBranchProjectFactory.By
         BasicMultiBranchProject project = new BasicMultiBranchProject(parent, name);
         project.setCriteria(criteria);
         return project;
+    }
+
+    @Override
+    public void updateExistingProject(@NonNull MultiBranchProject<?, ?> project,
+                                      @NonNull Map<String, Object> attributes, @NonNull TaskListener listener)
+            throws IOException, InterruptedException {
+        if (project instanceof BasicMultiBranchProject) {
+            SCMSourceCriteria criteria = ((BasicMultiBranchProject) project).getCriteria();
+            if (this.criteria == null ? criteria != null : !this.criteria.equals(criteria)) {
+                ((BasicMultiBranchProject) project).setCriteria(this.criteria);
+            }
+        }
     }
 
     @Extension
