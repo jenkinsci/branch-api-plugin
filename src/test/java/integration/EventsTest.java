@@ -79,11 +79,20 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_inspectingProjectFactory_then_branchProjectTypeCorrectlyInferred() throws Exception {
+    public void given_multibranch_when_inspectingProjectFactory_then_ProjectTypeCorrectlyInferred() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             assertThat(prj.getProjectFactory().getProjectClass(), equalTo((Class)FreeStyleProject.class));
+        }
+    }
+
+    @Test
+    public void given_multibranch_when_inspectingProject_then_ProjectTypeCorrectlyInferred() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            assertThat(prj.getProjectClass(), equalTo((Class)FreeStyleProject.class));
         }
     }
 

@@ -252,6 +252,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
+     * Returns the base class of the projects that are managed by this {@link MultiBranchProject}.
+     *
+     * @return the base class of the projects that are managed by this {@link MultiBranchProject}.
+     * @since FIXME
+     */
+    @SuppressWarnings("unchecked")
+    public final Class<P> getProjectClass() {
+        return (Class<P>) getDescriptor().getProjectClass();
+    }
+
+    /**
      * Sets the {@link BranchProjectFactory}.
      *
      * @param projectFactory the new {@link BranchProjectFactory}.
