@@ -48,11 +48,22 @@ As a Jenkins User, I would like Jenkins to track a collection of repositories an
 
 As a Jenkins Administrator, I would like to define a policy for the retention of each these jobs so that the build history for these jobs can be retained in accordance with the organization's needs.
 
-=== Implementing `jenkins.branch.BranchProjectFactory`
+As a Jenkins User, I would like to apply different customizations to different branch projects. For example:
+
+* I would like to retain all builds of the mainline development branches but only retain the last _N_ builds for feature branches.
+* I would like to restrict the rate at which branches for external change requests get built to prevent an external user from consuming excessive build resources.
+
+=== Creating a new multi-branch project type
+
+This section covers creating a new multi-branch project type.
+We assume that you have already either created the job type that will be used for the branch specific jobs or you have a means of co-opting an existing job type (for example by using a `JobProperty` to store information about the associated branch)
 
 There are two extension points that you need to implement in order to have a multi-branch project: `jenkins.branch.BranchProjectFactory` and `jenkins.branch.MultiBranchProject`.
 
-The bulk of the implementation is the `BranchProjectFactory`.
+TIP: If you create a new multi-branch project type, you will almost always want to integrate that project type with organization folders.
+
+==== Implementing `jenkins.branch.BranchProjectFactory`
+
 There are two strategies for implementing a branch project factory:
 
 . Create a job type specifically for use within the multi-branch projects.
@@ -109,6 +120,7 @@ public class MyBranchProjectFactory extends BranchProjectFactory<MyBranchJob, My
         // ...
     }
 
+    @Symbol("myBranchFactory")
     @Extension
     public static class DescriptorImpl extends BranchProjectFactoryDescriptor {
 
@@ -181,6 +193,7 @@ public class MyBranchProjectFactory extends BranchProjectFactory<FreeStyleProjec
         // ...
     }
 
+    @Symbol("myBranchJobFactory")
     @Extension
     public static class DescriptorImpl extends BranchProjectFactoryDescriptor {
         @Override
@@ -198,8 +211,7 @@ public class MyBranchProjectFactory extends BranchProjectFactory<FreeStyleProjec
 
 In either case, the `decorate(_project_)` method will be important to ensure that `BranchProperty` implementations can customize the jobs that have been created.
 
-
-=== Implementing `jenkins.branch.MultiBranchProject`
+==== Implementing `jenkins.branch.MultiBranchProject`
 
 Once you have the branch project factory, the implementation of the multi-branch project type itself becomes relatively straightforward:
 
@@ -221,6 +233,7 @@ public class MyMultiBranchProject extends MultiBranchProject<MyBranchJob, MyBran
         // ...
     }
 
+    @Symbol("myMultiBranchJob")
     @Extension
     public static class DescriptorImpl extends MultiBranchProjectDescriptor {
 
@@ -248,16 +261,414 @@ In either case, unless your implementation can work against absolutely any branc
 You could also make this a configurable extension point or re-use a singleton instance.
 In general, it is better to control project creation using `BranchProperty` instances that get applied through the `BranchProjectFactory.decorate(_project_)` method.
 
-=== Testing your multi-branch project implementation
+.SCMSourceCriteria implementations
+[NOTE]
+====
+If you are implementing `jenkins.scm.api.SCMSourceCriteria` ensure that your implementation has an `equals(_o_)` and a `hashCode()` implementation.
 
-=== Implementing `jenkins.branch.BranchProperty`
+Where the criteria are configurable by users, suppressing unnecessary changes to persisted crieria will require the `SCMSourceCriteria` implementations to have an `equals(_o_)` that returns `true` for equivalent instances.
+====
 
-=== Testing your branch property
+.ParameterDefinitionBranchProperty
+[TIP]
+====
+If you have implemented a new multi-branch project implementation, users will generally want a `jenkins.branch.ParameterDefinitionBranchProperty` implementation that is compatible with your branch projects, e.g. something like
 
-=== Implementing `jenkins.branch.BranchPropertyStrategy`
+[source,java]
+----
+public static class MyParameterDefinitionBranchProperty extends ParameterDefinitionBranchProperty {
+    @DataBoundConstructor
+    public MyParameterDefinitionBranchProperty() {
+    }
 
-=== Testing your branch property strategy
+    @Symbol("myParameters")
+    @Extension
+    public static class DescriptorImpl extends BranchPropertyDescriptor {
+        // ...
 
-=== Implementing `jenkins.branch.MultiBranchProjectFactory`
+        @Override
+        protected boolean isApplicable(@NonNull MultiBranchProjectDescriptor projectDescriptor) {
+            return projectDescriptor instanceof MyMultiBranchProject.DescriptorImpl;
+        }
+    }
+}
+----
+====
 
-=== Testing your multi-branch project factory
+==== Testing your multi-branch project implementation
+
+The core tests for Branch API should cover most of the major functionality, thus the main points you need to check are:
+
+* _Given_ a repository with two branches that match the criteria for your project type, _when_ you create your multi-branch project type and configure it for the repository, _then_ the two sub projects are created and built successfully.
+
+* _Given_ your multi-branch project configured for a repository with two branches that match your project type, _when_ you configure branch properties, _then_ the sub-projects are decorated by the configured branch properties.
++
+You should, at a minimum, verify:
+
+** `jenkins.branch.BuildRetentionBranchProperty` which sets the build retention strategy.
+
+** `jenkins.branch.RateLimitBranchProperty` which should delay builds of each decorated branch project type to keep the rate of that decorated branch project under the supplied upper limit.
+
+** _(If your branch project type extends `hudson.model.Project`)_ `UntrustedBranchProperty` which should remove publishers that are not on a user configured whitelist.
+
+** _(If you implemented a `ParameterDefinitionBranchProperty` for your multi-branch project)_ your `ParameterDefinitionBranchProperty` implementation decorates branches to be parameterized with its configured parameters.
+
+* _Given_ your multi-branch project configured with some branch properties defined, _when_ the branch properties are removed, _then_ the branch property injected configuration is removed.
++
+You should, at a minimum, verify:
+
+** Removing a `jenkins.branch.BuildRetentionBranchProperty` removes the build retention strategy.
+
+** Removing a `jenkins.branch.RateLimitBranchProperty` removes the `jenkins.branch.RateLimitBranchProperty.JobPropertyImpl` from the branch job properties.
+
+** _(If your branch project type extends `hudson.model.Project`)_ removing a `UntrustedBranchProperty` removes the whitelist and publishers that were not on the whitelist are configured for the branches again.
+
+=== Integrating a multi-branch project type with organization folders
+
+Integration of a multi-branch project type with organization folders is relatively straight forward.
+There is just one extension point to implement: `jenkins.branch.MultiBranchProjectFactory`
+
+==== Implementing `jenkins.branch.MultiBranchProjectFactory`
+
+The majority of implementations are expected to want to create multi-branch projects for repositories that contain at least one branch that matches some `SCMSourceCriteria`.
+If this is the behaviour you want, then use `jenkins.branch.MultiBranchProjectFactory.BySCMSourceCriteria` as your base class
+
+[source,java]
+----
+public class MyMultiBranchProjectFactory extends MultiBranchProjectFactory.BySCMSourceCriteria {
+
+    private final SCMSourceCriteria criteria;
+
+    @DataBoundConstructor
+    public MyMultiBranchProjectFactory(SCMSourceCriteria criteria) {
+        this.criteria = criteria;
+    }
+
+    @NonNull
+    @Override
+    protected SCMSourceCriteria getSCMSourceCriteria(@NonNull SCMSource source) {
+        return criteria;
+    }
+
+    @NonNull
+    @Override
+    protected MultiBranchProject<?, ?> doCreateProject(@NonNull ItemGroup<?> parent, @NonNull String name,
+                                                       @NonNull Map<String, Object> attributes) {
+        MyMultiBranchProject project = new MyMultiBranchProject(parent, name);
+        project.setCriteria(criteria);
+        return project;
+    }
+
+    @Override
+    public void updateExistingProject(@NonNull MultiBranchProject<?, ?> project,
+                                      @NonNull Map<String, Object> attributes, @NonNull TaskListener listener)
+            throws IOException, InterruptedException {
+        if (project instanceof MyMultiBranchProject) {
+            ((MyMultiBranchProject)project).setCriteria(criteria);
+        }
+    }
+
+    @Symbol("myMultiBranchJobFactory")
+    @Extension
+    public static class DescriptorImpl extends MultiBranchProjectFactoryDescriptor {
+
+        @Nonnull
+        @Override
+        public String getDisplayName() {
+            return "MyMultiBranchProjectFactory";
+        }
+
+        @Override
+        public MultiBranchProjectFactory newInstance() {
+            // ...
+        }
+    }
+}
+----
+
+If you have a different use case, then you will need to extend from `jenkins.branch.MultiBranchProjectFactory` directly.
+
+[source,java]
+----
+public class MyMultiBranchProjectFactory extends MultiBranchProjectFactory {
+    @Override
+    public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
+                              @NonNull List<? extends SCMSource> scmSources,
+                              @NonNull Map<String, Object> attributes,
+                              @NonNull TaskListener listener) throws IOException, InterruptedException {
+        // ...
+    }
+
+    // override if you can optimize checks using the supplied SCMHeadEvent
+    @Override
+    public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
+                              @NonNull List<? extends SCMSource> scmSources,
+                              @NonNull Map<String, Object> attributes,
+                              @NonNull SCMHeadEvent<?> event,
+                              @NonNull TaskListener listener)
+            throws IOException, InterruptedException {
+        // ...
+    }
+
+    @NonNull
+    @Override
+    public MultiBranchProject<?, ?> createNewProject(@NonNull ItemGroup<?> parent, @NonNull String name,
+                                                     @NonNull List<? extends SCMSource> scmSources,
+                                                     @NonNull Map<String, Object> attributes,
+                                                     @NonNull TaskListener listener)
+            throws IOException, InterruptedException {
+        // ...
+    }
+
+    @Override
+    public void updateExistingProject(@NonNull MultiBranchProject<?, ?> project,
+                                      @NonNull Map<String, Object> attributes, @NonNull TaskListener listener)
+            throws IOException, InterruptedException {
+        // ...
+    }
+
+    @Symbol("myMultiBranchJobFactory")
+    @Extension
+    public static class DescriptorImpl extends MultiBranchProjectFactoryDescriptor {
+
+        @Nonnull
+        @Override
+        public String getDisplayName() {
+            return "MyMultiBranchProjectFactory";
+        }
+
+        @Override
+        public MultiBranchProjectFactory newInstance() {
+            // ...
+        }
+    }
+}
+----
+
+In either case, you will need to decide whether to return a default instance from `MultiBranchProjectFactoryDescriptor.newInstance` or whether users must configure options before the factory can work.
+
+==== Testing your multi-branch project factory
+
+The core tests for Branch API should cover most of the major functionality, thus the main points you need to check are:
+
+* _Given_ an organization with three repositories and two of the repositories have branches that match the criteria for your project type, _when_ you create an organization folder for the organization and add your multi-branch project factory, _then_ the two repositories with matching branches are created, indexed and the matching branches are built successfully.
+
+* _(If your multi-branch project factory has user configurable options)_
++
+_Given_ an organization folder configured with your multi-branch project factory, _when_ the user reconfigures your multi-branch project factory, _then_ then existing mult-branch projects are updated to reflect the new multi-branch project factory configuration.
+
+=== Enabling users to customize specific branches in a multi-branch project
+
+By default, all branch projects are created from the same cookie-cutter.
+Users want to be able to mark customizations as applying to specific branches.
+
+By way of example:
+
+* Users may want to modify the build steps to prevent a deployment step from running for feature branches.
+* Users may want to replace the email notification on chanfe request branches with an alternative implementation that only ever sends emails to the change request author.
+* Users may want named branches to use a specific queue item authenticator so that the mainline branch build has access to the deployment credentials.
+* _etc_
+
+If you want to provide a new type of customization that users can apply to branches, then you want to implement a `jenkins.branch.BranchProperty`.
+
+If you want to provide a new strategy for applying different properties to different branches, then you want to implement an `jenkins.branch.BranchPropertyStrategy`.
+
+==== Implementing `jenkins.branch.BranchProperty`
+
+Most _generic_ branch properties will be adding a `JobProperty` to the branch job.
+
+The API contract for `JobProperty` allows the instance to assume that its `config` stapler view will always be invoked in the context of a `Job` and that consequently `Stapler.currentRequest().findAncestorObject(Job.class)` will always be non-null.
+Because `jenkins.branch.MultiBranchProject` inherits from `Folder` and not `Job` this part of the `JobProperty` contract would always be broken if we tried to wrap a generic `JobProperty` in a `BranchProperty`.
+This is why a `JobProperty` implementation needs a corresponding `BranchProperty` implementation to be applied to branch specific jobs.
+
+[TIP]
+====
+If you have control over the `JobProperty` implementation, the best thing to do is to ensure that it does not rely on the assumption that its `config` stapler view will always be invoked in the context of a `Job`.
+
+If you can make that assumption more generic, e.g. to instead assume that there is an `Item` in the stapler request ancestors, then you can re-use the job property in your branch property:
+
+[source,java]
+----
+public class MyBranchProperty extends BranchProperty {
+    private final MyJobProperty property;
+
+    @DataBoundConstructor
+    public MyBranchProperty(MyJobProperty property) {
+        this.property = property;
+    }
+
+    @Override
+    public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
+        // if your job property does not work on all Job classes you may want to test clazz for compatibility
+        // before adding the property
+        return new JobDecorator<P, B>() {
+            @NonNull
+            @Override
+            public List<JobProperty<? super FreeStyleProject>> jobProperties(
+                    @NonNull List<JobProperty<? super FreeStyleProject>> jobProperties) {
+                List<JobProperty<? super P>> result = asArrayList(jobProperties);
+                for (Iterator<JobProperty<? super P>> iterator = result.iterator();
+                     iterator.hasNext(); ) {
+                    JobProperty<? super P> p = iterator.next();
+                    if (p instanceof MyJobProperty) {
+                        iterator.remove();
+                    }
+                }
+                if (property != null) {
+                    // we need to copy the property so that when it gets added to the job
+                    // and its owner is set, we do not affect our template instance
+                    result.add(property.clone());
+                }
+                return result;
+            }
+        };
+    }
+
+    @Extension
+    public static class DescriptorImpl extends BranchPropertyDescriptor {
+        @Nonnull
+        @Override
+        public String getDisplayName() {
+            return "MyBranchProperty";
+        }
+    }
+}
+----
+
+If you do not have control over the `JobProperty` implementation, you will need to replicate all the relevant configuration fields of the `JobProperty` and then instantiate a configured instance.
+
+[source,java]
+----
+public class MyBranchProperty extends BranchProperty {
+    // fields to configure the job property
+
+    @DataBoundConstructor
+    public MyBranchProperty(...) {
+        this.field = ...;
+        ...
+    }
+
+    // getters for all the fields
+
+    // @DataBoundSetter setters for all the optional fieleds
+
+    @Override
+    public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
+        // if your job property does not work on all Job classes you may want to test clazz for compatibility
+        // before adding the property
+        return new JobDecorator<P, B>() {
+            @NonNull
+            @Override
+            public List<JobProperty<? super FreeStyleProject>> jobProperties(
+                    @NonNull List<JobProperty<? super FreeStyleProject>> jobProperties) {
+                List<JobProperty<? super P>> result = asArrayList(jobProperties);
+                for (Iterator<JobProperty<? super P>> iterator = result.iterator();
+                     iterator.hasNext(); ) {
+                    JobProperty<? super P> p = iterator.next();
+                    if (p instanceof MyJobProperty) {
+                        iterator.remove();
+                    }
+                }
+                if (/* configured to add a property*/) {
+                    result.add(new MyJobProperty(...));
+                }
+                return result;
+            }
+        };
+    }
+
+    @Extension
+    public static class DescriptorImpl extends BranchPropertyDescriptor {
+        @Nonnull
+        @Override
+        public String getDisplayName() {
+            return "MyBranchProperty";
+        }
+    }
+}
+----
+====
+
+The second most common `BranchProperty` implementations will be wrappers for `hudson.tasks.BuildWrapper` or `hudson.tasks.Publisher` instances.
+For these cases we can assume that they only work on `hudson.model.Project` subclasses and thus return a `jenkins.branch.ProjectDecorator` from `BranchProperty.jobDecorator(_class_)` as that provides the ability to manipulate the build wrappers and publishers.
+
+[source,java]
+----
+public class MyBranchProperty extends BranchProperty {
+    // fields to configure the build wrapper
+
+    @DataBoundConstructor
+    public MyBranchProperty(...) {
+        this.field = ...;
+        ...
+    }
+
+    // getters for all the fields
+
+    // @DataBoundSetter setters for all the optional fieleds
+
+    @Override
+    public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
+        if (Project.class.isAssignableFrom(clazz)) {
+            return new ProjectDecorator<P, B>() {
+                @NonNull
+                @Override
+                public List<BuildWrapper> buildWrappers(@NonNull List<BuildWrapper> wrappers) {
+                    List<BuildWrapper> result = asArrayList(wrappers);
+                    for (Iterator<BuildWrapper> iterator = result.iterator(); iterator.hasNext(); ) {
+                        BuildWrapper w = iterator.next();
+                        if (w instanceof MyBuildWrapper) {
+                            iterator.remove();
+                        }
+                    }
+                    if (/* adding a wrapper */) {
+                        result.add(new MyBuildWrapper(...));
+                    }
+                    return result;
+                }
+            };
+        }
+        return null;
+    }
+
+    @Extension
+    public static class DescriptorImpl extends BranchPropertyDescriptor {
+        @Nonnull
+        @Override
+        public String getDisplayName() {
+            return "MyBranchProperty";
+        }
+
+        public boolean isApplicable(@NonNull MultiBranchProjectDescriptor projectDescriptor) {
+            return Project.class.isAssignableFrom(projectDescriptor.getProjectClass());
+        }
+    }
+}
+----
+
+==== Testing your branch property
+
+This should be relatively similar to testing the `JobProperty` / `BuildWrapper` / `Publisher` / etc that your branch property wraps.
+For example, you should check that the configuration round trips via the UI, that the functionality gets applied to the branch jobs, etc.
+
+The only Branch API specific factors that may need testing is the scoping of the branch property appropriately.
+This should be essentially a test of your `BranchPropertyDescriptor.isApplicable(_x_)` method overrides in your descriptor.
+
+==== Implementing `jenkins.branch.BranchPropertyStrategy`
+
+`BranchPropertyStrategy` is a relatively direct extension point.
+The contract consists of a single method: `getPropertiesFor(_head_)`.
+
+The considerations apply to the descriptor that controls where your strategy implementation is available, being the intersection of the `isApplicable(_scmSourceDescriptor_)` and `isApplicable(_project_)` methods.
+
+For example, you may want to implement a property strategy that only makes sense for `SCMSource` implementations that could return change requests and consequently returns specific branch properties for those sources.
+If your implementation further has an "automatic" set of branch properties that are to be applied and those properties only are appropriate for pipeline branch projects, then your  branch property strategy is only relevant to pipeline multibranch projects configured with a SCMSource that could produce change requests.
+
+Whether such specialization makes sense is not something we can anticipate from the Branch API.
+The anticipated specializations are around the `SCMSource` types, but the API contract includes the `isApplicable(_project_)` methods as a form of future-proofing.
+
+==== Testing your branch property strategy
+
+This should be relatively similar to regular Jenkins extensions.
+For example, you should check that the configuration round trips via the UI, that the functionality gets applied in the correct circumstances, etc.
+
