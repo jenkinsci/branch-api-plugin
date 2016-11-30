@@ -39,16 +39,19 @@ import hudson.BulkChange;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.Util;
+import hudson.XmlFile;
 import hudson.init.InitMilestone;
 import hudson.model.Action;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Items;
+import hudson.model.Saveable;
 import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
+import hudson.model.listeners.SaveableListener;
 import hudson.util.DescribableList;
 import hudson.util.LogTaskListener;
 import hudson.util.PersistedList;
@@ -57,25 +60,28 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
+import jenkins.model.TransientActionFactory;
 import jenkins.scm.api.SCMEventListener;
 import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
+import jenkins.scm.api.SCMNavigatorEvent;
 import jenkins.scm.api.SCMNavigatorOwner;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCategory;
@@ -83,9 +89,10 @@ import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.api.SCMSourceOwner;
-import jenkins.scm.api.actions.MetadataAction;
+import jenkins.scm.api.actions.ObjectMetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
+import net.jcip.annotations.GuardedBy;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.Icon;
@@ -120,6 +127,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * Our project factories.
      */
     private final DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor> projectFactories = new DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor>(this);
+
+    /**
+     * The persisted state maintained outside of the config file.
+     *
+     * @since 2.0
+     */
+    private transient /*almost final*/ State state = new State(this);
 
     /**
      * {@inheritDoc}
@@ -160,6 +174,15 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
         if (!(getIcon() instanceof MetadataActionFolderIcon)) {
             setIcon(newDefaultFolderIcon());
+        }
+        if (state == null) {
+            state = new State(this);
+        }
+        try {
+            state.load();
+        } catch (XStreamException | IOException e) {
+            LOGGER.log(Level.WARNING, "Could not read persisted state, will be recovered on next index.", e);
+            state.reset();
         }
     }
 
@@ -233,25 +256,26 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         listener.getLogger().format("[%tc] Starting organization scan...%n", start);
         try {
             listener.getLogger().format("[%tc] Updating actions...%n", System.currentTimeMillis());
-            Map<Class<? extends Action>, Action> persistentActions = new HashMap<>();
-            for (ListIterator<SCMNavigator> iterator = navigators.listIterator(navigators.size());
-                 iterator.hasPrevious(); ) {
-                SCMNavigator navigator = iterator.previous();
-                // first navigator always wins in case of duplicate keys
-                persistentActions.putAll(navigator.fetchActions(this, listener));
+            Map<SCMNavigator, List<Action>> navigatorActions = new HashMap<>();
+            for (SCMNavigator navigator : navigators) {
+                navigatorActions.put(navigator, navigator.fetchActions(this, null, listener));
             }
             // update any persistent actions for the SCMNavigator
-            if (!persistentActions.isEmpty()) {
-                BulkChange bc = new BulkChange(this);
-                try {
-                    for (Map.Entry<Class<? extends Action>, Action> entry : persistentActions.entrySet()) {
-                        if (entry.getValue() == null) {
-                            removeActions(entry.getKey());
-                        } else {
-                            replaceActions(entry.getKey(), entry.getValue());
-                        }
+            if (!navigatorActions.equals(state.getActions())) {
+                boolean saveProject = false;
+                for (List<Action> actions : navigatorActions.values()) {
+                    for (Action a : actions) {
+                        // undo any hacks that attached the contributed actions without attribution
+                        saveProject = removeActions(a.getClass()) || saveProject;
                     }
+                }
+                BulkChange bc = new BulkChange(state);
+                try {
+                    state.setActions(navigatorActions);
                     bc.commit();
+                    if (saveProject) {
+                        save();
+                    }
                 } finally {
                     bc.abort();
                 }
@@ -404,7 +428,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         if (StringUtils.isNotBlank(description)) {
             return description;
         }
-        MetadataAction action = getAction(MetadataAction.class);
+        ObjectMetadataAction action = getAction(ObjectMetadataAction.class);
         if (action != null) {
             return action.getObjectDescription();
         }
@@ -418,7 +442,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     public String getDisplayName() {
         String displayName = getDisplayNameOrNull();
         if (displayName == null) {
-            MetadataAction action = getAction(MetadataAction.class);
+            ObjectMetadataAction action = getAction(ObjectMetadataAction.class);
             if (action != null && StringUtils.isNotBlank(action.getObjectDisplayName())) {
                 return action.getObjectDisplayName();
             }
@@ -661,9 +685,18 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
     }
 
+    /**
+     * Listens for events from the SCM event system.
+     *
+     * @since 2.0
+     */
     @Extension
     public static class SCMEventListenerImpl extends SCMEventListener {
 
+        /**
+         * The {@link TaskListener} for events that we cannot assign to an organization folder.
+         * @return The {@link TaskListener} for events that we cannot assign to an organization folder.
+         */
         public TaskListener globalEventsListener() {
             File eventsFile =
                     new File(Jenkins.getActiveInstance().getRootDir(), OrganizationFolder.class.getName() + ".log");
@@ -679,6 +712,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             return new StreamBuildListener(os, Charsets.UTF_8);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onSCMHeadEvent(SCMHeadEvent<?> event) {
             TaskListener global = globalEventsListener();
@@ -738,6 +774,71 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void onSCMNavigatorEvent(SCMNavigatorEvent<?> event) {
+            if (UPDATED == event.getType()) {
+                Set<SCMNavigator> matches = new HashSet<>();
+                for (OrganizationFolder p : Jenkins.getActiveInstance().getAllItems(OrganizationFolder.class)) {
+                    matches.clear();
+                    for (SCMNavigator n: p.getSCMNavigators()) {
+                        if (event.isMatch(n)) {
+                            matches.add(n);
+                        }
+                    }
+                    if (!matches.isEmpty()) {
+                        TaskListener listener;
+                        try {
+                            listener = p.getComputation().createEventsListener();
+                        } catch (IOException e) {
+                            listener = new LogTaskListener(LOGGER, Level.FINE);
+                        }
+                        Map<SCMNavigator, List<Action>> navigatorActions = new HashMap<>();
+                        for (SCMNavigator navigator : matches) {
+                            try {
+                                List<Action> newActions = navigator.fetchActions(p, event, listener);
+                                List<Action> oldActions = p.state.getActions(navigator);
+                                if (oldActions == null || !oldActions.equals(newActions)) {
+                                    navigatorActions.put(navigator, newActions);
+                                }
+                            } catch (IOException | InterruptedException e) {
+                                e.printStackTrace(listener.error("Could not fetch metadata from %s", navigator));
+                            }
+                        }
+                        // update any persistent actions for the SCMNavigator
+                        if (!navigatorActions.isEmpty()) {
+                            boolean saveProject = false;
+                            for (List<Action> actions : navigatorActions.values()) {
+                                for (Action a : actions) {
+                                    // undo any hacks that attached the contributed actions without attribution
+                                    saveProject = p.removeActions(a.getClass()) || saveProject;
+                                }
+                            }
+                            BulkChange bc = new BulkChange(p.state);
+                            try {
+                                for (Map.Entry<SCMNavigator, List<Action>> entry : navigatorActions.entrySet()) {
+                                    p.state.setActions(entry.getKey(), entry.getValue());
+                                }
+                                bc.commit();
+                                if (saveProject) {
+                                    p.save();
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace(listener.error("Could not persist updated metadata"));
+                            } finally {
+                                bc.abort();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onSCMSourceEvent(SCMSourceEvent<?> event) {
             TaskListener global = globalEventsListener();
@@ -925,6 +1026,127 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         public void addAttribute(@NonNull String key, Object value)
                 throws IllegalArgumentException, ClassCastException {
             throw new IllegalArgumentException();
+        }
+    }
+
+    /**
+     * Adds the {@link OrganizationFolder.State#getActions()} to {@link OrganizationFolder#getAllActions()}.
+     *
+     * @since 2.0
+     */
+    @Extension
+    public static class StateActionFactory extends TransientActionFactory<OrganizationFolder> {
+
+        @Override
+        public Class<OrganizationFolder> type() {
+            return OrganizationFolder.class;
+        }
+
+        @Nonnull
+        @Override
+        public Collection<? extends Action> createFor(@Nonnull OrganizationFolder target) {
+            List<Action> result = new ArrayList<>();
+            for (List<Action> actions: target.state.getActions().values()) {
+                result.addAll(actions);
+            }
+            return result;
+        }
+    }
+
+    /**
+     * The persisted state.
+     *
+     * @since 2.0
+     */
+    private static class State implements Saveable {
+        private final transient OrganizationFolder owner;
+        /**
+         * The {@link SCMNavigator#fetchActions(SCMNavigatorOwner, SCMNavigatorEvent, TaskListener)} for each {@link SCMNavigator} keyed by the digest of the {@link SCMNavigator}.
+         */
+        private final Map<String,List<Action>> actions = new HashMap<>();
+
+        /**
+         * The digests of the {@link SCMNavigator} instances.
+         */
+        @GuardedBy("self")
+        private transient final WeakHashMap<SCMNavigator,String> navigatorKeys = new WeakHashMap<>();
+
+        private State(OrganizationFolder owner) {
+            this.owner = owner;
+        }
+
+        public synchronized void reset() {
+            actions.clear();
+        }
+
+        public final XmlFile getStateFile() {
+            return new XmlFile(Items.XSTREAM, new File(owner.getRootDir(), "state.xml"));
+        }
+
+        public synchronized void load() throws IOException {
+            if (getStateFile().exists()) {
+                getStateFile().unmarshal(this);
+            }
+        }
+
+        /**
+         * Save the settings to a file.
+         */
+        @Override
+        public synchronized void save() throws IOException {
+            if (BulkChange.contains(this)) {
+                return;
+            }
+            getStateFile().write(this);
+            SaveableListener.fireOnChange(this, getStateFile());
+        }
+
+        private String keyOf(SCMNavigator navigator) {
+            String key;
+            synchronized (navigatorKeys) {
+                key = navigatorKeys.get(navigator);
+            }
+            if (key == null) {
+                key = Util.getDigestOf(Items.XSTREAM.toXML(navigator));
+                synchronized (navigatorKeys) {
+                    // idempotent write
+                    navigatorKeys.put(navigator, key); // cache the key
+                }
+            }
+            return key;
+        }
+
+        public List<Action> getActions(SCMNavigator navigator) {
+            if (owner.getSCMNavigators().contains(navigator)) {
+                String key = keyOf(navigator);
+                return Collections.unmodifiableList(Util.fixNull(actions.get(key)));
+            }
+            return null;
+        }
+
+        public void setActions(SCMNavigator navigator, List<Action> actions) {
+            String key = keyOf(navigator);
+            this.actions.put(key, new ArrayList<Action>(actions));
+        }
+
+        public Map<SCMNavigator, List<Action>> getActions() {
+            List<SCMNavigator> navigators = owner.getSCMNavigators();
+            Map<SCMNavigator, List<Action>> result = new HashMap<>(navigators.size());
+            for (SCMNavigator navigator: navigators) {
+                String key = keyOf(navigator);
+                result.put(navigator, Collections.unmodifiableList(Util.fixNull(actions.get(key))));
+            }
+            return result;
+        }
+
+        public void setActions(Map<SCMNavigator, List<Action>> actions) {
+            Set<String> keys = new HashSet<>();
+            for (Map.Entry<SCMNavigator, List<Action>> entry: actions.entrySet()) {
+                String key = keyOf(entry.getKey());
+                this.actions.put(key, new ArrayList<Action>(Util.fixNull(entry.getValue())));
+                keys.add(key);
+            }
+            this.actions.keySet().retainAll(keys);
         }
     }
 }

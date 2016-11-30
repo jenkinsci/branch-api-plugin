@@ -31,16 +31,16 @@ import hudson.Extension;
 import hudson.Util;
 import hudson.model.Hudson;
 import javax.annotation.Nonnull;
-import jenkins.scm.api.actions.MetadataAction;
+import jenkins.scm.api.actions.AvatarMetadataAction;
 import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;
 
 /**
  * A {@link FolderIcon} specifically for {@link OrganizationFolder} and {@link MultiBranchProject} instances that will
- * delegate to the {@link MetadataAction} attached to the folder.
+ * delegate to the {@link AvatarMetadataAction} attached to the folder.
  *
- * @since FIXME
+ * @since 2.0
  */
 public class MetadataActionFolderIcon extends FolderIcon {
 
@@ -70,22 +70,26 @@ public class MetadataActionFolderIcon extends FolderIcon {
     @Override
     public String getIconClassName() {
         if (owner != null) {
-            MetadataAction action = owner.getAction(MetadataAction.class);
+            AvatarMetadataAction action = owner.getAction(AvatarMetadataAction.class);
             if (action != null) {
                 String result = action.getAvatarIconClassName();
                 if (result != null) {
                     // if the className is non-null, return that
                     return result;
                 }
-                if (Util.isOverridden(MetadataAction.class, action.getClass(), "getFolderIconImageOf", String.class)
-                        && action.getAvatarImageOf("32x32") != null) {
-                    // if the metadata action has a custom getFolderIconImageOf then it may be using that to return
-                    // a custom image URL rather than an Icon, in which case we need to check to see if the
-                    // getFolderIconImageOf is returning a non-null value which would necessitate returning null
-                    // here in order to ensure that the getImageOf path is called.
-                    // of course this can only happen if the getFolderIconImageOf is overridden as the default
-                    // will just produce an image url based on the Icon - which we already know is null.
-                    return null;
+                try {
+                    if (Util.isOverridden(AvatarMetadataAction.class, action.getClass(), "getAvatarImageOf", String.class)
+                            && action.getAvatarImageOf("32x32") != null) {
+                        // if the metadata action has a custom getFolderIconImageOf then it may be using that to return
+                        // a custom image URL rather than an Icon, in which case we need to check to see if the
+                        // getFolderIconImageOf is returning a non-null value which would necessitate returning null
+                        // here in order to ensure that the getImageOf path is called.
+                        // of course this can only happen if the getFolderIconImageOf is overridden as the default
+                        // will just produce an image url based on the Icon - which we already know is null.
+                        return null;
+                    }
+                } catch (IllegalArgumentException ignore) {
+                    // should never happen, but if it does we will just fall back to icon class name
                 }
                 // otherwise the metadata doesn't want to control the icon, so fall back to the descriptor's default
             }
@@ -105,7 +109,7 @@ public class MetadataActionFolderIcon extends FolderIcon {
      */
     public String getImageOf(String size) {
         if (owner != null) {
-            MetadataAction action = owner.getAction(MetadataAction.class);
+            AvatarMetadataAction action = owner.getAction(AvatarMetadataAction.class);
             if (action != null) {
                 String result = action.getAvatarImageOf(size);
                 if (result != null) {
@@ -126,7 +130,7 @@ public class MetadataActionFolderIcon extends FolderIcon {
     @Override
     public String getDescription() {
         if (owner != null) {
-            MetadataAction action = owner.getAction(MetadataAction.class);
+            AvatarMetadataAction action = owner.getAction(AvatarMetadataAction.class);
             if (action != null) {
                 String result = action.getAvatarDescription();
                 if (result != null) {

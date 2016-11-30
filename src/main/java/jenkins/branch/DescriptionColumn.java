@@ -32,7 +32,7 @@ import hudson.model.Item;
 import hudson.model.Job;
 import hudson.views.ListViewColumn;
 import hudson.views.ListViewColumnDescriptor;
-import jenkins.scm.api.actions.MetadataAction;
+import jenkins.scm.api.actions.ObjectMetadataAction;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -40,7 +40,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * {@link ListViewColumn} that shows the description text of a {@link Job} with priority given to
- * {@link MetadataAction#getObjectDescription()}.
+ * {@link ObjectMetadataAction#getObjectDescription()}.
  *
  * @author Kohsuke Kawaguchi
  */
@@ -61,9 +61,9 @@ public class DescriptionColumn extends ListViewColumn {
     @Restricted(NoExternalUse.class)
     @SuppressWarnings("unused") // used via Jelly EL binding
     @CheckForNull
-    public MetadataAction getPropertyOf(Item item) {
+    public ObjectMetadataAction getPropertyOf(Item item) {
         if (item instanceof Actionable) {
-            return ((Actionable) item).getAction(MetadataAction.class);
+            return ((Actionable) item).getAction(ObjectMetadataAction.class);
         }
         return null;
     }
@@ -78,8 +78,8 @@ public class DescriptionColumn extends ListViewColumn {
     @Restricted(NoExternalUse.class)
     @SuppressWarnings("unused") // used via Jelly EL binding
     public String description(@CheckForNull Object p, @NonNull Object job) {
-        if (p instanceof MetadataAction) {
-            return StringUtils.defaultIfBlank(((MetadataAction) p).getObjectDescription(),
+        if (p instanceof ObjectMetadataAction) {
+            return StringUtils.defaultIfBlank(((ObjectMetadataAction) p).getObjectDescription(),
                     job instanceof Job ? ((Job) job).getDescription() : "");
         } else {
             return job instanceof Job ? ((Job) job).getDescription() : "";

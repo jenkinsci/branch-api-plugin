@@ -91,7 +91,7 @@ import jenkins.branch.DescriptionColumn;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMSourceEvent;
-import jenkins.scm.impl.mock.MockMetadataAction;
+import jenkins.scm.api.actions.ObjectMetadataAction;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMLink;
 import jenkins.scm.impl.mock.MockSCMNavigator;
@@ -293,10 +293,10 @@ public class BrandingTest {
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
             assertThat(prj.getDisplayName(), is("foo"));
             assertThat(prj.getDisplayNameOrNull(), nullValue());
-            assertThat(prj.getAction(MockMetadataAction.class), nullValue());
+            assertThat(prj.getAction(ObjectMetadataAction.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
-            assertThat(prj.getAction(MockMetadataAction.class), notNullValue());
+            assertThat(prj.getAction(ObjectMetadataAction.class), notNullValue());
             assertThat(prj.getDisplayName(), is("Foo Project"));
         }
     }
@@ -313,7 +313,7 @@ public class BrandingTest {
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
-            assertThat(prj.getItem("foo").getAction(MockMetadataAction.class), allOf(
+            assertThat(prj.getItem("foo").getAction(ObjectMetadataAction.class), allOf(
                     hasProperty("objectDescription", is("The Foo Project of Manchu")),
                     hasProperty("objectUrl", is("http://foo.manchu.example.com/")),
                     hasProperty("objectDisplayName", nullValue())
@@ -385,7 +385,7 @@ public class BrandingTest {
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
-            assertThat(prj.getAction(MockMetadataAction.class), allOf(
+            assertThat(prj.getAction(ObjectMetadataAction.class), allOf(
                     hasProperty("objectDescription", is("The Foo of Manchu")),
                     hasProperty("objectUrl", is("http://foo.manchu.example.com/")),
                     hasProperty("objectDisplayName", nullValue())

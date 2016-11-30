@@ -38,7 +38,7 @@ public abstract class BranchProjectFactoryDescriptor extends Descriptor<BranchPr
     /**
      * The base class of the projects that are produced by this factory.
      *
-     * @since FIXME
+     * @since 2.0
      */
     @NonNull
     private final Class<? extends Job> branchProjectClass;
@@ -48,7 +48,7 @@ public abstract class BranchProjectFactoryDescriptor extends Descriptor<BranchPr
      *
      * @param clazz              the {@link BranchProjectFactory} that this descriptor is for.
      * @param branchProjectClass the {@link Job} type that the {@link BranchProjectFactory} creates.
-     * @since FIXME
+     * @since 2.0
      */
     protected BranchProjectFactoryDescriptor(Class<? extends BranchProjectFactory<?, ?>> clazz,
                                              Class<? extends Job> branchProjectClass) {
@@ -60,7 +60,7 @@ public abstract class BranchProjectFactoryDescriptor extends Descriptor<BranchPr
      * Semi explicit constructor to use when the descriptor is not an inner class of the {@link BranchProjectFactory}.
      *
      * @param clazz the {@link BranchProjectFactory} that this descriptor is for.
-     * @since FIXME
+     * @since 2.0
      */
     protected BranchProjectFactoryDescriptor(Class<? extends BranchProjectFactory<?, ?>> clazz) {
         super(clazz);
@@ -84,7 +84,7 @@ public abstract class BranchProjectFactoryDescriptor extends Descriptor<BranchPr
      * Fully inferring constructor to use when the descriptor is an inner class of the {@link BranchProjectFactory}
      * and type parameter inference works because it just should work.
      *
-     * @since FIXME
+     * @since 2.0
      */
     protected BranchProjectFactoryDescriptor() {
         super();
@@ -108,7 +108,7 @@ public abstract class BranchProjectFactoryDescriptor extends Descriptor<BranchPr
      * Returns the base class of the projects that are produced by this factory.
      *
      * @return the base class of the projects that are produced by this factory.
-     * @since FIXME
+     * @since 2.0
      */
     @NonNull
     public Class<? extends Job> getProjectClass() {

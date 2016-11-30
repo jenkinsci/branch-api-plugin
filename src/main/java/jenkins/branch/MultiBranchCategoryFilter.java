@@ -39,7 +39,7 @@ import jenkins.scm.api.SCMSourceCategory;
  * {@link SCMSourceCategory}.
  * Designed for programmatic construction only. Not designed for user instantiation, hence no {@link Descriptor}.
  *
- * @since FIXME
+ * @since 2.0
  */
 public class MultiBranchCategoryFilter extends ViewJobFilter {
 

@@ -62,7 +62,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     /**
      * The base class of the projects that are produced by this factory.
      *
-     * @since FIXME
+     * @since 2.0
      */
     @NonNull
     private final Class<? extends Job> projectClass;
@@ -72,7 +72,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      *
      * @param clazz        the {@link MultiBranchProject} that this descriptor is for.
      * @param projectClass the {@link Job} type that the {@link MultiBranchProject} creates.
-     * @since FIXME
+     * @since 2.0
      */
     protected MultiBranchProjectDescriptor(Class<? extends MultiBranchProject<?, ?>> clazz,
                                            Class<? extends Job> projectClass) {
@@ -84,7 +84,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      * Semi explicit constructor to use when the descriptor is not an inner class of the {@link MultiBranchProject}.
      *
      * @param clazz the {@link MultiBranchProject} that this descriptor is for.
-     * @since FIXME
+     * @since 2.0
      */
     protected MultiBranchProjectDescriptor(Class<? extends MultiBranchProject<?, ?>> clazz) {
         super(clazz);
@@ -95,7 +95,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      * Fully inferring constructor to use when the descriptor is an inner class of the {@link MultiBranchProject}
      * and type parameter inference works because it just should work.
      *
-     * @since FIXME
+     * @since 2.0
      */
     protected MultiBranchProjectDescriptor() {
         super();
@@ -129,7 +129,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      * Returns the base class of the projects that are produced by this factory.
      *
      * @return the base class of the projects that are produced by this factory.
-     * @since FIXME
+     * @since 2.0
      */
     @NonNull
     public Class<? extends Job> getProjectClass() {

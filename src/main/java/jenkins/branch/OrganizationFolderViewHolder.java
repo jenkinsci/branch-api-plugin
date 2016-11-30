@@ -53,7 +53,7 @@ import static java.util.Arrays.asList;
 /**
  * Holds the view configuration for an {@link OrganizationFolder}.
  *
- * @since FIXME
+ * @since 2.0
  */
 public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
     /**

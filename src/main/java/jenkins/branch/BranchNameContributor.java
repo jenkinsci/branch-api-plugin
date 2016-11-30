@@ -32,8 +32,11 @@ import hudson.model.Job;
 import hudson.model.TaskListener;
 import java.io.IOException;
 import java.net.URL;
+import jenkins.scm.api.ChangeRequestSCMHead;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.actions.ChangeRequestAction;
+import jenkins.scm.api.actions.ContributorMetadataAction;
+import jenkins.scm.api.actions.ObjectMetadataAction;
 
 /**
  * Defines the environment variable {@code BRANCH_NAME} for multibranch builds.
@@ -50,24 +53,25 @@ public class BranchNameContributor extends EnvironmentContributor {
         if (parent instanceof MultiBranchProject) {
             BranchProjectFactory projectFactory = ((MultiBranchProject) parent).getProjectFactory();
             if (projectFactory.isProject(j)) {
-                SCMHead head = projectFactory.getBranch(j).getHead();
+                Branch branch = projectFactory.getBranch(j);
+                SCMHead head = branch.getHead();
                 // Note: not using Branch.name, since in the future that could be something different
                 // than SCMHead.name, which is what we really want here.
                 envs.put("BRANCH_NAME", head.getName());
-                ChangeRequestAction cr = head.getAction(ChangeRequestAction.class);
-                if (cr != null) {
-                    envs.putIfNotNull("CHANGE_ID", cr.getId());
-                    URL u = cr.getURL();
-                    if (u != null) {
-                        envs.put("CHANGE_URL", u.toString());
+                if (head instanceof ChangeRequestSCMHead) {
+                    envs.putIfNotNull("CHANGE_ID", ((ChangeRequestSCMHead) head).getId());
+                    SCMHead target = ((ChangeRequestSCMHead) head).getTarget();
+                    envs.put("CHANGE_TARGET", target.getName());
+                    ObjectMetadataAction oma = branch.getAction(ObjectMetadataAction.class);
+                    if (oma != null) {
+                        envs.putIfNotNull("CHANGE_URL", oma.getObjectUrl());
+                        envs.putIfNotNull("CHANGE_TITLE", oma.getObjectDisplayName());
                     }
-                    envs.putIfNotNull("CHANGE_TITLE", cr.getTitle());
-                    envs.putIfNotNull("CHANGE_AUTHOR", cr.getAuthor());
-                    envs.putIfNotNull("CHANGE_AUTHOR_DISPLAY_NAME", cr.getAuthorDisplayName());
-                    envs.putIfNotNull("CHANGE_AUTHOR_EMAIL", cr.getAuthorEmail());
-                    SCMHead target = cr.getTarget();
-                    if (target != null) {
-                        envs.put("CHANGE_TARGET", target.getName());
+                    ContributorMetadataAction cma = branch.getAction(ContributorMetadataAction.class);
+                    if (cma != null) {
+                        envs.putIfNotNull("CHANGE_AUTHOR", cma.getContributor());
+                        envs.putIfNotNull("CHANGE_AUTHOR_DISPLAY_NAME", cma.getContributorDisplayName());
+                        envs.putIfNotNull("CHANGE_AUTHOR_EMAIL", cma.getContributorEmail());
                     }
                 }
             }

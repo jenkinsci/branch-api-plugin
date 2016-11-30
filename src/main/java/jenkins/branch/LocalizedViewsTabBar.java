@@ -46,7 +46,7 @@ public class LocalizedViewsTabBar extends ViewsTabBar {
      *
      * @param views the views.
      * @return the sorted views
-     * @since FIXME
+     * @since 2.0
      */
     @Nonnull
     @Restricted(NoExternalUse.class)

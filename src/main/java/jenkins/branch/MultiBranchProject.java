@@ -46,10 +46,12 @@ import hudson.model.ItemGroup;
 import hudson.model.Items;
 import hudson.model.Job;
 import hudson.model.Run;
+import hudson.model.Saveable;
 import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
+import hudson.model.listeners.SaveableListener;
 import hudson.scm.PollingResult;
 import hudson.security.ACL;
 import hudson.security.Permission;
@@ -67,16 +69,18 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
+import jenkins.model.TransientActionFactory;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEventListener;
 import jenkins.scm.api.SCMHead;
@@ -87,7 +91,7 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceOwner;
-import jenkins.scm.api.actions.MetadataAction;
+import jenkins.scm.api.actions.ObjectMetadataAction;
 import jenkins.scm.impl.NullSCMSource;
 import jenkins.triggers.SCMTriggerItem;
 import net.sf.json.JSONObject;
@@ -117,6 +121,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * The user supplied branch sources.
      */
     private /*almost final*/ PersistedList<BranchSource> sources = new BranchSourceList(this);
+
+    /**
+     * The persisted state maintained outside of the config file.
+     *
+     * @since 2.0
+     */
+    private transient /*almost final*/ State state = new State(this);
 
     /**
      * The source for dead branches.
@@ -158,6 +169,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         } catch (XStreamException e) {
             facDigest = null;
         }
+        if (state == null) {
+            state = new State(this);
+        }
+        try {
+            state.load();
+        } catch (XStreamException | IOException e) {
+            LOGGER.log(Level.WARNING, "Could not read persisted state, will be recovered on next index.", e);
+            state.reset();
+        }
     }
 
     /**
@@ -165,7 +185,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     private synchronized void init2() {
         if (sources == null) {
-          sources = new PersistedList<BranchSource>(this);
+            sources = new PersistedList<BranchSource>(this);
         }
         if (nullSCMSource == null) {
             nullSCMSource = new NullSCMSource();
@@ -230,7 +250,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @Override
     public String getPronoun() {
         Set<String> result = new TreeSet<>();
-        for (BranchSource source: sources) {
+        for (BranchSource source : sources) {
             String pronoun = Util.fixEmptyAndTrim(source.getSource().getPronoun());
             if (pronoun != null) {
                 result.add(pronoun);
@@ -256,7 +276,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * Returns the base class of the projects that are managed by this {@link MultiBranchProject}.
      *
      * @return the base class of the projects that are managed by this {@link MultiBranchProject}.
-     * @since FIXME
+     * @since 2.0
      */
     @SuppressWarnings("unchecked")
     public final Class<P> getProjectClass() {
@@ -411,31 +431,34 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         try {
             final BranchProjectFactory<P, R> _factory = getProjectFactory();
             List<SCMSource> scmSources = getSCMSources();
-            Map<Class<? extends Action>, Action> persistentActions = new HashMap<>();
-            for (ListIterator<SCMSource> iterator = scmSources.listIterator(scmSources.size());
-                 iterator.hasPrevious(); ) {
-                SCMSource source = iterator.previous();
-                persistentActions.putAll(source.fetchActions(listener)); // first source always wins
+            Map<String, List<Action>> sourceActions = new LinkedHashMap<>();
+            for (SCMSource source : scmSources) {
+                sourceActions.put(source.getId(), source.fetchActions(null, listener));
             }
             // update any persistent actions for the SCMSource
-            if (!persistentActions.isEmpty()) {
-                BulkChange bc = new BulkChange(this);
-                try {
-                    for (Map.Entry<Class<? extends Action>, Action> entry : persistentActions.entrySet()) {
-                        if (entry.getValue() == null) {
-                            removeActions(entry.getKey());
-                        } else {
-                            replaceActions(entry.getKey(), entry.getValue());
-                        }
+            if (!sourceActions.equals(state.sourceActions)) {
+                boolean saveProject = false;
+                for (List<Action> actions : sourceActions.values()) {
+                    for (Action a : actions) {
+                        // undo any hacks that attached the contributed actions without attribution
+                        saveProject = removeActions(a.getClass()) || saveProject;
                     }
+                }
+                BulkChange bc = new BulkChange(state);
+                try {
+                    state.sourceActions.keySet().retainAll(sourceActions.keySet());
+                    state.sourceActions.putAll(sourceActions);
                     bc.commit();
+                    if (saveProject) {
+                        save();
+                    }
                 } finally {
                     bc.abort();
                 }
             }
             for (final SCMSource source : scmSources) {
                 source.fetch(new SCMHeadObserverImpl(source, observer, listener, _factory,
-                        new IndexingCauseFactory()), listener);
+                        new IndexingCauseFactory(), null), listener);
             }
         } finally {
             long end = System.currentTimeMillis();
@@ -446,7 +469,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     private void scheduleBuild(BranchProjectFactory<P, R> factory, final P item, SCMRevision revision,
                                TaskListener listener, String name, Cause[] cause, Action... actions) {
-        Action[] _actions = new Action[actions.length+1];
+        Action[] _actions = new Action[actions.length + 1];
         _actions[0] = new CauseAction(cause);
         System.arraycopy(actions, 0, _actions, 1, actions.length);
         if (ParameterizedJobMixIn.scheduleBuild2(item, 0, _actions) != null) {
@@ -465,7 +488,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * {@inheritDoc}
      */
     @Override
-    protected Collection<P> orphanedItems(Collection<P> orphaned, TaskListener listener) throws IOException, InterruptedException {
+    protected Collection<P> orphanedItems(Collection<P> orphaned, TaskListener listener)
+            throws IOException, InterruptedException {
         BranchProjectFactory<P, R> _factory = getProjectFactory();
         for (P project : orphaned) {
             if (!_factory.isProject(project)) {
@@ -475,7 +499,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             Branch b = _factory.getBranch(project);
             if (!(b instanceof Branch.Dead)) {
                 _factory.decorate(
-                        _factory.setBranch(project, new Branch.Dead(b.getHead(), b.getProperties(), b.getActions())));
+                        _factory.setBranch(project, new Branch.Dead(b)));
             }
         }
         return super.orphanedItems(orphaned, listener);
@@ -541,7 +565,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return acl;
         }
     }
-    private static final Set<Permission> SUPPRESSED_PERMISSIONS = ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
+
+    private static final Set<Permission> SUPPRESSED_PERMISSIONS =
+            ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
 
     /**
      * {@inheritDoc}
@@ -565,7 +591,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         if (StringUtils.isNotBlank(description)) {
             return description;
         }
-        MetadataAction action = getAction(MetadataAction.class);
+        ObjectMetadataAction action = getAction(ObjectMetadataAction.class);
         if (action != null) {
             return action.getObjectDescription();
         }
@@ -579,7 +605,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     public String getDisplayName() {
         String displayName = getDisplayNameOrNull();
         if (displayName == null) {
-            MetadataAction action = getAction(MetadataAction.class);
+            ObjectMetadataAction action = getAction(ObjectMetadataAction.class);
             if (action != null && StringUtils.isNotBlank(action.getObjectDisplayName())) {
                 return action.getObjectDisplayName();
             }
@@ -694,7 +720,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     public static class BranchIndexing<P extends Job<P, R> & TopLevelItem,
             R extends Run<P, R>> extends FolderComputation<P> {
 
-        public BranchIndexing(@NonNull MultiBranchProject<P,R> project, @CheckForNull BranchIndexing<P, R> previousIndexing) {
+        public BranchIndexing(@NonNull MultiBranchProject<P, R> project,
+                              @CheckForNull BranchIndexing<P, R> previousIndexing) {
             super(project, previousIndexing);
         }
 
@@ -702,7 +729,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * {@inheritDoc}
          */
         @Override
-        public MultiBranchProject<P,R> getParent() {
+        public MultiBranchProject<P, R> getParent() {
             return (MultiBranchProject) super.getParent();
         }
 
@@ -778,7 +805,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @Override
     protected FolderComputation<P> createComputation(FolderComputation<P> previous) {
-        return new BranchIndexing<P,R>(this, (BranchIndexing) previous);
+        return new BranchIndexing<P, R>(this, (BranchIndexing) previous);
     }
 
     /**
@@ -819,10 +846,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     private static class BranchSourceList extends PersistedList<BranchSource> {
 
-        BranchSourceList(MultiBranchProject<?,?> owner) {
+        BranchSourceList(MultiBranchProject<?, ?> owner) {
             super(owner);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         protected void onModified() throws IOException {
             super.onModified();
@@ -830,11 +860,18 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 branchSource.getSource().setOwner((MultiBranchProject) owner);
             }
         }
-
     }
 
+    /**
+     * Our event listener.
+     */
     @Extension
     public static class SCMEventListenerImpl extends SCMEventListener {
+        /**
+         * The {@link TaskListener} for events that we cannot assign to a multi-branch project.
+         *
+         * @return The {@link TaskListener} for events that we cannot assign to a multi-branch project.
+         */
         public TaskListener globalEventsListener() {
             File eventsFile =
                     new File(Jenkins.getActiveInstance().getRootDir(), MultiBranchProject.class.getName() + ".log");
@@ -850,6 +887,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return new StreamBuildListener(os, Charsets.UTF_8);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onSCMHeadEvent(final SCMHeadEvent<?> event) {
             TaskListener global = globalEventsListener();
@@ -865,7 +905,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     final BranchProjectFactory _factory = p.getProjectFactory();
                     for (SCMSource source : p.getSCMSources()) {
                         if (event.isMatch(source)) {
-                            for (SCMHead h: event.heads(source).keySet()) {
+                            for (SCMHead h : event.heads(source).keySet()) {
                                 if (p.getItem(h.getName()) == null) {
                                     // only interested in create events that actually could create a new branch
                                     haveMatch = true;
@@ -893,10 +933,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             for (SCMSource source : p.getSCMSources()) {
                                 if (event.isMatch(source)) {
                                     source.fetch(p.getSCMSourceCriteria(source), p.new SCMHeadObserverImpl(
-                                            source,
-                                            childObserver,
-                                            listener,
-                                            _factory, new EventCauseFactory(event)), event,
+                                                    source,
+                                                    childObserver,
+                                                    listener,
+                                                    _factory, new EventCauseFactory(event), event), event,
                                             listener
                                     );
                                 }
@@ -981,8 +1021,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                                         m.getKey(),
                                                         childObserver,
                                                         listener,
-                                                        _factory, new EventCauseFactory(event)
-                                                ),
+                                                        _factory, new EventCauseFactory(event),
+                                                        event),
                                                 m.getValue()
                                         ),
                                         listener
@@ -1009,7 +1049,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 }
                                 _factory.decorate(_factory.setBranch(
                                         j,
-                                        new Branch.Dead(branch.getHead(), branch.getProperties())
+                                        new Branch.Dead(branch)
                                 ));
                                 j.save();
                             }
@@ -1058,8 +1098,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                                         source,
                                                         childObserver,
                                                         listener,
-                                                        _factory, new EventCauseFactory(event)
-                                                ), event,
+                                                        _factory, new EventCauseFactory(event),
+                                                        event), event,
                                                 listener
                                         );
                                     }
@@ -1077,6 +1117,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onSCMSourceEvent(SCMSourceEvent<?> event) {
             TaskListener global = globalEventsListener();
@@ -1090,8 +1133,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
                     boolean haveMatch = false;
                     List<SCMSource> scmSources = p.getSCMSources();
-                    for (SCMSource source : scmSources) {
-                        if (event.isMatch(source)) {
+                    for (SCMSource s : scmSources) {
+                        if (event.isMatch(s)) {
                             global.getLogger().format("Found match against %s%n", p.getFullName());
                             haveMatch = true;
                             break;
@@ -1106,25 +1149,29 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
 
                         try {
-                            Map<Class<? extends Action>, Action> persistentActions = new HashMap<>();
-                            for (ListIterator<SCMSource> iterator = scmSources.listIterator(scmSources.size());
-                                 iterator.hasPrevious(); ) {
-                                SCMSource source = iterator.previous();
-                                persistentActions.putAll(source.fetchActions(listener)); // first source always wins
+                            Map<String, List<Action>> stateActions = new HashMap<>();
+                            for (SCMSource source : scmSources) {
+                                List<Action> newActions = source.fetchActions(event, listener);
+                                List<Action> oldActions = p.state.sourceActions.get(source.getId());
+                                if (oldActions == null || !oldActions.equals(newActions)) {
+                                    stateActions.put(source.getId(), newActions);
+                                }
                             }
-                            // update any persistent actions for the SCMSource
-                            if (!persistentActions.isEmpty()) {
-                                BulkChange bc = new BulkChange(p);
-                                try {
-                                    for (Map.Entry<Class<? extends Action>, Action> entry : persistentActions
-                                            .entrySet()) {
-                                        if (entry.getValue() == null) {
-                                            p.removeActions(entry.getKey());
-                                        } else {
-                                            p.replaceActions(entry.getKey(), entry.getValue());
-                                        }
+                            if (!stateActions.isEmpty()) {
+                                boolean saveProject = false;
+                                for (List<Action> actions : stateActions.values()) {
+                                    for (Action a : actions) {
+                                        // undo any hacks that attached the contributed actions without attribution
+                                        saveProject = p.removeActions(a.getClass()) || saveProject;
                                     }
+                                }
+                                BulkChange bc = new BulkChange(p.state);
+                                try {
+                                    p.state.sourceActions.putAll(stateActions);
                                     bc.commit();
+                                    if (saveProject) {
+                                        p.save();
+                                    }
                                 } finally {
                                     bc.abort();
                                 }
@@ -1198,45 +1245,81 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
     }
 
+    /**
+     * Our observer.
+     */
     private class SCMHeadObserverImpl extends SCMHeadObserver {
+        /**
+         * The source that we are observing.
+         */
+        @NonNull
         private final SCMSource source;
+        /**
+         * The child observer.
+         */
+        @NonNull
         private final ChildObserver<P> observer;
+        /**
+         * The task listener.
+         */
+        @NonNull
         private final TaskListener listener;
+        /**
+         * The project factory.
+         */
+        @NonNull
         private final BranchProjectFactory<P, R> _factory;
+        /**
+         * A source of {@link Cause} instances to use when triggering builds.
+         */
+        @NonNull
         private final CauseFactory causeFactory;
+        /**
+         * The optional event to use when scoping queries.
+         */
+        @CheckForNull
+        private final SCMHeadEvent<?> event;
 
-        public SCMHeadObserverImpl(SCMSource source, ChildObserver<P> observer, TaskListener listener,
-                                   BranchProjectFactory<P, R> _factory, CauseFactory causeFactory) {
+        /**
+         * Constructor.
+         *
+         * @param source       The source that we are observing.
+         * @param observer     The child observer.
+         * @param listener     The task listener.
+         * @param _factory     The project factory.
+         * @param causeFactory A source of {@link Cause} instances to use when triggering builds.
+         * @param event        The optional event to use when scoping queries.
+         */
+        public SCMHeadObserverImpl(@NonNull SCMSource source, @NonNull ChildObserver<P> observer,
+                                   @NonNull TaskListener listener, @NonNull BranchProjectFactory<P, R> _factory,
+                                   @NonNull CauseFactory causeFactory, @CheckForNull SCMHeadEvent<?> event) {
             this.source = source;
             this.observer = observer;
             this.listener = listener;
             this._factory = _factory;
             this.causeFactory = causeFactory;
+            this.event = event;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void observe(@NonNull SCMHead head, @NonNull SCMRevision revision) {
             Branch branch = newBranch(source, head);
             String rawName = branch.getName();
             String encodedName = branch.getEncodedName();
             P project = observer.shouldUpdate(encodedName);
-            Map<Class<? extends Action>, Action> headActions = null;
             Action[] revisionActions = new Action[0];
+            boolean headActionsFetched = false;
             try {
-                headActions = source.fetchActions(head, listener);
+                branch.setActions(source.fetchActions(head, event, listener));
+                headActionsFetched = true;
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace(listener.error("Could not fetch metadata of branch %s", rawName));
             }
-            if (headActions != null) {
-                branch.getActions().addAll(headActions.values());
-            }
             try {
-                List<Action> actions = new ArrayList<Action>();
-                for (Action a : source.fetchActions(revision, listener).values()) {
-                    if (a != null) {
-                        actions.add(a);
-                    }
-                }
+                List<Action> actions = source.fetchActions(revision, event, listener);
                 revisionActions = actions.toArray(new Action[actions.size()]);
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace(listener.error("Could not fetch metadata for revision %s of branch %s",
@@ -1249,6 +1332,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
                 Branch origBranch = _factory.getBranch(project);
                 boolean rebuild = origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead);
+                if (!headActionsFetched) {
+                    // we didn't fetch them so replicate previous actions
+                    branch.setActions(origBranch.getActions());
+                }
                 boolean needSave = !branch.equals(origBranch) || !branch.getActions().equals(origBranch.getActions());
                 _factory.decorate(_factory.setBranch(project, branch));
                 if (rebuild) {
@@ -1259,13 +1346,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             revision
                     );
                     needSave = true;
-                    scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(), revisionActions);
+                    scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(),
+                            revisionActions);
                 } else if (revision.isDeterministic()) {
                     SCMRevision lastBuild = _factory.getRevision(project);
                     if (!revision.equals(lastBuild)) {
                         listener.getLogger().format("Changes detected: %s (%s → %s)%n", rawName, lastBuild, revision);
                         needSave = true;
-                        scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(), revisionActions);
+                        scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(),
+                                revisionActions);
                     } else {
                         listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
                     }
@@ -1277,7 +1366,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         if (pollingResult.hasChanges()) {
                             listener.getLogger().format("Changes detected: %s%n", rawName);
                             needSave = true;
-                            scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(), revisionActions);
+                            scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(),
+                                    revisionActions);
                         } else {
                             listener.getLogger().format("No changes detected: %s%n", rawName);
                         }
@@ -1321,6 +1411,106 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             // ok it is now up to the observer to ensure it does the actual save.
             observer.created(project);
             scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(), revisionActions);
+        }
+    }
+
+    /**
+     * Adds the {@link MultiBranchProject.State#sourceActions} to {@link MultiBranchProject#getAllActions()}.
+     *
+     * @since 2.0
+     */
+    @Extension
+    public static class StateActionFactory extends TransientActionFactory<MultiBranchProject> {
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Class<MultiBranchProject> type() {
+            return MultiBranchProject.class;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Nonnull
+        @Override
+        public Collection<? extends Action> createFor(@Nonnull MultiBranchProject target) {
+            List<Action> result = new ArrayList<>();
+            MultiBranchProject<?, ?> project = target;
+            for (BranchSource b : project.getSources()) {
+                List<Action> actions = project.state.sourceActions.get(b.getSource().getId());
+                if (actions != null && !actions.isEmpty()) {
+                    result.addAll(actions);
+                }
+            }
+            return result;
+        }
+    }
+
+    /**
+     * The persisted state.
+     *
+     * @since 2.0
+     */
+    private static class State implements Saveable {
+        /**
+         * Our owner.
+         */
+        @NonNull
+        private transient final MultiBranchProject<?, ?> owner;
+        /**
+         * The {@link SCMSource#fetchActions(SCMSourceEvent, TaskListener)} for each source, keyed by
+         * {@link SCMSource#getId()}.
+         */
+        private final Map<String, List<Action>> sourceActions = new HashMap<>();
+
+        /**
+         * Constructor.
+         *
+         * @param owner our owner.
+         */
+        private State(@NonNull MultiBranchProject<?, ?> owner) {
+            this.owner = owner;
+        }
+
+        /**
+         * Clear the state completely.
+         */
+        public synchronized void reset() {
+            sourceActions.clear();
+        }
+
+        /**
+         * Loads the state from disk.
+         *
+         * @throws IOException if there was an issue loading the state from disk.
+         */
+        public synchronized void load() throws IOException {
+            if (getStateFile().exists()) {
+                getStateFile().unmarshal(this);
+            }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public synchronized void save() throws IOException {
+            if (BulkChange.contains(this)) {
+                return;
+            }
+            getStateFile().write(this);
+            SaveableListener.fireOnChange(this, getStateFile());
+        }
+
+        /**
+         * The file that the state is persisted in.
+         *
+         * @return The file that the state is persisted in.
+         */
+        public final XmlFile getStateFile() {
+            return new XmlFile(Items.XSTREAM, new File(owner.getRootDir(), "state.xml"));
         }
     }
 }

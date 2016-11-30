@@ -37,7 +37,7 @@ import jenkins.scm.api.SCMHeadCategory;
  * A {@link ViewJobFilter} that filters the children of a {@link MultiBranchProject} based on a {@link SCMHeadCategory}.
  * Designed for programmatic construction only. Not designed for user instantiation, hence no {@link Descriptor}.
  *
- * @since FIXME
+ * @since 2.0
  */
 public class BranchCategoryFilter extends ViewJobFilter {
 

@@ -33,16 +33,15 @@ import hudson.views.ListViewColumnDescriptor;
 import hudson.views.StatusColumn;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import jenkins.scm.api.actions.MetadataAction;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
- * {@link ListViewColumn} that shows the description text of a {@link Job} with priority given to
- * {@link MetadataAction#getObjectDescription()}.
+ * {@link ListViewColumn} that shows the status icon for item ensuring that {@link Branch.Dead} jobs are reported as
+ * disabled.
  *
- * @author Kohsuke Kawaguchi
+ * @since 2.0
  */
 public class BranchStatusColumn extends StatusColumn {
     /**
@@ -52,6 +51,12 @@ public class BranchStatusColumn extends StatusColumn {
     public BranchStatusColumn() {
     }
 
+    /**
+     * Gets the {@link BallColor} for an item.
+     *
+     * @param item the item.
+     * @return the {@link BallColor}.
+     */
     @Restricted(NoExternalUse.class)
     public BallColor iconColor(Item item) {
         if (item.getParent() instanceof MultiBranchProject) {

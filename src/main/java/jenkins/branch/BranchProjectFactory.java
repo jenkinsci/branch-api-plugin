@@ -251,7 +251,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
      * Returns the base class of the projects that are produced by this factory.
      *
      * @return the base class of the projects that are produced by this factory.
-     * @since FIXME
+     * @since 2.0
      */
     @SuppressWarnings("unchecked")
     @NonNull

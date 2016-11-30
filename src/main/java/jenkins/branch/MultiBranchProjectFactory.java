@@ -88,7 +88,7 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @param event      the {@link SCMHeadEvent} that the recognition test should be restricted to.
      * @param listener   a way of reporting progress
      * @return true if recognized
-     * @since FIXME
+     * @since 2.0
      */
     public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
                               @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String, Object> attributes,

@@ -53,7 +53,7 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 /**
  * Holds the view configuration for an {@link MultiBranchProject}.
  *
- * @since FIXME
+ * @since 2.0
  */
 public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
     /**

@@ -31,9 +31,11 @@ import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
 import hudson.model.Job;
+import hudson.model.TaskListener;
 import hudson.scm.NullSCM;
 import hudson.scm.SCM;
 import java.io.ObjectStreamException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -41,6 +43,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nonnull;
 import jenkins.model.TransientActionFactory;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMHeadEvent;
+import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.NullSCMSource;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
@@ -73,9 +77,12 @@ public class Branch {
     private final CopyOnWriteArrayList<BranchProperty> properties = new CopyOnWriteArrayList<BranchProperty>();
 
     /**
-     * The actions to associate with this branch.
+     * The {@link SCMSource#fetchActions(SCMHead, SCMHeadEvent, TaskListener)} for this branch.
+     * The collection is always replaced as a whole. We store the whole collection in an ArrayList so that the XStream
+     * representation is simpler.
+     * @since 2.0
      */
-    private final CopyOnWriteArrayList<Action> actions = new CopyOnWriteArrayList<>();
+    private List<Action> actions = new ArrayList<>();
 
     /**
      * Constructs a branch instance.
@@ -89,6 +96,21 @@ public class Branch {
         this.head = head;
         this.scm = scm;
         this.properties.addAll(properties);
+    }
+
+    /**
+     * Internal copy constructor for creating dead branches.
+     * @param id the id of the new {@link SCMSource}.
+     * @param scm the new {@link SCM}.
+     * @param b the branch to copy.
+     * @since 2.0
+     */
+    private Branch(String id, SCM scm, Branch b) {
+        this.sourceId = id;
+        this.head = b.head;
+        this.scm = scm;
+        this.properties.addAll(b.properties);
+        this.actions = new ArrayList<>(b.actions);
     }
 
     /**
@@ -194,7 +216,15 @@ public class Branch {
      */
     @NonNull
     public List<Action> getActions() {
-        return actions;
+        return Collections.unmodifiableList(actions);
+    }
+
+    /**
+     * Sets the actions atomically.
+     * @param actions the new actions
+     */
+    /*package*/ void setActions(@NonNull List<Action> actions) {
+        this.actions = new ArrayList<>(actions);
     }
 
     /**
@@ -270,14 +300,11 @@ public class Branch {
         /**
          * Constructor.
          *
-         * @param name       branch name.
-         * @param properties the initial branch properties
-         * @param actions    the initial branch actions.
-         * @since FIXME
+         * @param b the branch that is now dead.
+         * @since 2.0
          */
-        public Dead(SCMHead name, List<? extends BranchProperty> properties, List<? extends Action> actions) {
-            super(NullSCMSource.ID, name, new NullSCM(), properties);
-            this.getActions().addAll(actions);
+        public Dead(Branch b) {
+            super(NullSCMSource.ID, new NullSCM(), b);
         }
 
         /**
@@ -309,7 +336,7 @@ public class Branch {
      * NOTE: We need to use a transient action factory as {@link AbstractProject#getActions()} is unmodifiable
      * and consequently {@link AbstractProject#addAction(Action)} will always fail.
      *
-     * @since FIXME
+     * @since 2.0
      */
     @Extension
     public static class TransientJobActionsFactoryImpl extends TransientActionFactory<Job> {
