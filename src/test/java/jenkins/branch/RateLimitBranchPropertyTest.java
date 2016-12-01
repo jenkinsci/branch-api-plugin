@@ -174,7 +174,7 @@ public class RateLimitBranchPropertyTest {
             assertThat("At least the rate implied delay but no more than 500ms longer",
                     System.currentTimeMillis() - startTime,
                     allOf(
-                            greaterThanOrEqualTo(60 * 60 / rate * 1000L),
+                            greaterThanOrEqualTo(60 * 60 / rate * 1000L - 200L),
                             lessThanOrEqualTo(60 * 60 / rate * 1000L * 500L)
                     )
             );
@@ -262,7 +262,7 @@ public class RateLimitBranchPropertyTest {
             assertThat("At least the rate implied delay but no more than 500ms longer",
                     secondBuild.getStartTimeInMillis() - firstBuild.getStartTimeInMillis(),
                     allOf(
-                            greaterThanOrEqualTo(60 * 60 / rate * 1000L),
+                            greaterThanOrEqualTo(60 * 60 / rate * 1000L - 200L),
                             lessThanOrEqualTo(60 * 60 / rate * 1000L * 500L)
                     )
             );

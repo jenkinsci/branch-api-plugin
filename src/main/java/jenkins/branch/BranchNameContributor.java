@@ -31,12 +31,11 @@ import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.TaskListener;
 import java.io.IOException;
-import java.net.URL;
-import jenkins.scm.api.ChangeRequestSCMHead;
+import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.actions.ChangeRequestAction;
-import jenkins.scm.api.actions.ContributorMetadataAction;
-import jenkins.scm.api.actions.ObjectMetadataAction;
+import jenkins.scm.api.metadata.ContributorMetadataAction;
+import jenkins.scm.api.metadata.ObjectMetadataAction;
 
 /**
  * Defines the environment variable {@code BRANCH_NAME} for multibranch builds.

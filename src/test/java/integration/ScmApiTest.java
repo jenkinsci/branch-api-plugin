@@ -116,6 +116,7 @@ import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMRevision;
 import jenkins.scm.impl.mock.MockSCMSource;
+import jenkins.scm.impl.mock.MockTagSCMHead;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -153,8 +154,8 @@ public class ScmApiTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(SCMHead.HeadByItem.findHead(prj.getItem("master")),
-                    is((SCMHead) new MockSCMHead("master", false)));
-            assertThat(SCMHead.HeadByItem.findHead(prj.getItem("1.0")), is((SCMHead) new MockSCMHead("1.0", true)));
+                    is((SCMHead) new MockSCMHead("master")));
+            assertThat(SCMHead.HeadByItem.findHead(prj.getItem("1.0")), is((SCMHead) new MockTagSCMHead("1.0")));
             assertThat(SCMHead.HeadByItem.findHead(prj.getItem("CR-" + crNum)),
                     is((SCMHead) new MockChangeRequestSCMHead(crNum, "master")));
         }
@@ -194,7 +195,7 @@ public class ScmApiTest {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             FreeStyleProject prj = r.createFreeStyleProject();
-            MockSCMHead head = new MockSCMHead("master", false);
+            MockSCMHead head = new MockSCMHead("master");
             prj.setScm(new MockSCM(c, "foo", head, new MockSCMRevision(head, c.getRevision("foo", "master"))));
             r.buildAndAssertSuccess(prj);
             // we rely on there being no implementation of HeadByItem provided by MockSCM to

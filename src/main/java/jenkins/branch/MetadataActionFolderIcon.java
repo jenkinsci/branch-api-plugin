@@ -31,7 +31,7 @@ import hudson.Extension;
 import hudson.Util;
 import hudson.model.Hudson;
 import javax.annotation.Nonnull;
-import jenkins.scm.api.actions.AvatarMetadataAction;
+import jenkins.scm.api.metadata.AvatarMetadataAction;
 import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.Stapler;

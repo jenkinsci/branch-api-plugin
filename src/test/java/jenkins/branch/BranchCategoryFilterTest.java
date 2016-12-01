@@ -44,6 +44,7 @@ import jenkins.scm.impl.ChangeRequestSCMHeadCategory;
 import jenkins.scm.impl.TagSCMHeadCategory;
 import jenkins.scm.impl.UncategorizedSCMHeadCategory;
 import jenkins.scm.impl.mock.MockSCMHead;
+import jenkins.scm.impl.mock.MockTagSCMHead;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 
@@ -70,16 +71,16 @@ public class BranchCategoryFilterTest {
         when(factory.asProject(child1)).thenReturn(child1);
         SCM scm = mock(SCM.class);
         when(factory.getBranch(child1)).thenReturn(
-                new Branch("1", new MockSCMHead("master", false), scm, Collections.<BranchProperty>emptyList()));
+                new Branch("1", new MockSCMHead("master"), scm, Collections.<BranchProperty>emptyList()));
         TopLevelJob child2 = mock(TopLevelJob.class);
         when(factory.isProject(child2)).thenReturn(true);
         when(factory.asProject(child2)).thenReturn(child2);
-        when(factory.getBranch(child2)).thenReturn(new Branch("1", new MockSCMHead("fork", false), scm,
+        when(factory.getBranch(child2)).thenReturn(new Branch("1", new MockSCMHead("fork"), scm,
                 Collections.<BranchProperty>emptyList()));
         TopLevelJob child3 = mock(TopLevelJob.class);
         when(factory.isProject(child3)).thenReturn(true);
         when(factory.asProject(child3)).thenReturn(child3);
-        when(factory.getBranch(child3)).thenReturn(new Branch("1", new MockSCMHead("master-1.0", true), scm,
+        when(factory.getBranch(child3)).thenReturn(new Branch("1", new MockTagSCMHead("master-1.0"), scm,
                 Collections.<BranchProperty>emptyList()));
         TopLevelJob child4 = mock(TopLevelJob.class);
         when(factory.isProject(child4)).thenReturn(false);
@@ -121,16 +122,16 @@ public class BranchCategoryFilterTest {
         when(factory.asProject(child1)).thenReturn(child1);
         SCM scm = mock(SCM.class);
         when(factory.getBranch(child1)).thenReturn(
-                new Branch("1", new MockSCMHead("master", false), scm, Collections.<BranchProperty>emptyList()));
+                new Branch("1", new MockSCMHead("master"), scm, Collections.<BranchProperty>emptyList()));
         TopLevelJob child2 = mock(TopLevelJob.class);
         when(factory.isProject(child2)).thenReturn(true);
         when(factory.asProject(child2)).thenReturn(child2);
-        when(factory.getBranch(child2)).thenReturn(new Branch("1", new MockSCMHead("fork", false), scm,
+        when(factory.getBranch(child2)).thenReturn(new Branch("1", new MockSCMHead("fork"), scm,
                 Collections.<BranchProperty>emptyList()));
         TopLevelJob child3 = mock(TopLevelJob.class);
         when(factory.isProject(child3)).thenReturn(true);
         when(factory.asProject(child3)).thenReturn(child3);
-        when(factory.getBranch(child3)).thenReturn(new Branch("1", new MockSCMHead("master-1.0", true), scm,
+        when(factory.getBranch(child3)).thenReturn(new Branch("1", new MockTagSCMHead("master-1.0"), scm,
                 Collections.<BranchProperty>emptyList()));
         TopLevelJob child4 = mock(TopLevelJob.class);
         when(factory.isProject(child4)).thenReturn(false);

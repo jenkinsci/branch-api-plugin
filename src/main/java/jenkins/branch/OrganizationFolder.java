@@ -89,7 +89,7 @@ import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.api.SCMSourceOwner;
-import jenkins.scm.api.actions.ObjectMetadataAction;
+import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
 import net.jcip.annotations.GuardedBy;

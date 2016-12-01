@@ -91,7 +91,7 @@ import jenkins.branch.DescriptionColumn;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMSourceEvent;
-import jenkins.scm.api.actions.ObjectMetadataAction;
+import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMLink;
 import jenkins.scm.impl.mock.MockSCMNavigator;
