@@ -80,11 +80,11 @@ public class MetadataActionFolderIcon extends FolderIcon {
                 try {
                     if (Util.isOverridden(AvatarMetadataAction.class, action.getClass(), "getAvatarImageOf", String.class)
                             && action.getAvatarImageOf("32x32") != null) {
-                        // if the metadata action has a custom getFolderIconImageOf then it may be using that to return
+                        // if the metadata action has a custom getAvatarImageOf then it may be using that to return
                         // a custom image URL rather than an Icon, in which case we need to check to see if the
-                        // getFolderIconImageOf is returning a non-null value which would necessitate returning null
+                        // getAvatarImageOf is returning a non-null value which would necessitate returning null
                         // here in order to ensure that the getImageOf path is called.
-                        // of course this can only happen if the getFolderIconImageOf is overridden as the default
+                        // of course this can only happen if the getAvatarImageOf is overridden as the default
                         // will just produce an image url based on the Icon - which we already know is null.
                         return null;
                     }
