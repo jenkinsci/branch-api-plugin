@@ -34,7 +34,6 @@ import hudson.model.Build;
 import hudson.model.Job;
 import hudson.model.Project;
 import hudson.model.Run;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,7 +48,12 @@ import java.util.List;
 public abstract class BranchProperty extends AbstractDescribableImpl<BranchProperty> implements ExtensionPoint {
 
     /**
-     * @deprecated Should have been typed to take {@link Project} and {@link Build} rather than {@link AbstractProject} and {@link AbstractBuild}.
+     * Returns a {@link ProjectDecorator} for the supplied project instance.
+     *
+     * @param project the project instance.
+     * @return a {@link ProjectDecorator} or {@code null} if none appropriate to this type of project.
+     * @deprecated Should have been typed to take {@link Project} and {@link Build} rather than
+     * {@link AbstractProject} and {@link AbstractBuild}.
      */
     @CheckForNull
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -59,7 +63,12 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
     }
 
     /**
-     * @deprecated Should have been typed to take {@link Project} and {@link Build} rather than {@link AbstractProject} and {@link AbstractBuild}.
+     * Returns a {@link ProjectDecorator} for the specific project type.
+     *
+     * @param clazz the project class.
+     * @return a {@link ProjectDecorator} or {@code null} if none appropriate to this type of project.
+     * @deprecated Should have been typed to take {@link Project} and {@link Build} rather than
+     * {@link AbstractProject} and {@link AbstractBuild}.
      */
     @CheckForNull
     @SuppressWarnings({"unchecked", "rawtypes"})

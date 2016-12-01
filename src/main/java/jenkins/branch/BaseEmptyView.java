@@ -23,7 +23,7 @@ public class BaseEmptyView extends View {
     public static final String VIEW_NAME = "welcome";
 
     /**
-     * Constructor
+     * {@inheritDoc}
      */
     public BaseEmptyView(ViewGroup owner) {
         super(VIEW_NAME, owner);

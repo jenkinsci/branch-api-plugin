@@ -90,6 +90,7 @@ public class Branch {
      * @param sourceId the {@link jenkins.scm.api.SCMSource#getId()}
      * @param head     the name of the branch.
      * @param scm      the {@link SCM} for the branch.
+     * @param properties the properties to initiate the branch with.
      */
     public Branch(String sourceId, SCMHead head, SCM scm, List<? extends BranchProperty> properties) {
         this.sourceId = sourceId;
@@ -188,6 +189,7 @@ public class Branch {
     /**
      * Gets the specific property, or {@code null} if no such property is found.
      *
+     * @param <T> the type of property.
      * @param clazz the type of property.
      * @return the the specific property, or {@code null} if no such property is found.
      */
@@ -229,6 +231,9 @@ public class Branch {
 
     /**
      * Gets the specific action, or null if no such property is found.
+     *
+     * @param <T> the type of action
+     * @param clazz the type of action.
      */
     @CheckForNull
     public <T extends Action> T getAction(Class<T> clazz) {
