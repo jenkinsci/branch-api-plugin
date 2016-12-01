@@ -26,6 +26,7 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.ParameterDefinition;
 import hudson.model.StringParameterDefinition;
@@ -33,6 +34,7 @@ import hudson.model.TopLevelItem;
 import integration.harness.BasicDummyStepBranchProperty;
 import integration.harness.BasicMultiBranchProject;
 import java.util.Collections;
+import jenkins.model.ParameterizedJobMixIn;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMSource;
 import org.junit.Before;
@@ -48,6 +50,7 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 public class ParameterDefinitionBranchPropertyTest {
@@ -83,15 +86,33 @@ public class ParameterDefinitionBranchPropertyTest {
     }
 
     @Test
-    public void isApplicable() throws Exception {
-        assertThat("Should always feign applicable as this is guarded by the BranchPropertyDescriptor",
-                new ParameterDefinitionBranchPropertyImpl().isApplicable(Job.class), is(true));
+    public void isApplicable_Job() throws Exception {
+        assertThat("Jobs are not parameterized",
+                new ParameterDefinitionBranchPropertyImpl().isApplicable(Job.class), is(false));
 
     }
 
     @Test
-    public void jobDecorator() throws Exception {
-        assertThat(new ParameterDefinitionBranchPropertyImpl().jobDecorator(Job.class), notNullValue());
+    public void isApplicable_Job_implementing_ParameterizedJob() throws Exception {
+        assertThat("Parameterized Jobs are are Applicable",
+                new ParameterDefinitionBranchPropertyImpl().isApplicable(ParamJob.class), is(true));
+
+    }
+
+    public static abstract class ParamJob extends Job implements ParameterizedJobMixIn.ParameterizedJob {
+        protected ParamJob(ItemGroup parent, String name) {
+            super(parent, name);
+        }
+    }
+
+    @Test
+    public void jobDecorator_Job() throws Exception {
+        assertThat(new ParameterDefinitionBranchPropertyImpl().jobDecorator(Job.class), nullValue());
+    }
+
+    @Test
+    public void jobDecorator_Job_implementing_ParameterizedJob() throws Exception {
+        assertThat(new ParameterDefinitionBranchPropertyImpl().jobDecorator(ParamJob.class), notNullValue());
     }
 
     @Test
