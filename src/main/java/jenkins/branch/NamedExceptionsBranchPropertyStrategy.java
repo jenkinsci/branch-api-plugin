@@ -62,6 +62,7 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
      * Stapler's constructor.
      *
      * @param defaultProperties the properties.
+     * @param namedExceptions the named exceptions.
      */
     @DataBoundConstructor
     public NamedExceptionsBranchPropertyStrategy(@CheckForNull BranchProperty[] defaultProperties,
@@ -141,6 +142,9 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
 
         /**
          * Constructor
+         *
+         * @param name the names to match.
+         * @param props the properties that the matching branches will get.
          */
         @SuppressWarnings("unused") // via stapler
         @DataBoundConstructor

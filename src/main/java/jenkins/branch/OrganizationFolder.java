@@ -401,7 +401,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
-     * Creates a place holder view when there's no active branch indexed.
+     * Creates a place-holder view when there's no active repositories indexed.
+     *
+     * @return a place-holder view for when there's no active repositories indexed.
      */
     protected View getWelcomeView() {
         return new OrganizationFolderEmptyView(this);
@@ -580,6 +582,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         /**
          * Creates a filtered sublist.
          *
+         * @param <T> the type to remove from the base list
          * @param base the base list
          * @param type the type to remove from the base list
          * @return the list will all instances of the supplied type removed.

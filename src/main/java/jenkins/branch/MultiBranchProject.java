@@ -326,6 +326,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Offers direct access to the configurable list of branch sources.
      * Intended for use from scripting and testing.
+     *
+     * @return the sources list.
      */
     @NonNull
     public PersistedList<BranchSource> getSourcesList() {
@@ -693,7 +695,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * Creates a place holder view when there's no active branch indexed.
+     * Creates a place-holder view when there's no active branch indexed.
+     *
+     * @return the place-holder view when there's no active branch indexed.
      */
     protected View getWelcomeView() {
         return new MultiBranchProjectEmptyView(this);

@@ -63,6 +63,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addAttribute}
      * @param listener   a way of reporting progress
      * @return true if recognized
+     * @throws InterruptedException if interrupted.
+     * @throws IOException if there was an IO error.
      */
     @SuppressWarnings("deprecation")
     public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
@@ -88,6 +90,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @param event      the {@link SCMHeadEvent} that the recognition test should be restricted to.
      * @param listener   a way of reporting progress
      * @return true if recognized
+     * @throws InterruptedException if interrupted.
+     * @throws IOException if there was an IO error.
      * @since 2.0
      */
     public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
@@ -109,6 +113,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @param listener   a way of reporting progress
      * @return a new uninitialized multibranch project (do not configure its
      * {@link MultiBranchProject#getSourcesList} or call {@link MultiBranchProject#onCreatedFromScratch})
+     * @throws InterruptedException if interrupted.
+     * @throws IOException if there was an IO error.
      */
     @NonNull
     @SuppressWarnings("deprecation")
@@ -136,6 +142,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @param attributes a set of metadata attributes as added by
      * {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addAttribute}
      * @param listener   a way of reporting progress
+     * @throws InterruptedException if interrupted.
+     * @throws IOException if there was an IO error.
      */
     public void updateExistingProject(@NonNull MultiBranchProject<?, ?> project,
                                       @NonNull Map<String, Object> attributes, @NonNull TaskListener listener)
@@ -154,6 +162,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @param listener   a way of reporting progress
      * @return a new uninitialized multibranch project (do not configure its
      * {@link MultiBranchProject#getSourcesList} or call {@link MultiBranchProject#onCreatedFromScratch})
+     * @throws InterruptedException if interrupted.
+     * @throws IOException if there was an IO error.
      * @deprecated use {@link #createNewProject(ItemGroup, String, List, Map, TaskListener)}
      */
     @Deprecated
@@ -194,6 +204,13 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
 
         /**
          * Historical alias for {@link #createNewProject}.
+         * @param parent     a folder
+         * @param name       a project name
+         * {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addSource}
+         * @param attributes a set of metadata attributes as added by
+         * {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addAttribute}
+         * @return a new uninitialized multibranch project (do not configure its
+         * {@link MultiBranchProject#getSourcesList} or call {@link MultiBranchProject#onCreatedFromScratch})
          */
         @NonNull
         protected abstract MultiBranchProject<?, ?> doCreateProject(@NonNull ItemGroup<?> parent, @NonNull String name,
@@ -203,9 +220,10 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          * {@inheritDoc}
          */
         @Override
-        public final MultiBranchProject<?, ?> createNewProject(ItemGroup<?> parent, String name,
-                                                               List<? extends SCMSource> scmSources,
-                                                               Map<String, Object> attributes, TaskListener listener)
+        public final MultiBranchProject<?, ?> createNewProject(@NonNull ItemGroup<?> parent, @NonNull String name,
+                                                               @NonNull List<? extends SCMSource> scmSources,
+                                                               @NonNull Map<String, Object> attributes,
+                                                               @NonNull TaskListener listener)
                 throws IOException, InterruptedException {
             return doCreateProject(parent, name, attributes);
         }
@@ -214,8 +232,10 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          * {@inheritDoc}
          */
         @Override
-        public boolean recognizes(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources,
-                                  Map<String, Object> attributes, final TaskListener listener)
+        public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
+                                  @NonNull List<? extends SCMSource> scmSources,
+                                  @NonNull Map<String, Object> attributes,
+                                  @NonNull TaskListener listener)
                 throws IOException, InterruptedException {
             for (final SCMSource scmSource : scmSources) {
                 if (scmSource.fetch(getSCMSourceCriteria(scmSource), SCMHeadObserver.any(), listener).getRevision()

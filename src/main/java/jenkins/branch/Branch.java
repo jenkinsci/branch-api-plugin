@@ -205,6 +205,8 @@ public class Branch {
 
     /**
      * Gets all the properties.
+     *
+     * @return the properties.
      */
     @NonNull
     public List<BranchProperty> getProperties() {
@@ -234,6 +236,7 @@ public class Branch {
      *
      * @param <T> the type of action
      * @param clazz the type of action.
+     * @return the first action of the requested type or {@code null} if no such action is present.
      */
     @CheckForNull
     public <T extends Action> T getAction(Class<T> clazz) {

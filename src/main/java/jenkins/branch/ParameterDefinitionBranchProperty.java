@@ -25,6 +25,7 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.OverrideMustInvoke;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.ParameterDefinition;
@@ -32,36 +33,74 @@ import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Run;
 import java.util.Iterator;
 import java.util.List;
+import jenkins.model.ParameterizedJobMixIn;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.export.Exported;
 
 /**
  * Support for build parameters.
- * Left abstract (not registered by default for all projects) so that concrete subclasses can decide which project types they should apply to.
+ * Left abstract (not registered by default for all projects) so that concrete subclasses can decide which project
+ * types they should apply to.
  */
 public abstract class ParameterDefinitionBranchProperty extends BranchProperty {
 
-    /** Subclasses should have a {@link DataBoundConstructor}. */
-    protected ParameterDefinitionBranchProperty() {}
-
+    /**
+     * The parameter definitions.
+     */
     private List<ParameterDefinition> parameterDefinitions;
 
+    /**
+     * Subclasses should have a {@link DataBoundConstructor}.
+     */
+    protected ParameterDefinitionBranchProperty() {
+    }
+
+    /**
+     * Gets the parameter definitions.
+     *
+     * @return the parameter definitions.
+     */
     @Exported
     public final List<ParameterDefinition> getParameterDefinitions() {
         return parameterDefinitions;
     }
 
+    /**
+     * Sets the parameter definitions.
+     *
+     * @param parameterDefinitions the parameter definitions.
+     */
     @DataBoundSetter
     public final void setParameterDefinitions(List<ParameterDefinition> parameterDefinitions) {
         this.parameterDefinitions = parameterDefinitions;
     }
 
-    /** Not to be confused with {@link BranchPropertyDescriptor#isApplicable(MultiBranchProjectDescriptor)}, this checks applicability for the child job type. */
+    /**
+     * Tests if the parameter definitions are applicable to the branch specific job type.
+     * <p>
+     * Not to be confused with {@link BranchPropertyDescriptor#isApplicable(MultiBranchProjectDescriptor)},
+     * this checks applicability for the child job type.
+     * <p>
+     * As all {@link Job} types support {@link JobProperty} and {@link ParametersDefinitionProperty} will work
+     * with anything that implements {@link ParameterizedJobMixIn.ParameterizedJob}, the default implementation
+     * which checks for both of these interfaces, should suffice for all. If you need to appliy additiona specification
+     * then you can override to tighten the criteria.
+     *
+     * @param <P>   the type of the branch specific child job.
+     * @param <B>   the type of the branch specific child job's builds.
+     * @param clazz the type of the branch specific child job.
+     * @return {@code true} if the specified type of child job can be parameterized.
+     */
+    @OverrideMustInvoke
     protected <P extends Job<P, B>, B extends Run<P, B>> boolean isApplicable(Class<P> clazz) {
-        return true;
+        return Job.class.isAssignableFrom(clazz)
+                && ParameterizedJobMixIn.ParameterizedJob.class.isAssignableFrom(clazz);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public final <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
         if (!isApplicable(clazz)) {
