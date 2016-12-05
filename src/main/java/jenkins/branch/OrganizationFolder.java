@@ -514,7 +514,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             }
             Locale locale = LocaleProvider.getLocale();
             return Messages.OrganizationFolder_Description(Messages.OrganizationFolder_DefaultProject(),
-                    new UncategorizedSCMSourceCategory().getDisplayName().toString(locale).toLowerCase(locale),
+                    UncategorizedSCMSourceCategory.DEFAULT.getDisplayName().toString(locale).toLowerCase(locale),
                     Messages.OrganizationFolder_DefaultPronoun()
             );
         }
@@ -607,7 +607,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             for (SCMNavigatorDescriptor d: descriptors) {
                 sourceCategories.addAll(d.getCategories());
             }
-            SCMSourceCategory uncategorized = new UncategorizedSCMSourceCategory();
+            SCMSourceCategory uncategorized = UncategorizedSCMSourceCategory.DEFAULT;
             for (SCMSourceCategory c: SCMSourceCategory.simplify(SCMSourceCategory.addUncategorizedIfMissing(sourceCategories)).values()) {
                 if (c.isUncategorized()) {
                     uncategorized = c;

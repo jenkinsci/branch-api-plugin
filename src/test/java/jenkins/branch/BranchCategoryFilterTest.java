@@ -91,7 +91,7 @@ public class BranchCategoryFilterTest {
         all.add(child2);
         all.add(child3);
         all.add(child4);
-        new BranchCategoryFilter(new UncategorizedSCMHeadCategory()).filter(added, all, filteringView);
+        new BranchCategoryFilter(UncategorizedSCMHeadCategory.DEFAULT).filter(added, all, filteringView);
         assertThat(added, Matchers.<TopLevelItem>containsInAnyOrder(child1, child2));
 
         added.clear();
@@ -101,7 +101,7 @@ public class BranchCategoryFilterTest {
         all.add(child2);
         all.add(child3);
         all.add(child4);
-        new BranchCategoryFilter(new TagSCMHeadCategory()).filter(added, all, filteringView);
+        new BranchCategoryFilter(TagSCMHeadCategory.DEFAULT).filter(added, all, filteringView);
         assertThat(added, Matchers.<TopLevelItem>containsInAnyOrder(child1, child3));
     }
 
@@ -142,7 +142,7 @@ public class BranchCategoryFilterTest {
         all.add(child2);
         all.add(child3);
         all.add(child4);
-        new BranchCategoryFilter(new TagSCMHeadCategory()).filter(added, all, filteringView);
+        new BranchCategoryFilter(TagSCMHeadCategory.DEFAULT).filter(added, all, filteringView);
         assertThat(added, Matchers.<TopLevelItem>containsInAnyOrder(child1, child3));
 
     }
@@ -178,9 +178,9 @@ public class BranchCategoryFilterTest {
             @Override
             protected SCMHeadCategory[] createCategories() {
                 return new SCMHeadCategory[]{
-                        new UncategorizedSCMHeadCategory(),
-                        new TagSCMHeadCategory(),
-                        new ChangeRequestSCMHeadCategory()
+                        UncategorizedSCMHeadCategory.DEFAULT,
+                        TagSCMHeadCategory.DEFAULT,
+                        ChangeRequestSCMHeadCategory.DEFAULT
                 };
             }
         }

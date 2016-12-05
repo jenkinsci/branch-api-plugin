@@ -135,7 +135,7 @@ public class CategorizationTest {
                     contains(
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new UncategorizedSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(UncategorizedSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", contains(hasProperty("name", is("master"))))
                             )
                     )
@@ -165,12 +165,12 @@ public class CategorizationTest {
                     containsInAnyOrder(
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new UncategorizedSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(UncategorizedSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", contains(hasProperty("name", is("master"))))
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new ChangeRequestSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(ChangeRequestSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", contains(hasProperty("name", is("CR-" + crNum))))
                             )
                     ));
@@ -199,12 +199,12 @@ public class CategorizationTest {
                     containsInAnyOrder(
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new UncategorizedSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(UncategorizedSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", contains(hasProperty("name", is("master"))))
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new TagSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(TagSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", contains(hasProperty("name", is("master-1.0"))))
                             )
                     ));
@@ -233,17 +233,17 @@ public class CategorizationTest {
                     containsInAnyOrder(
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new UncategorizedSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(UncategorizedSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", emptyCollectionOf(Item.class))
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new TagSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(TagSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", contains(hasProperty("name", is("master-1.0"))))
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new ChangeRequestSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(ChangeRequestSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", contains(hasProperty("name", is("CR-" + crNum))))
                             )
                     ));
@@ -283,7 +283,7 @@ public class CategorizationTest {
                     containsInAnyOrder(
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new UncategorizedSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(UncategorizedSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", containsInAnyOrder(
                                             hasProperty("name", is("master")),
                                             hasProperty("name", is("feature"))
@@ -291,7 +291,7 @@ public class CategorizationTest {
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new TagSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(TagSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", containsInAnyOrder(
                                             hasProperty("name", is("master-1.0")),
                                             hasProperty("name", is("master-1.1"))
@@ -299,7 +299,7 @@ public class CategorizationTest {
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
-                                    hasProperty("viewName", is(new ChangeRequestSCMHeadCategory().getName())),
+                                    hasProperty("viewName", is(ChangeRequestSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", containsInAnyOrder(
                                             hasProperty("name", is("CR-" + crNum2)),
                                             hasProperty("name", is("CR-" + crNum1))
