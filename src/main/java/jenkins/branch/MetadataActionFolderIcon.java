@@ -89,7 +89,11 @@ public class MetadataActionFolderIcon extends FolderIcon {
                         return null;
                     }
                 } catch (IllegalArgumentException ignore) {
-                    // should never happen, but if it does we will just fall back to icon class name
+                    // This would be thrown by Util.isOverridden if the method does not exist, which
+                    // should never happen, as AvatarMetadataAction has the method (which we call)
+                    // if it was overridden (because if not overridden invoking the method will return
+                    // a non-null value based on the icon class name. We'd prefer to use the icon class
+                    // name rather than generating an image url, which is why we do the is overridden check
                 }
                 // otherwise the metadata doesn't want to control the icon, so fall back to the descriptor's default
             }

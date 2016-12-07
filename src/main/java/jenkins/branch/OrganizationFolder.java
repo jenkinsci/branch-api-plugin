@@ -1096,11 +1096,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          * Save the settings to a file.
          */
         @Override
-        public synchronized void save() throws IOException {
-            if (BulkChange.contains(this)) {
-                return;
+        public void save() throws IOException {
+            synchronized (this) {
+                if (BulkChange.contains(this)) {
+                    return;
+                }
+                getStateFile().write(this);
             }
-            getStateFile().write(this);
             SaveableListener.fireOnChange(this, getStateFile());
         }
 

@@ -900,9 +900,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
                     event.getTimestamp());
-            // not interested in removal as that needs to be handled by the computation in order to ensure that
-            // other sources do not want to take ownership and also to ensure that the dead branch strategy
-            // is enforced correctly
+            // not interested in removal of dead items as that needs to be handled by the computation in order
+            // to ensure that other sources do not want to take ownership and also to ensure that the dead branch
+            // strategy is enforced correctly
             if (SCMEvent.Type.CREATED == event.getType()) {
                 for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
                     boolean haveMatch = false;
@@ -1500,11 +1500,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * {@inheritDoc}
          */
         @Override
-        public synchronized void save() throws IOException {
-            if (BulkChange.contains(this)) {
-                return;
+        public void save() throws IOException {
+            synchronized (this) {
+                if (BulkChange.contains(this)) {
+                    return;
+                }
+                getStateFile().write(this);
             }
-            getStateFile().write(this);
             SaveableListener.fireOnChange(this, getStateFile());
         }
 

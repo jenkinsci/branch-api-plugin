@@ -84,7 +84,7 @@ public abstract class ParameterDefinitionBranchProperty extends BranchProperty {
      * <p>
      * As all {@link Job} types support {@link JobProperty} and {@link ParametersDefinitionProperty} will work
      * with anything that implements {@link ParameterizedJobMixIn.ParameterizedJob}, the default implementation
-     * which checks for both of these interfaces, should suffice for all. If you need to appliy additiona specification
+     * which checks for both of these interfaces, should suffice for all. If you need to apply additional specification
      * then you can override to tighten the criteria.
      *
      * @param <P>   the type of the branch specific child job.

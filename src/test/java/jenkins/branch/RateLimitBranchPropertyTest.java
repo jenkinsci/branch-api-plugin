@@ -158,7 +158,7 @@ public class RateLimitBranchPropertyTest {
             Queue.getInstance().maintain();
             assertThat(master.getQueueItem().isBlocked(), is(true));
             assertThat(master.getQueueItem().getCauseOfBlockage().getShortDescription().toLowerCase(),
- containsString("throttle"));
+                    containsString("throttle"));
 
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s
@@ -217,7 +217,9 @@ public class RateLimitBranchPropertyTest {
             assertThat(master.isInQueue(), is(false));
             assertThat(master.getQueueItem(), nullValue());
             QueueTaskFuture<FreeStyleBuild> future = master.scheduleBuild2(0);
-            QueueTaskFuture<FreeStyleBuild> future2 = master.scheduleBuild2(0, (Cause)null, (Action)new ParametersAction(Collections.<ParameterValue>singletonList(new StringParameterValue("FOO", "MANCHU"))));
+            QueueTaskFuture<FreeStyleBuild> future2 = master.scheduleBuild2(0, (Cause) null,
+                    (Action) new ParametersAction(
+                            Collections.<ParameterValue>singletonList(new StringParameterValue("FOO", "MANCHU"))));
             assertThat(future, not(is(future2)));
 
             // let the item get added to the queue
@@ -233,7 +235,7 @@ public class RateLimitBranchPropertyTest {
             Queue.getInstance().maintain();
             assertThat(master.getQueueItem().isBlocked(), is(true));
             assertThat(master.getQueueItem().getCauseOfBlockage().getShortDescription().toLowerCase(),
- containsString("throttle"));
+                    containsString("throttle"));
 
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s
