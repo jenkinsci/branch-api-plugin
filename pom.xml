@@ -87,7 +87,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>scm-api</artifactId>
-      <version>2.0-SNAPSHOT</version>
+      <version>2.0</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -157,7 +157,7 @@
         <groupId>org.jenkins-ci.tools</groupId>
         <artifactId>maven-hpi-plugin</artifactId>
         <configuration>
-          <compatibleSinceVersion>1.11</compatibleSinceVersion>
+          <compatibleSinceVersion>2.0</compatibleSinceVersion>
         </configuration>
       </plugin>
     </plugins>
