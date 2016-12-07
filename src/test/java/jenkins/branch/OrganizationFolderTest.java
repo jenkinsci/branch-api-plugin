@@ -45,6 +45,8 @@ import java.util.logging.SimpleFormatter;
 
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMSource;
+import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -82,12 +84,15 @@ public class OrganizationFolderTest {
     @Test
     @Issue("JENKINS-31516")
     public void indexChildrenOnOrganizationFolderIndex() throws Exception {
-        OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
-        top = r.configRoundtrip(top);
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("stuff");
+            OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
+            top.getNavigators().add(new MockSCMNavigator(c, true, true, true));
+            top = r.configRoundtrip(top);
 
-        top.scheduleBuild(0);
-        assertTrue(MultiBranchImpl.awaitIndexed(top, "stuff", 15, TimeUnit.SECONDS));
+            top.scheduleBuild(0);
+            assertTrue(MultiBranchImpl.awaitIndexed(top, "stuff", 15, TimeUnit.SECONDS));
+        }
     }
 
     @Issue("JENKINS-32782")
