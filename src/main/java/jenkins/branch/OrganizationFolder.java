@@ -956,24 +956,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
                 private boolean recognizes(Map<String, Object> attributes, MultiBranchProjectFactory candidateFactory)
                         throws IOException, InterruptedException {
-                    if (event == null) {
-                        return candidateFactory.recognizes(
-                                OrganizationFolder.this,
-                                projectName,
-                                sources,
-                                attributes,
-                                listener
-                        );
-                    } else {
-                        return candidateFactory
-                                .recognizes(
-                                        OrganizationFolder.this,
-                                        projectName,
-                                        sources,
-                                        attributes,
-                                        event,
-                                        listener);
-                    }
+                    return candidateFactory.recognizes(
+                                    OrganizationFolder.this,
+                                    projectName,
+                                    sources,
+                                    attributes,
+                                    event,
+                                    listener);
                 }
 
                 @Override

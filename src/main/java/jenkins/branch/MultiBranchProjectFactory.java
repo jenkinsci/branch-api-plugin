@@ -52,6 +52,8 @@ import jenkins.scm.api.SCMSourceCriteria;
 public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<MultiBranchProjectFactory>
         implements ExtensionPoint {
 
+    // TODO refactor this class to use a clean API/SPI separation
+
     /**
      * Determines whether this factory recognizes a given configuration.
      *
@@ -70,12 +72,7 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
     public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
                               @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String, Object> attributes,
                               @NonNull TaskListener listener) throws IOException, InterruptedException {
-        if (Util.isOverridden(MultiBranchProjectFactory.class, getClass(), "createProject", ItemGroup.class,
-                String.class, List.class, Map.class, TaskListener.class)) {
-            return createProject(parent, name, scmSources, attributes, listener) != null;
-        } else {
-            throw new AbstractMethodError(getClass().getName() + " must override recognizes");
-        }
+        return recognizes(parent, name, scmSources, attributes, null, listener);
     }
 
     /**
@@ -96,9 +93,18 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      */
     public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
                               @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String, Object> attributes,
-                              @NonNull SCMHeadEvent<?> event,
+                              @CheckForNull SCMHeadEvent<?> event,
                               @NonNull TaskListener listener) throws IOException, InterruptedException {
-        return recognizes(parent, name, scmSources, attributes, listener);
+        if (Util.isOverridden(MultiBranchProjectFactory.class, getClass(), "recognizes", ItemGroup.class,
+                String.class, List.class, Map.class, TaskListener.class)) {
+            return recognizes(parent, name, scmSources, attributes, listener);
+        } else if (Util.isOverridden(MultiBranchProjectFactory.class, getClass(), "createProject", ItemGroup.class,
+                String.class, List.class, Map.class, TaskListener.class)) {
+            return createProject(parent, name, scmSources, attributes, listener) != null;
+        } else {
+            throw new AbstractMethodError(getClass().getName()
+                    + " must override recognizes(ItemGroup,String,Map,SCMHeadEvent,TaskListener)");
+        }
     }
 
     /**
@@ -237,13 +243,7 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
                                   @NonNull Map<String, Object> attributes,
                                   @NonNull TaskListener listener)
                 throws IOException, InterruptedException {
-            for (final SCMSource scmSource : scmSources) {
-                if (scmSource.fetch(getSCMSourceCriteria(scmSource), SCMHeadObserver.any(), listener).getRevision()
-                        != null) {
-                    return true;
-                }
-            }
-            return false;
+            return recognizes(parent, name, scmSources, attributes, null, listener);
         }
 
         /**
@@ -253,7 +253,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
         public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
                                   @NonNull List<? extends SCMSource> scmSources,
                                   @NonNull Map<String, Object> attributes,
-                                  @NonNull SCMHeadEvent<?> event, @NonNull TaskListener listener)
+                                  @CheckForNull SCMHeadEvent<?> event,
+                                  @NonNull TaskListener listener)
                 throws IOException, InterruptedException {
             for (final SCMSource scmSource : scmSources) {
                 if (scmSource.fetch(getSCMSourceCriteria(scmSource), SCMHeadObserver.any(), event, listener)
