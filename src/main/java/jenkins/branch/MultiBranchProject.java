@@ -936,11 +936,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         try {
                             for (SCMSource source : p.getSCMSources()) {
                                 if (event.isMatch(source)) {
-                                    source.fetch(p.getSCMSourceCriteria(source), p.new SCMHeadObserverImpl(
+                                    source.fetch(
+                                            p.getSCMSourceCriteria(source),
+                                            p.new SCMHeadObserverImpl(
                                                     source,
                                                     childObserver,
                                                     listener,
-                                                    _factory, new EventCauseFactory(event), event), event,
+                                                    _factory,
+                                                    new EventCauseFactory(event),
+                                                    event),
+                                            event,
                                             listener
                                     );
                                 }
@@ -967,16 +972,21 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             if (branch instanceof Branch.Dead) {
                                 // try to bring back from the dead by checking all sources in sequence
                                 // the first to match the event and that contains the head wins!
-                                for (SCMSource src : p.getSCMSources()) {
+                                SOURCES: for (SCMSource src : p.getSCMSources()) {
                                     if (!event.isMatch(src)) {
                                         continue;
                                     }
                                     Map<SCMHead, SCMRevision> revisionMap = event.heads(src);
                                     SCMHead head = branch.getHead();
-                                    if (revisionMap.containsKey(head)) {
-                                        matches.put(src, head);
-                                        jobs.add(i);
-                                        break;
+                                    for (SCMHead h: revisionMap.keySet()) {
+                                        // for bringing back from the dead we need to check the name as it could be
+                                        // back from the dead on a different source from original
+                                        if (h.getName().equals(head.getName())) {
+                                            LOGGER.log(Level.INFO, "Found match against {0}", i.getFullName());
+                                            matches.put(src, head);
+                                            jobs.add(i);
+                                            break SOURCES;
+                                        }
                                     }
                                 }
                             } else {
@@ -986,7 +996,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 }
                                 Map<SCMHead, SCMRevision> revisionMap = event.heads(src);
                                 SCMHead head = branch.getHead();
-                                if (revisionMap.containsKey(head)) {
+                                // The distinguishing key for branch projects is the name, so check on the name
+                                boolean match = false;
+                                for (SCMHead h: revisionMap.keySet()) {
+                                    if (h.getName().equals(head.getName())) {
+                                        match = true;
+                                        break;
+                                    }
+                                }
+                                if (match) {
+                                    LOGGER.log(Level.INFO, "Found match against {0}", i.getFullName());
                                     if (SCMEvent.Type.UPDATED == event.getType()) {
                                         SCMRevision revision = revisionMap.get(head);
                                         if (revision != null && revision.isDeterministic()) {
@@ -1020,15 +1039,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
                                 m.getKey().fetch(
                                         p.getSCMSourceCriteria(m.getKey()),
-                                        SCMHeadObserver.filter(
-                                                p.new SCMHeadObserverImpl(
-                                                        m.getKey(),
-                                                        childObserver,
-                                                        listener,
-                                                        _factory, new EventCauseFactory(event),
-                                                        event),
-                                                m.getValue()
-                                        ),
+                                        p.new SCMHeadObserverImpl(
+                                                m.getKey(),
+                                                childObserver,
+                                                listener,
+                                                _factory,
+                                                new EventCauseFactory(event),
+                                                event),
+                                        event,
                                         listener
                                 );
                             }
@@ -1098,12 +1116,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 for (SCMSource source : p.getSCMSources()) {
                                     if (event.isMatch(source)) {
                                         source.fetch(
-                                                p.getSCMSourceCriteria(source), p.new SCMHeadObserverImpl(
+                                                p.getSCMSourceCriteria(source),
+                                                p.new SCMHeadObserverImpl(
                                                         source,
                                                         childObserver,
                                                         listener,
-                                                        _factory, new EventCauseFactory(event),
-                                                        event), event,
+                                                        _factory,
+                                                        new EventCauseFactory(event),
+                                                        event
+                                                ),
+                                                event,
                                                 listener
                                         );
                                     }
