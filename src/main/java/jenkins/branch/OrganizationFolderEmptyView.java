@@ -9,7 +9,7 @@ import hudson.model.ViewGroup;
  */
 public class OrganizationFolderEmptyView extends BaseEmptyView {
     /**
-     * Constructor
+     * {@inheritDoc}
      */
     public OrganizationFolderEmptyView(ViewGroup owner) {
         super(owner);

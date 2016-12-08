@@ -16,11 +16,25 @@ import org.kohsuke.stapler.StaplerResponse;
  * Holds the basic 'empty view' parent
  */
 public class BaseEmptyView extends View {
+
     /**
-     * Constructor
+     * The empty view name
+     */
+    public static final String VIEW_NAME = "welcome";
+
+    /**
+     * {@inheritDoc}
      */
     public BaseEmptyView(ViewGroup owner) {
-        super("Welcome", owner);
+        super(VIEW_NAME, owner);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getDisplayName() {
+        return Messages.BaseEmptyView_displayName();
     }
 
     /**

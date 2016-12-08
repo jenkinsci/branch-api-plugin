@@ -28,7 +28,6 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
-
 import java.util.ArrayList;
 import java.util.List;
 import org.kohsuke.accmod.Restricted;
@@ -65,7 +64,8 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
 
     /**
      * All the registered {@link BranchPropertyDescriptor}s.
-     * Probably unused.
+     *
+     * @return All the registered {@link BranchPropertyDescriptor}s.
      */
     public static List<BranchPropertyDescriptor> all() {
         return ExtensionList.lookup(BranchPropertyDescriptor.class);
@@ -94,6 +94,9 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
     @Extension
     public static final class Visibility extends DescriptorVisibilityFilter {
 
+        /**
+         * {@inheritDoc}
+         */
         @SuppressWarnings("rawtypes")
         @Override
         public boolean filter(Object context, Descriptor descriptor) {

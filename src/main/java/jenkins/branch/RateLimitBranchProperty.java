@@ -40,6 +40,8 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.jvnet.localizer.ResourceBundleHolder;
@@ -54,6 +56,11 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 @SuppressWarnings("unused") // instantiated by stapler
 public class RateLimitBranchProperty extends BranchProperty {
+
+    /**
+     * Our logger.
+     */
+    private static final Logger LOGGER = Logger.getLogger(RateLimitBranchProperty.class.getName());
 
     /**
      * The durations that we know about.
@@ -87,6 +94,9 @@ public class RateLimitBranchProperty extends BranchProperty {
 
     /**
      * Constructor for stapler.
+     *
+     * @param count        the maximum builds within the duration.
+     * @param durationName the name of the duration.
      */
     @DataBoundConstructor
     @SuppressWarnings("unused") // instantiated by stapler
@@ -115,6 +125,9 @@ public class RateLimitBranchProperty extends BranchProperty {
         return durationName;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(
             Class<P> jobType) {
@@ -149,7 +162,9 @@ public class RateLimitBranchProperty extends BranchProperty {
         }
 
         /**
-         * Fill the duration names
+         * Fill the duration names.
+         *
+         * @return the duration names.
          */
         @SuppressWarnings("unused") // by stapler
         public ListBoxModel doFillDurationNameItems() {
@@ -158,7 +173,11 @@ public class RateLimitBranchProperty extends BranchProperty {
         }
 
         /**
-         * Check the count
+         * Check the count.
+         *
+         * @param value        the count.
+         * @param durationName the duration name.
+         * @return the form validation.
          */
         public FormValidation doCheckCount(@QueryParameter int value, @QueryParameter String durationName) {
             return Jenkins.getActiveInstance().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
@@ -181,6 +200,12 @@ public class RateLimitBranchProperty extends BranchProperty {
          */
         private final int count;
 
+        /**
+         * Constructor for stapler.
+         *
+         * @param count        the maximum builds within the duration.
+         * @param durationName the name of the duration.
+         */
         @DataBoundConstructor
         public Throttle(int count, String durationName) {
             this.count = Math.min(Math.max(0, count), 1000);
@@ -229,6 +254,11 @@ public class RateLimitBranchProperty extends BranchProperty {
          */
         private transient Throttle throttle;
 
+        /**
+         * Constructor.
+         *
+         * @param throttle the throttle.
+         */
         @DataBoundConstructor
         public JobPropertyImpl(Throttle throttle) {
             this.throttle = throttle;
@@ -316,6 +346,8 @@ public class RateLimitBranchProperty extends BranchProperty {
 
             /**
              * Fill the duration names
+             *
+             * @return the duration names.
              */
             @SuppressWarnings("unused") // by stapler
             public ListBoxModel doFillDurationNameItems() {
@@ -330,6 +362,10 @@ public class RateLimitBranchProperty extends BranchProperty {
 
             /**
              * Check the count
+             *
+             * @param value        the count.
+             * @param durationName the duration name.
+             * @return the form validation.
              */
             public FormValidation doCheckCount(@QueryParameter int value, @QueryParameter String durationName) {
                 long duration =
@@ -344,25 +380,25 @@ public class RateLimitBranchProperty extends BranchProperty {
                 if (interval < TimeUnit2.MINUTES.toMillis(1)) {
                     return FormValidation.ok(
                             Messages.RateLimitBranchProperty_ApproxSecsBetweenBuilds(
-                                            TimeUnit2.MILLISECONDS.toSeconds(interval)));
+                                    TimeUnit2.MILLISECONDS.toSeconds(interval)));
                 }
                 if (interval < TimeUnit2.HOURS.toMillis(2)) {
                     return FormValidation.ok(
                             Messages.RateLimitBranchProperty_ApproxMinsBetweenBuilds(
-                                            TimeUnit2.MILLISECONDS.toMinutes(interval)));
+                                    TimeUnit2.MILLISECONDS.toMinutes(interval)));
                 }
                 if (interval < TimeUnit2.DAYS.toMillis(2)) {
                     return FormValidation.ok(
                             Messages.RateLimitBranchProperty_ApproxHoursBetweenBuilds(
-                                            TimeUnit2.MILLISECONDS.toHours(interval)));
+                                    TimeUnit2.MILLISECONDS.toHours(interval)));
                 }
                 if (interval < TimeUnit2.DAYS.toMillis(14)) {
                     return FormValidation.ok(
-                                    Messages.RateLimitBranchProperty_ApproxDaysBetweenBuilds(
-                                            TimeUnit2.MILLISECONDS.toDays(interval)));
+                            Messages.RateLimitBranchProperty_ApproxDaysBetweenBuilds(
+                                    TimeUnit2.MILLISECONDS.toDays(interval)));
                 }
                 return FormValidation.ok(Messages.RateLimitBranchProperty_ApproxWeeksBetweenBuilds(
-                                TimeUnit2.MILLISECONDS.toDays(interval) / 7));
+                        TimeUnit2.MILLISECONDS.toDays(interval) / 7));
             }
         }
     }
@@ -379,16 +415,57 @@ public class RateLimitBranchProperty extends BranchProperty {
         @Override
         public CauseOfBlockage canRun(Queue.Item item) {
             if (item.task instanceof Job) {
-                Job<?,?> job = (Job) item.task;
+                Job<?, ?> job = (Job) item.task;
                 JobPropertyImpl property = job.getProperty(JobPropertyImpl.class);
                 if (property != null) {
+                    LOGGER.log(Level.FINER, "{0} has a rate limit of {1} builds per {2}",
+                            new Object[]{
+                                    job.getFullName(),
+                                    property.getCount(),
+                                    property.getDurationName()
+                            }
+                    );
                     Run lastBuild = job.getLastBuild();
                     if (lastBuild != null) {
+                        // we don't mind if the project type allows concurrent builds
+                        // we assume that the last build was started at a time that respects the rate
+                        // thus the next build to start will start such that the time between starts matches the rate
+                        // it doesn't matter if the duration of the build is longer than the time between starts
+                        // only that we linearise the starts and keep a consistent minimum duration between *starts*
                         long timeSinceLastBuild = System.currentTimeMillis() - lastBuild.getTimeInMillis();
                         long betweenBuilds = property.getMillisecondsBetweenBuilds();
                         if (timeSinceLastBuild < betweenBuilds) {
+                            LOGGER.log(Level.FINE, "{0} will be delayed for another {1}ms as it is {2}ms since "
+                                            + "last build and ideal rate is {3}ms between builds",
+                                    new Object[]{
+                                            job.getFullName(),
+                                            betweenBuilds - timeSinceLastBuild,
+                                            timeSinceLastBuild,
+                                            betweenBuilds
+                                    }
+                            );
                             return CauseOfBlockage.fromMessage(Messages._RateLimitBranchProperty_BuildBlocked(
                                     new Date(lastBuild.getTimeInMillis() + betweenBuilds))
+                            );
+                        }
+                    }
+                    // ensure items leave the queue in the order they were scheduled
+                    List<Queue.Item> items = Jenkins.getActiveInstance().getQueue().getItems(item.task);
+                    if (items.size() == 1 && item == items.get(0)) {
+                        return null;
+                    }
+                    for (Queue.Item i : items) {
+                        if (i.getId() < item.getId()) {
+                            LOGGER.log(Level.FINE, "{0} with queue id {1} blocked by queue id {2} was first",
+                                    new Object[]{
+                                            job.getFullName(),
+                                            item.getId(),
+                                            i.getId()
+                                    }
+                            );
+                            long betweenBuilds = property.getMillisecondsBetweenBuilds();
+                            return CauseOfBlockage.fromMessage(Messages._RateLimitBranchProperty_BuildBlocked(
+                                    new Date(System.currentTimeMillis() + betweenBuilds))
                             );
                         }
                     }

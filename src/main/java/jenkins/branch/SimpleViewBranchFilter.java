@@ -13,7 +13,7 @@ import java.util.List;
  * Base class for a {@link ViewJobFilter} that will filter based on the {@link Branch} that a job in a
  * {@link MultiBranchProject} belongs to.
  *
- * @since FIXME
+ * @since 2.0
  */
 public abstract class SimpleViewBranchFilter extends ViewJobFilter {
 

@@ -32,7 +32,7 @@ import hudson.model.ViewGroup;
  */
 public class MultiBranchProjectEmptyView extends BaseEmptyView {
     /**
-     * Constructor
+     * {@inheritDoc}
      */
     public MultiBranchProjectEmptyView(ViewGroup owner) {
         super(owner);

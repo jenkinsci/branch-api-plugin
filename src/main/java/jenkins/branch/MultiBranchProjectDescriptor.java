@@ -24,15 +24,20 @@
 package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
+import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
+import hudson.model.Job;
 import hudson.model.TopLevelItemDescriptor;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.jvnet.tiger_types.Types;
 
 /**
  * <p>The {@link Descriptor} for {@link MultiBranchProject}s.</p>
@@ -53,6 +58,83 @@ import java.util.List;
  * @author Stephen Connolly
  */
 public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescriptor {
+
+    /**
+     * The base class of the projects that are produced by this factory.
+     *
+     * @since 2.0
+     */
+    @NonNull
+    private final Class<? extends Job> projectClass;
+
+    /**
+     * Explicit constructor to use when type inference fails.
+     *
+     * @param clazz        the {@link MultiBranchProject} that this descriptor is for.
+     * @param projectClass the {@link Job} type that the {@link MultiBranchProject} creates.
+     * @since 2.0
+     */
+    protected MultiBranchProjectDescriptor(Class<? extends MultiBranchProject<?, ?>> clazz,
+                                           Class<? extends Job> projectClass) {
+        super(clazz);
+        this.projectClass = projectClass;
+    }
+
+    /**
+     * Semi explicit constructor to use when the descriptor is not an inner class of the {@link MultiBranchProject}.
+     *
+     * @param clazz the {@link MultiBranchProject} that this descriptor is for.
+     * @since 2.0
+     */
+    protected MultiBranchProjectDescriptor(Class<? extends MultiBranchProject<?, ?>> clazz) {
+        super(clazz);
+        projectClass = inferProjectClass(clazz);
+    }
+
+    /**
+     * Fully inferring constructor to use when the descriptor is an inner class of the {@link MultiBranchProject}
+     * and type parameter inference works because it just should work.
+     *
+     * @since 2.0
+     */
+    protected MultiBranchProjectDescriptor() {
+        super();
+        projectClass = inferProjectClass((Class) clazz);
+    }
+
+    /**
+     * Infers the base class of projects that the specified {@link MultiBranchProject} creates.
+     *
+     * @param clazz the specified {@link MultiBranchProject}.
+     * @return the base class of project that the specified {@link MultiBranchProject} creates.
+     */
+    private static Class<? extends Job> inferProjectClass(Class<? extends MultiBranchProject> clazz) {
+        Type bt = Types.getBaseClass(clazz, MultiBranchProject.class);
+        if (bt instanceof ParameterizedType) {
+            ParameterizedType pt = (ParameterizedType) bt;
+            // this 'p' is the closest approximation of P of MultiBranchProject<P,R>.
+            Class p = Types.erasure(pt.getActualTypeArguments()[0]);
+            if (!Job.class.isAssignableFrom(p)) {
+                throw new AssertionError(
+                        "Cannot infer job type produced by " + clazz + " perhaps use the explicit constructor");
+            }
+            return p;
+        } else {
+            throw new AssertionError(
+                    "Cannot infer job type produced by " + clazz + " perhaps use the explicit constructor");
+        }
+    }
+
+    /**
+     * Returns the base class of the projects that are produced by this factory.
+     *
+     * @return the base class of the projects that are produced by this factory.
+     * @since 2.0
+     */
+    @NonNull
+    public Class<? extends Job> getProjectClass() {
+        return projectClass;
+    }
 
     /**
      * We have to extend {@link TopLevelItemDescriptor} but we want to be able to access {@link #clazz} as a
@@ -89,7 +171,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     public List<BranchProjectFactoryDescriptor> getProjectFactoryDescriptors() {
         List<BranchProjectFactoryDescriptor> result = new ArrayList<BranchProjectFactoryDescriptor>();
         for (BranchProjectFactoryDescriptor descriptor : ExtensionList.lookup(BranchProjectFactoryDescriptor.class)) {
-            if (descriptor.isApplicable(getClazz())) {
+            if (descriptor.isApplicable(getClazz()) && descriptor.getProjectClass().isAssignableFrom(getProjectClass())) {
                 result.add(descriptor);
             }
         }
@@ -105,5 +187,23 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     @NonNull
     public Descriptor<BranchSource> getBranchSourceDescriptor() {
         return Jenkins.getActiveInstance().getDescriptorOrDie(BranchSource.class);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<FolderIconDescriptor> getIconDescriptors() {
+        return Collections.<FolderIconDescriptor>singletonList(
+                Jenkins.getActiveInstance().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class)
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isIconConfigurable() {
+        return false;
     }
 }

@@ -28,10 +28,10 @@ THE SOFTWARE.
     <j:set var="url" value="${it.indexingUrl}"/>
     <j:choose>
         <j:when test="${url != null}">
-            <a href="${rootURL}/${url}console">Branch indexing</a>
+          <a href="${rootURL}/${url}console">${%Branch indexing}</a>
         </j:when>
         <j:otherwise>
-            Branch indexing
+          ${%Branch indexing}
         </j:otherwise>
     </j:choose>
 </j:jelly>

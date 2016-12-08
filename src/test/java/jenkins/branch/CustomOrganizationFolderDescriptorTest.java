@@ -30,9 +30,9 @@ import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Items;
 import hudson.model.TopLevelItemDescriptor;
 import hudson.model.View;
+import integration.harness.BasicMultiBranchProjectFactory;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
@@ -40,7 +40,8 @@ import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.impl.SingleSCMNavigator;
-import static org.junit.Assert.*;
+import jenkins.scm.impl.mock.MockSCMNavigator;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
@@ -48,26 +49,42 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.TestExtension;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+
 public class CustomOrganizationFolderDescriptorTest {
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
     @Rule
     public LoggerRule logger = new LoggerRule().record(CustomOrganizationFolderDescriptor.class, Level.ALL);
+
+    @Before
+    public void removeIntegrationTestMocks() throws Exception {
+        assertTrue(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).remove(ExtensionList.lookup(
+                MultiBranchProjectFactoryDescriptor.class).get(
+                BasicMultiBranchProjectFactory.DescriptorImpl.class)));
+        assertTrue(ExtensionList.lookup(SCMNavigatorDescriptor.class)
+                .remove(ExtensionList.lookup(SCMNavigatorDescriptor.class).get(
+                        MockSCMNavigator.DescriptorImpl.class)));
+    }
     
     @Test
     public void noNavigatorNoFactoryInstalled() throws Exception {
         assertEquals(1, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
         assertEquals(SingleSCMNavigator.DescriptorImpl.class, ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass());
         assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
-        assertEquals(Collections.emptyList(), newItemTypes());
+        assertThat(newItemTypes(), containsInAnyOrder());
     }
 
     @Test
     public void someNavigatorNoFactoryInstalled() throws Exception {
         assertEquals(2, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
         assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
-        assertEquals(Collections.emptyList(), newItemTypes());
+        assertThat(newItemTypes(), containsInAnyOrder());
     }
     @TestExtension("someNavigatorNoFactoryInstalled")
     public static class SomeNavigatorNoFactoryInstalledDescriptor extends MockNavigatorDescriptor {}
@@ -77,7 +94,7 @@ public class CustomOrganizationFolderDescriptorTest {
         assertEquals(1, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
         assertEquals(SingleSCMNavigator.DescriptorImpl.class, ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass());
         assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
-        assertEquals(Collections.emptyList(), newItemTypes());
+        assertThat(newItemTypes(), containsInAnyOrder());
     }
     @TestExtension("noNavigatorSomeFactoryInstalled")
     public static class NoNavigatorSomeFactoryInstalledDescriptor extends OrganizationFolderTest.MockFactoryDescriptor {}
@@ -86,7 +103,7 @@ public class CustomOrganizationFolderDescriptorTest {
     public void someNavigatorSomeFactoryInstalled() throws Exception {
         assertEquals(2, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
         assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
-        assertEquals(Collections.singletonList("MockNavigator"), newItemTypes());
+        assertThat(newItemTypes(), containsInAnyOrder("MockNavigator"));
     }
     @TestExtension("someNavigatorSomeFactoryInstalled")
     public static class SomeNavigatorSomeFactoryInstalledDescriptor1 extends MockNavigatorDescriptor {}
@@ -100,7 +117,7 @@ public class CustomOrganizationFolderDescriptorTest {
         assertEquals(Collections.emptyList(), newItemTypes());
         ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
         ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
-        assertEquals(Collections.singletonList("MockNavigator"), newItemTypes());
+        assertThat(newItemTypes(), containsInAnyOrder("MockNavigator"));
     }
 
     @Issue("JENKINS-34239")
@@ -110,7 +127,7 @@ public class CustomOrganizationFolderDescriptorTest {
         assertEquals(Collections.emptyList(), newItemTypes());
         ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
         ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
-        assertEquals(Collections.singletonList("MockNavigator"), newItemTypes());
+        assertThat(newItemTypes(), containsInAnyOrder("MockNavigator"));
     }
 
     @Issue("JENKINS-39520")
@@ -121,7 +138,8 @@ public class CustomOrganizationFolderDescriptorTest {
         ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorNoFactoryInstalledDescriptor());
         ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
         ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
-        assertEquals(Arrays.asList("MockNavigator", "MockNavigator"), newItemTypes());
+        assertThat("When there is more than one navigator then the generic organization folder makes sense to show",
+                newItemTypes(), containsInAnyOrder("MockNavigator", "MockNavigator", "Organization Folder"));
     }
 
     @Issue("JENKINS-31949")
@@ -134,7 +152,7 @@ public class CustomOrganizationFolderDescriptorTest {
                 names.add(d.getDisplayName());
             }
         }
-        assertEquals(Collections.emptyList(), names);
+        assertThat(names, containsInAnyOrder());
     }
 
     private static class MockNavigator extends SCMNavigator {

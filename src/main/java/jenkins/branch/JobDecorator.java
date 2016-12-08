@@ -67,6 +67,7 @@ public class JobDecorator<P extends Job<P, B>, B extends Run<P, B>> {
      * prove insufficient.
      *
      * @param project the project.
+     * @return the supplied project for method chaining.
      */
     @NonNull
     public P project(@NonNull P project) {
