@@ -258,7 +258,15 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             listener.getLogger().format("[%tc] Updating actions...%n", System.currentTimeMillis());
             Map<SCMNavigator, List<Action>> navigatorActions = new HashMap<>();
             for (SCMNavigator navigator : navigators) {
-                navigatorActions.put(navigator, navigator.fetchActions(this, null, listener));
+                List<Action> actions;
+                try {
+                    actions = navigator.fetchActions(this, null, listener);
+                } catch (IOException e) {
+                    e.printStackTrace(listener.error("Could not refresh actions for navigator"));
+                    // preserve previous actions if we have some transient error fetching now (e.g. API rate limit)
+                    actions = Util.fixNull(state.getActions().get(navigator));
+                }
+                navigatorActions.put(navigator, actions);
             }
             // update any persistent actions for the SCMNavigator
             if (!navigatorActions.equals(state.getActions())) {

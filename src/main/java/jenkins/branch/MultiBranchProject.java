@@ -1177,8 +1177,18 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         try {
                             Map<String, List<Action>> stateActions = new HashMap<>();
                             for (SCMSource source : scmSources) {
-                                List<Action> newActions = source.fetchActions(event, listener);
                                 List<Action> oldActions = p.state.sourceActions.get(source.getId());
+                                List<Action> newActions;
+                                try {
+                                    newActions = source.fetchActions(event, listener);
+                                } catch (IOException e) {
+                                    e.printStackTrace(listener.error("Could not refresh actions for source %s",
+                                            source.getId()
+                                    ));
+                                    // preserve previous actions if we have some transient error fetching now (e.g.
+                                    // API rate limit)
+                                    newActions = oldActions;
+                                }
                                 if (oldActions == null || !oldActions.equals(newActions)) {
                                     stateActions.put(source.getId(), newActions);
                                 }
