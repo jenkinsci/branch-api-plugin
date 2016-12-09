@@ -34,6 +34,7 @@ import integration.harness.BasicSCMSourceCriteria;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import jenkins.branch.Branch;
 import jenkins.branch.BranchSource;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.OrganizationFolder;
@@ -45,8 +46,6 @@ import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMSource;
 import jenkins.scm.impl.mock.MockSCMSourceEvent;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -58,6 +57,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -1001,6 +1001,211 @@ public class EventsTest {
                             hasProperty("name", is("master"))
                     )
             );
+        }
+    }
+
+    @Test
+    public void given_multibranchWithSourcesAndDeadBranch_when_eventForBranchResurrection_then_branchIsBuilt()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createBranch("foo", "feature");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            FreeStyleProject master = prj.getItem("master");
+            FreeStyleProject feature = prj.getItem("feature");
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertThat("The feature branch was built", feature.getLastBuild(), notNullValue());
+            assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
+
+            c.deleteBranch("foo", "feature");
+            fire(new MockSCMHeadEvent(SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
+            assertThat("Feature branch is disabled", feature.isDisabled(), is(true));
+            assertThat("Feature branch is dead", prj.getProjectFactory().getBranch(feature), instanceOf(Branch.Dead.class));
+
+            c.createBranch("foo", "feature");
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "feature", "junkHash"));
+            assertThat("Feature branch is resurrected", feature.isDisabled(), is(false));
+            assertThat("Feature branch is resurrected", prj.getProjectFactory().getBranch(feature),
+                    not(instanceOf(Branch.Dead.class)));
+            r.waitUntilNoActivity();
+            assertThat("The feature branch was rebuilt", feature.getLastBuild().getNumber(), is(2));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithSourcesCriteriaAndDeadBranch_when_eventForBranchResurrection_then_branchIsBuilt()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.addFile("foo", "master", "marker", "marker.txt", "build me".getBytes());
+            c.cloneBranch("foo", "master", "feature");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            FreeStyleProject master = prj.getItem("master");
+            FreeStyleProject feature = prj.getItem("feature");
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertThat("The feature branch was built", feature.getLastBuild(), notNullValue());
+            assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
+
+            c.rmFile("foo", "feature", "remove marker", "marker.txt");
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            assertThat("Feature branch is disabled", feature.isDisabled(), is(true));
+
+            c.addFile("foo", "feature", "marker", "marker.txt", "build me again".getBytes());
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            assertThat("Feature branch is resurrected", feature.isDisabled(), is(false));
+            r.waitUntilNoActivity();
+            assertThat("The feature branch was rebuilt", feature.getLastBuild().getNumber(), is(2));
+        }
+    }
+
+    @Test
+    public void given_multibranchWith2Sources_when_eventForBranchOnHigherSource_then_branchTakeover()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.cloneBranch("bar", "master", "feature");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", true, false, false)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("Master branch is from first source",
+                    prj.getProjectFactory().getBranch(master).getSourceId(),
+                    is("foo:id"));
+            FreeStyleProject feature = prj.getItem("feature");
+            assertThat("Feature branch is from second source",
+                    prj.getProjectFactory().getBranch(feature).getSourceId(),
+                    is("bar:id"));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertThat("The feature branch was built", feature.getLastBuild(), notNullValue());
+            assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
+
+            c.createBranch("foo", "feature");
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "feature", "junkHash"));
+            assertThat("Feature branch takeover by higher priority source",
+                    prj.getProjectFactory().getBranch(feature).getSourceId(),
+                    is("foo:id"));
+            r.waitUntilNoActivity();
+            assertThat("The feature branch was rebuilt", feature.getLastBuild().getNumber(), is(2));
+        }
+    }
+
+    @Test
+    public void given_multibranchWith2SourcesAndCriteria_when_firstSourceDoesntHaveBranchAndSecondSourceHasMatch_then_branchPresent()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.addFile("foo", "master", "marker", "marker.txt", "build me".getBytes());
+            c.addFile("bar", "master", "marker", "marker.txt", "build me".getBytes());
+            c.cloneBranch("bar", "master","feature");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", true, false, false)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("Master branch is from first source",
+                    prj.getProjectFactory().getBranch(master).getSourceId(),
+                    is("foo:id"));
+            FreeStyleProject feature = prj.getItem("feature");
+            assertThat("Feature branch is from second source",
+                    prj.getProjectFactory().getBranch(feature).getSourceId(),
+                    is("bar:id"));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertThat("The feature branch was built", feature.getLastBuild(), notNullValue());
+            assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranchWith2SourcesAndCriteria_when_firstSourceHasBranchWithoutMatchAndSecondSourceHasMatch_then_branchFromSecondSource()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.cloneBranch("foo", "master", "feature");
+            c.addFile("foo", "master", "marker", "marker.txt", "build me".getBytes());
+            c.addFile("bar", "master", "marker", "marker.txt", "build me".getBytes());
+            c.cloneBranch("bar", "master", "feature");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", true, false, false)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("Master branch is from first source",
+                    prj.getProjectFactory().getBranch(master).getSourceId(),
+                    is("foo:id"));
+            FreeStyleProject feature = prj.getItem("feature");
+            assertThat("Feature branch is from second source",
+                    prj.getProjectFactory().getBranch(feature).getSourceId(),
+                    is("bar:id"));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertThat("The feature branch was built", feature.getLastBuild(), notNullValue());
+            assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranchWith2SourcesAndCriteria_when_eventForBranchOnHigherSource_then_branchTakeover()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.addFile("foo", "master", "marker", "marker.txt", "build me".getBytes());
+            c.addFile("bar", "master", "marker", "marker.txt", "build me".getBytes());
+            c.cloneBranch("bar", "master", "feature");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", true, false, false)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("Master branch is from first source",
+                    prj.getProjectFactory().getBranch(master).getSourceId(),
+                    is("foo:id"));
+            FreeStyleProject feature = prj.getItem("feature");
+            assertThat("Feature branch is from second source",
+                    prj.getProjectFactory().getBranch(feature).getSourceId(),
+                    is("bar:id"));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertThat("The feature branch was built", feature.getLastBuild(), notNullValue());
+            assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
+
+            c.cloneBranch("foo", "master", "feature");
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            assertThat("Feature branch takeover by higher priority source",
+                    prj.getProjectFactory().getBranch(feature).getSourceId(),
+                    is("foo:id"));
+            r.waitUntilNoActivity();
+            assertThat("The feature branch was rebuilt", feature.getLastBuild().getNumber(), is(2));
         }
     }
 
