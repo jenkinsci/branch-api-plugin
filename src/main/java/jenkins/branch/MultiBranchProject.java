@@ -1346,6 +1346,44 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             String rawName = branch.getName();
             String encodedName = branch.getEncodedName();
             P project = observer.shouldUpdate(encodedName);
+            Branch origBranch;
+            if (project == null) {
+                origBranch = null;
+            } else {
+                if (!_factory.isProject(project)) {
+                    listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
+                    return;
+                }
+                origBranch = _factory.getBranch(project);
+                if (!(origBranch instanceof Branch.Dead)) {
+                    if (!source.getId().equals(origBranch.getSourceId())) {
+                        // check who has priority
+                        int ourPriority = Integer.MAX_VALUE;
+                        int oldPriority = Integer.MAX_VALUE;
+                        int p = 1;
+                        for (BranchSource s : sources) {
+                            String sId = s.getSource().getId();
+                            if (sId.equals(source.getId())) {
+                                ourPriority = p;
+                            }
+                            if (sId.equals(origBranch.getSourceId())) {
+                                oldPriority = p;
+                            }
+                            p++;
+                        }
+                        if (oldPriority < ourPriority) {
+                            listener.getLogger().println(
+                                    "Ignoring " + project + " from source #" + ourPriority + " as source #" +
+                                            oldPriority + " owns the branch name");
+                            return;
+                        } else {
+                            listener.getLogger().println(
+                                    "Takeover for " + project + " by source #" + ourPriority
+                                            + " from source #" + oldPriority);
+                        }
+                    }
+                }
+            }
             Action[] revisionActions = new Action[0];
             boolean headActionsFetched = false;
             try {
@@ -1362,12 +1400,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         revision, rawName));
             }
             if (project != null) {
-                if (!_factory.isProject(project)) {
-                    listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
-                    return;
-                }
-                Branch origBranch = _factory.getBranch(project);
-                boolean rebuild = origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead);
+                boolean rebuild = (origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead))
+                        || !(source.getId().equals(origBranch.getSourceId()));
                 if (!headActionsFetched) {
                     // we didn't fetch them so replicate previous actions
                     branch.setActions(origBranch.getActions());
