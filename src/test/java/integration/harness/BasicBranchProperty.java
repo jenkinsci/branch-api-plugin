@@ -29,6 +29,7 @@ import hudson.Extension;
 import hudson.model.FreeStyleProject;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
+import java.io.IOException;
 import jenkins.branch.Branch;
 
 public class BasicBranchProperty extends JobProperty<FreeStyleProject> {
@@ -41,6 +42,16 @@ public class BasicBranchProperty extends JobProperty<FreeStyleProject> {
 
     public Branch getBranch() {
         return b;
+    }
+
+    public void setBranch(Branch b) throws IOException {
+        if (this.b.equals(b)) {
+            return;
+        }
+        this.b = b;
+        if (owner != null) {
+            owner.save();
+        }
     }
 
     @Override

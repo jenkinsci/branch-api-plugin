@@ -59,7 +59,13 @@ public class BasicBranchProjectFactory extends BranchProjectFactory<FreeStylePro
     public FreeStyleProject setBranch(FreeStyleProject project, Branch branch) {
         BulkChange bc = new BulkChange(project);
         try {
-            project.addProperty(new BasicBranchProperty(branch));
+            BasicBranchProperty prop = project.getProperty(BasicBranchProperty.class);
+            if (prop == null) {
+                project.addProperty(new BasicBranchProperty(branch));
+            } else {
+                prop.setBranch(branch);
+            }
+            assert project.getProperty(BasicBranchProperty.class).getBranch().equals(branch);
             if (branch instanceof Branch.Dead) {
                 if (!project.isDisabled()) {
                     project.disable();
