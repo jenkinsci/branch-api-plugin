@@ -897,16 +897,425 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         @Override
         public void onSCMHeadEvent(final SCMHeadEvent<?> event) {
             TaskListener global = globalEventsListener();
+            String eventClass = event.getClass().getName();
+            String eventType = event.getType().name();
+            long eventTimestamp = event.getTimestamp();
             global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
-                    System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                    event.getTimestamp());
+                    System.currentTimeMillis(), eventClass, eventType,
+                    eventTimestamp);
+            LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: onSCMHeadEvent",
+                    new Object[]{
+                            eventClass, eventType, eventTimestamp
+                    }
+            );
+            int matchCount = 0;
             // not interested in removal of dead items as that needs to be handled by the computation in order
             // to ensure that other sources do not want to take ownership and also to ensure that the dead branch
             // strategy is enforced correctly
             if (SCMEvent.Type.CREATED == event.getType()) {
-                for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
+                matchCount = processHeadCreate(event, global, eventClass, eventType, eventTimestamp, matchCount);
+            } else if (SCMEvent.Type.UPDATED == event.getType() || SCMEvent.Type.REMOVED == event.getType()) {
+                matchCount = processHeadUpdate(event, global, eventClass, eventType, eventTimestamp, matchCount);
+            }
+            global.getLogger().format("[%tc] Finished processing %s %s event with timestamp %tc. Matched %d.%n",
+                    System.currentTimeMillis(), eventClass, eventType,
+                    eventTimestamp, matchCount);
+
+        }
+
+        private int processHeadCreate(SCMHeadEvent<?> event, TaskListener global, String eventClass, String eventType,
+                                      long eventTimestamp, int matchCount) {
+            Set<String> sourceIds = new HashSet<>();
+            for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
+                sourceIds.clear();
+                String pFullName = p.getFullName();
+                LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Checking {3} for a match",
+                        new Object[]{
+                                eventClass, eventType, eventTimestamp, pFullName
+                        }
+                );
+                boolean haveMatch = false;
+                final BranchProjectFactory _factory = p.getProjectFactory();
+                SOURCES:
+                for (SCMSource source : p.getSCMSources()) {
+                    if (event.isMatch(source)) {
+                        LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: Matches source {4}",
+                                new Object[]{
+                                        eventClass, eventType, eventTimestamp, pFullName, source.getId()
+                                }
+                        );
+                        for (SCMHead h : event.heads(source).keySet()) {
+                            String name = h.getName();
+                            Job job = p.getItem(name);
+                            if (job == null) {
+                                LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Match: {5}",
+                                        new Object[]{
+                                                eventClass, eventType, eventTimestamp, pFullName, source.getId(), name
+                                        }
+                                );
+                                // only interested in create events that actually could create a new branch
+                                haveMatch = true;
+                                matchCount++;
+                                global.getLogger().format("Found match against %s (new branch %s)%n", pFullName, name);
+                                break SOURCES;
+                            }
+                            Branch branch = _factory.getBranch(job);
+                            if (branch instanceof Branch.Dead) {
+                                LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Match: {5}",
+                                        new Object[]{
+                                                eventClass, eventType, eventTimestamp, pFullName, source.getId(), name
+                                        }
+                                );
+                                // only interested in create events that actually could create a new branch
+                                haveMatch = true;
+                                matchCount++;
+                                global.getLogger().format("Found match against %s (resurrect branch %s)%n", pFullName, name);
+                                break SOURCES;
+                            }
+                            String sourceId = branch.getSourceId();
+                            if (StringUtils.equals(sourceId, source.getId())) {
+                                LOGGER.log(Level.FINER,
+                                        "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Already have: {5}",
+                                        new Object[]{
+                                                eventClass,
+                                                eventType,
+                                                eventTimestamp,
+                                                pFullName,
+                                                source.getId(),
+                                                name
+                                        }
+                                );
+                                continue;
+                            }
+                            if (sourceIds.contains(sourceId)) {
+                                LOGGER.log(Level.FINER,
+                                        "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Ignored as "
+                                                + "already have {5} from higher priority source {6}",
+                                        new Object[]{
+                                                eventClass,
+                                                eventType,
+                                                eventTimestamp,
+                                                pFullName,
+                                                source.getId(),
+                                                name,
+                                                sourceId
+                                        }
+                                );
+                                continue;
+                            }
+                            LOGGER.log(Level.FINE,
+                                    "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Match: {5} "
+                                            + "overriding lower priority source {6}",
+                                    new Object[]{
+                                            eventClass,
+                                            eventType,
+                                            eventTimestamp,
+                                            pFullName,
+                                            source.getId(),
+                                            name,
+                                            sourceId
+                                    }
+                            );
+                            // only interested in create events that actually could create a new branch
+                            haveMatch = true;
+                            matchCount++;
+                            global.getLogger().format("Found match against %s (takeover branch %s)%n", pFullName, name);
+                            break SOURCES;
+                        }
+                        LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: No new projects for {4}",
+                                new Object[]{
+                                        eventClass, eventType, eventTimestamp, pFullName, source.getId()
+                                }
+                        );
+                    } else {
+                        LOGGER.log(Level.FINEST, "{0} {1} {2,date} {2,time}: Project {3}: Does not matches source {4}",
+                                new Object[]{
+                                        eventClass, eventType,
+                                        eventTimestamp, pFullName,
+                                        source.getId()
+                                }
+                        );
+                    }
+                    sourceIds.add(source.getId());
+                }
+                if (haveMatch) {
+                    TaskListener listener;
+                    try {
+                        listener = p.getComputation().createEventsListener();
+                    } catch (IOException e) {
+                        listener = new LogTaskListener(LOGGER, Level.FINE);
+                    }
+                    long start = System.currentTimeMillis();
+                    listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
+                            start, eventType, eventTimestamp);
+                    ChildObserver childObserver = p.createEventsChildObserver();
+                    try {
+                        for (SCMSource source : p.getSCMSources()) {
+                            if (event.isMatch(source)) {
+                                source.fetch(
+                                        p.getSCMSourceCriteria(source),
+                                        p.new SCMHeadObserverImpl(
+                                                source,
+                                                childObserver,
+                                                listener,
+                                                _factory,
+                                                new EventCauseFactory(event),
+                                                event),
+                                        event,
+                                        listener
+                                );
+                            }
+                        }
+                    } catch (IOException | InterruptedException e) {
+                        e.printStackTrace(listener.error(e.getMessage()));
+                    } finally {
+                        long end = System.currentTimeMillis();
+                        listener.getLogger().format("[%tc] %s event processed in %s%n",
+                                end, eventType, Util.getTimeSpanString(end - start));
+                    }
+                }
+            }
+            return matchCount;
+        }
+
+        private int processHeadUpdate(SCMHeadEvent<?> event, TaskListener global, String eventClass, String eventType, long eventTimestamp,
+                                      int matchCount) {
+            Map<SCMSource, SCMHead> matches = new IdentityHashMap<>();
+            Set<String> candidateNames = new HashSet<>();
+            Map<SCMSource, Map<SCMHead,SCMRevision>> revisionMaps = new IdentityHashMap<>();
+            Set<Job<?, ?>> jobs = new HashSet<>();
+            for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
+                String pFullName = p.getFullName();
+                LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Checking {3} for a match",
+                        new Object[]{
+                                eventClass, eventType, eventTimestamp, pFullName
+                        }
+                );
+                final BranchProjectFactory _factory = p.getProjectFactory();
+                matches.clear();
+                candidateNames.clear();
+                revisionMaps.clear();
+                for (SCMSource source : p.getSCMSources()) {
+                    Map<SCMHead, SCMRevision> eventHeads = event.heads(source);
+                    if (!eventHeads.isEmpty()) {
+                        revisionMaps.put(source, eventHeads);
+                        for (SCMHead h: eventHeads.keySet()) {
+                            candidateNames.add(h.getName());
+                        }
+                    }
+                }
+                jobs.clear();
+                for (Job i : p.getItems()) {
+                    if (!candidateNames.contains(i.getName())) {
+                        continue;
+                    }
+                    if (_factory.isProject(i)) {
+                        Branch branch = _factory.getBranch(i);
+                        if (branch instanceof Branch.Dead) {
+                            LOGGER.log(Level.FINEST, "{0} {1} {2,date} {2,time}: Checking {3} -> Resurrect dead branch {4} ?",
+                                    new Object[]{
+                                            eventClass, eventType, eventTimestamp, pFullName, i.getName()
+                                    }
+                            );
+                            // try to bring back from the dead by checking all sources in sequence
+                            // the first to match the event and that contains the head wins!
+                            SOURCES: for (SCMSource src : p.getSCMSources()) {
+                                Map<SCMHead, SCMRevision> revisionMap = revisionMaps.get(src);
+                                if (revisionMap == null) {
+                                    continue;
+                                }
+                                SCMHead head = branch.getHead();
+                                for (SCMHead h: revisionMap.keySet()) {
+                                    // for bringing back from the dead we need to check the name as it could be
+                                    // back from the dead on a different source from original
+                                    if (h.getName().equals(head.getName())) {
+                                        matches.put(src, head);
+                                        jobs.add(i);
+                                        break SOURCES;
+                                    }
+                                }
+                            }
+                        } else {
+                            // TODO takeover
+                            LOGGER.log(Level.FINEST,
+                                    "{0} {1} {2,date} {2,time}: Checking {3} -> Matches existing branch {4} ?",
+                                    new Object[]{
+                                            eventClass, eventType, eventTimestamp, pFullName, i.getName()
+                                    }
+                            );
+                            SCMSource src = p.getSCMSource(branch.getSourceId());
+                            if (src == null) {
+                                continue;
+                            }
+                            Map<SCMHead, SCMRevision> revisionMap = revisionMaps.get(src);
+                            if (revisionMap == null) {
+                                // we got here because a source matches the name
+                                // need to find the source that did match the name and compare priorities
+                                // to see if this is a takeover
+                                LOGGER.log(Level.FINEST,
+                                        "{0} {1} {2,date} {2,time}: Checking {3} -> Event does not match current "
+                                                + "source of {4}, checking for take-over",
+                                        new Object[]{
+                                                eventClass, eventType, eventTimestamp, pFullName, i.getName()
+                                        }
+                                );
+
+                                // check who has priority
+                                int ourPriority = Integer.MAX_VALUE;
+                                int oldPriority = Integer.MAX_VALUE;
+                                SCMSource ourSource = null;
+                                int priority = 1;
+                                for (SCMSource s : p.getSCMSources()) {
+                                    String sId = s.getId();
+                                    Map<SCMHead, SCMRevision> rMap = revisionMaps.get(s);
+                                    if (ourPriority > priority && oldPriority > priority && rMap != null) {
+                                        // only need to check for takeover when the event is higher priority
+                                        for (SCMHead h: rMap.keySet()) {
+                                            if (i.getName().equals(h.getName())) {
+                                                ourPriority = priority;
+                                                ourSource = s;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (sId.equals(src.getId())) {
+                                        oldPriority = priority;
+                                    }
+                                    priority++;
+                                }
+                                if (oldPriority < ourPriority) {
+                                    LOGGER.log(Level.FINEST,
+                                            "{0} {1} {2,date} {2,time}: Checking {3} -> Ignoring event for {4} "
+                                                    + "from source #{5} as source #{6} owns the branch name",
+                                            new Object[]{
+                                                    eventClass, eventType, eventTimestamp, pFullName, i.getName(),
+                                                    ourPriority, oldPriority
+                                            }
+                                    );
+                                    continue;
+                                } else {
+                                    LOGGER.log(Level.FINER,
+                                            "{0} {1} {2,date} {2,time}: Checking {3} -> Takeover event for {4} "
+                                                    + "by source #{5} from source #{6}",
+                                            new Object[]{
+                                                    eventClass, eventType, eventTimestamp, pFullName, i.getName(),
+                                                    ourPriority, oldPriority
+                                            }
+                                    );
+                                    assert ourSource != null;
+                                    src = ourSource;
+                                    revisionMap = revisionMaps.get(ourSource);
+                                    assert revisionMap != null;
+                                }
+                            }
+                            SCMHead head = branch.getHead();
+                            // The distinguishing key for branch projects is the name, so check on the name
+                            boolean match = false;
+                            for (SCMHead h: revisionMap.keySet()) {
+                                if (h.getName().equals(head.getName())) {
+                                    match = true;
+                                    break;
+                                }
+                            }
+                            if (match) {
+                                LOGGER.log(Level.FINE,
+                                        "{0} {1} {2,date} {2,time}: Checking {3} -> Event matches source of {4}",
+                                        new Object[]{
+                                                eventClass, eventType, eventTimestamp, pFullName, i.getName()
+                                        }
+                                );
+                                if (SCMEvent.Type.UPDATED == event.getType()) {
+                                    SCMRevision revision = revisionMap.get(head);
+                                    if (revision != null && revision.isDeterministic()) {
+                                        SCMRevision lastBuild = _factory.getRevision(i);
+                                        if (revision.equals(lastBuild)) {
+                                            // we are not interested in events that tell us a revision
+                                            // we have already seen
+                                            LOGGER.log(Level.FINE,
+                                                    "{0} {1} {2,date} {2,time}: Checking {3} -> Ignoring event as "
+                                                            + "revision {4} is same as last build of {5}",
+                                                    new Object[]{
+                                                            eventClass,
+                                                            eventType,
+                                                            eventTimestamp,
+                                                            pFullName,
+                                                            revision,
+                                                            i.getName()
+                                                    }
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                }
+                                matches.put(src, head);
+                                jobs.add(i);
+                            }
+                        }
+                    }
+                }
+                if (!matches.isEmpty()) {
+                    matchCount++;
+                    global.getLogger().format("Found match against %s%n", pFullName);
+                    TaskListener listener;
+                    try {
+                        listener = p.getComputation().createEventsListener();
+                    } catch (IOException e) {
+                        listener = new LogTaskListener(LOGGER, Level.FINE);
+                    }
+                    long start = System.currentTimeMillis();
+                    listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
+                            start, eventType, eventTimestamp);
+                    ChildObserver childObserver = p.createEventsChildObserver();
+                    try {
+                        for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
+                            m.getKey().fetch(
+                                    p.getSCMSourceCriteria(m.getKey()),
+                                    p.new SCMHeadObserverImpl(
+                                            m.getKey(),
+                                            childObserver,
+                                            listener,
+                                            _factory,
+                                            new EventCauseFactory(event),
+                                            event),
+                                    event,
+                                    listener
+                            );
+                        }
+                        // now dis-associate branches that no-longer exist
+                        Set<String> names = childObserver.observed();
+                        for (Job<?, ?> j : jobs) {
+                            if (names.contains(j.getName())) {
+                                // observed, so not dead
+                                continue;
+                            }
+                            Branch branch = _factory.getBranch(j);
+                            String sourceId = branch.getSourceId();
+                            boolean foundSource = false;
+                            for (SCMSource s : matches.keySet()) {
+                                if (sourceId.equals(s.getId())) {
+                                    foundSource = true;
+                                }
+                            }
+                            if (!foundSource) {
+                                // not safe to switch to a dead branch
+                                continue;
+                            }
+                            _factory.decorate(_factory.setBranch(
+                                    j,
+                                    new Branch.Dead(branch)
+                            ));
+                            j.save();
+                        }
+                    } catch (IOException | InterruptedException e) {
+                        e.printStackTrace(listener.error(e.getMessage()));
+                    } finally {
+                        long end = System.currentTimeMillis();
+                        listener.getLogger().format("[%tc] %s event processed in %s%n",
+                                end, eventType, Util.getTimeSpanString(end - start));
+                    }
+                } else {
+                    // didn't match an existing branch, maybe the criteria now match against an updated branch
                     boolean haveMatch = false;
-                    final BranchProjectFactory _factory = p.getProjectFactory();
                     for (SCMSource source : p.getSCMSources()) {
                         if (event.isMatch(source)) {
                             for (SCMHead h : event.heads(source).keySet()) {
@@ -917,9 +1326,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 }
                             }
                             if (haveMatch) {
-                                global.getLogger().format("Found match against %s%n", p.getFullName());
+                                global.getLogger().format("Found match against %s%n", pFullName);
                                 break;
                             }
+                            break;
                         }
                     }
                     if (haveMatch) {
@@ -931,7 +1341,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                         long start = System.currentTimeMillis();
                         listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
-                                start, event.getType().name(), event.getTimestamp());
+                                start, eventType, eventTimestamp);
                         ChildObserver childObserver = p.createEventsChildObserver();
                         try {
                             for (SCMSource source : p.getSCMSources()) {
@@ -944,7 +1354,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                                     listener,
                                                     _factory,
                                                     new EventCauseFactory(event),
-                                                    event),
+                                                    event
+                                            ),
                                             event,
                                             listener
                                     );
@@ -955,192 +1366,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         } finally {
                             long end = System.currentTimeMillis();
                             listener.getLogger().format("[%tc] %s event processed in %s%n",
-                                    end, event.getType().name(), Util.getTimeSpanString(end - start));
-                        }
-                    }
-                }
-            } else if (SCMEvent.Type.UPDATED == event.getType() || SCMEvent.Type.REMOVED == event.getType()) {
-                Map<SCMSource, SCMHead> matches = new IdentityHashMap<>();
-                Set<Job<?, ?>> jobs = new HashSet<>();
-                for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
-                    final BranchProjectFactory _factory = p.getProjectFactory();
-                    matches.clear();
-                    jobs.clear();
-                    for (Job i : p.getItems()) {
-                        if (_factory.isProject(i)) {
-                            Branch branch = _factory.getBranch(i);
-                            if (branch instanceof Branch.Dead) {
-                                // try to bring back from the dead by checking all sources in sequence
-                                // the first to match the event and that contains the head wins!
-                                SOURCES: for (SCMSource src : p.getSCMSources()) {
-                                    if (!event.isMatch(src)) {
-                                        continue;
-                                    }
-                                    Map<SCMHead, SCMRevision> revisionMap = event.heads(src);
-                                    SCMHead head = branch.getHead();
-                                    for (SCMHead h: revisionMap.keySet()) {
-                                        // for bringing back from the dead we need to check the name as it could be
-                                        // back from the dead on a different source from original
-                                        if (h.getName().equals(head.getName())) {
-                                            LOGGER.log(Level.INFO, "Found match against {0}", i.getFullName());
-                                            matches.put(src, head);
-                                            jobs.add(i);
-                                            break SOURCES;
-                                        }
-                                    }
-                                }
-                            } else {
-                                SCMSource src = p.getSCMSource(branch.getSourceId());
-                                if (src == null) {
-                                    continue;
-                                }
-                                Map<SCMHead, SCMRevision> revisionMap = event.heads(src);
-                                SCMHead head = branch.getHead();
-                                // The distinguishing key for branch projects is the name, so check on the name
-                                boolean match = false;
-                                for (SCMHead h: revisionMap.keySet()) {
-                                    if (h.getName().equals(head.getName())) {
-                                        match = true;
-                                        break;
-                                    }
-                                }
-                                if (match) {
-                                    LOGGER.log(Level.INFO, "Found match against {0}", i.getFullName());
-                                    if (SCMEvent.Type.UPDATED == event.getType()) {
-                                        SCMRevision revision = revisionMap.get(head);
-                                        if (revision != null && revision.isDeterministic()) {
-                                            SCMRevision lastBuild = _factory.getRevision(i);
-                                            if (revision.equals(lastBuild)) {
-                                                // we are not interested in events that tell us a revision
-                                                // we have already seen
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    matches.put(src, head);
-                                    jobs.add(i);
-                                }
-                            }
-                        }
-                    }
-                    if (!matches.isEmpty()) {
-                        global.getLogger().format("Found match against %s%n", p.getFullName());
-                        TaskListener listener;
-                        try {
-                            listener = p.getComputation().createEventsListener();
-                        } catch (IOException e) {
-                            listener = new LogTaskListener(LOGGER, Level.FINE);
-                        }
-                        long start = System.currentTimeMillis();
-                        listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
-                                start, event.getType().name(), event.getTimestamp());
-                        ChildObserver childObserver = p.createEventsChildObserver();
-                        try {
-                            for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
-                                m.getKey().fetch(
-                                        p.getSCMSourceCriteria(m.getKey()),
-                                        p.new SCMHeadObserverImpl(
-                                                m.getKey(),
-                                                childObserver,
-                                                listener,
-                                                _factory,
-                                                new EventCauseFactory(event),
-                                                event),
-                                        event,
-                                        listener
-                                );
-                            }
-                            // now dis-associate branches that no-longer exist
-                            Set<String> names = childObserver.observed();
-                            for (Job<?, ?> j : jobs) {
-                                if (names.contains(j.getName())) {
-                                    // observed, so not dead
-                                    continue;
-                                }
-                                Branch branch = _factory.getBranch(j);
-                                String sourceId = branch.getSourceId();
-                                boolean foundSource = false;
-                                for (SCMSource s : matches.keySet()) {
-                                    if (sourceId.equals(s.getId())) {
-                                        foundSource = true;
-                                    }
-                                }
-                                if (!foundSource) {
-                                    // not safe to switch to a dead branch
-                                    continue;
-                                }
-                                _factory.decorate(_factory.setBranch(
-                                        j,
-                                        new Branch.Dead(branch)
-                                ));
-                                j.save();
-                            }
-                        } catch (IOException | InterruptedException e) {
-                            e.printStackTrace(listener.error(e.getMessage()));
-                        } finally {
-                            long end = System.currentTimeMillis();
-                            listener.getLogger().format("[%tc] %s event processed in %s%n",
-                                    end, event.getType().name(), Util.getTimeSpanString(end - start));
-                        }
-                    } else {
-                        // didn't match an existing branch, maybe the criteria now match against an updated branch
-                        boolean haveMatch = false;
-                        for (SCMSource source : p.getSCMSources()) {
-                            if (event.isMatch(source)) {
-                                for (SCMHead h : event.heads(source).keySet()) {
-                                    if (p.getItem(h.getName()) == null) {
-                                        // only interested in create events that actually could create a new branch
-                                        haveMatch = true;
-                                        break;
-                                    }
-                                }
-                                if (haveMatch) {
-                                    global.getLogger().format("Found match against %s%n", p.getFullName());
-                                    break;
-                                }
-                                break;
-                            }
-                        }
-                        if (haveMatch) {
-                            TaskListener listener;
-                            try {
-                                listener = p.getComputation().createEventsListener();
-                            } catch (IOException e) {
-                                listener = new LogTaskListener(LOGGER, Level.FINE);
-                            }
-                            long start = System.currentTimeMillis();
-                            listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
-                                    start, event.getType().name(), event.getTimestamp());
-                            ChildObserver childObserver = p.createEventsChildObserver();
-                            try {
-                                for (SCMSource source : p.getSCMSources()) {
-                                    if (event.isMatch(source)) {
-                                        source.fetch(
-                                                p.getSCMSourceCriteria(source),
-                                                p.new SCMHeadObserverImpl(
-                                                        source,
-                                                        childObserver,
-                                                        listener,
-                                                        _factory,
-                                                        new EventCauseFactory(event),
-                                                        event
-                                                ),
-                                                event,
-                                                listener
-                                        );
-                                    }
-                                }
-                            } catch (IOException | InterruptedException e) {
-                                e.printStackTrace(listener.error(e.getMessage()));
-                            } finally {
-                                long end = System.currentTimeMillis();
-                                listener.getLogger().format("[%tc] %s event processed in %s%n",
-                                        end, event.getType().name(), Util.getTimeSpanString(end - start));
-                            }
+                                    end, eventType, Util.getTimeSpanString(end - start));
                         }
                     }
                 }
             }
+            return matchCount;
         }
 
         /**
@@ -1152,6 +1383,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
                     event.getTimestamp());
+            int matchCount = 0;
             // not interested in creation as that is an event for org folders
             // not interested in removal as that is an event for org folders
             if (SCMEvent.Type.UPDATED == event.getType()) {
@@ -1218,6 +1450,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     }
                 }
             }
+            global.getLogger().format("[%tc] Finished processing %s %s event with timestamp %tc. Matched %d.%n",
+                    System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                    event.getTimestamp(), matchCount);
         }
 
     }
@@ -1346,6 +1581,44 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             String rawName = branch.getName();
             String encodedName = branch.getEncodedName();
             P project = observer.shouldUpdate(encodedName);
+            Branch origBranch;
+            if (project == null) {
+                origBranch = null;
+            } else {
+                if (!_factory.isProject(project)) {
+                    listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
+                    return;
+                }
+                origBranch = _factory.getBranch(project);
+                if (!(origBranch instanceof Branch.Dead)) {
+                    if (!source.getId().equals(origBranch.getSourceId())) {
+                        // check who has priority
+                        int ourPriority = Integer.MAX_VALUE;
+                        int oldPriority = Integer.MAX_VALUE;
+                        int p = 1;
+                        for (BranchSource s : sources) {
+                            String sId = s.getSource().getId();
+                            if (sId.equals(source.getId())) {
+                                ourPriority = p;
+                            }
+                            if (sId.equals(origBranch.getSourceId())) {
+                                oldPriority = p;
+                            }
+                            p++;
+                        }
+                        if (oldPriority < ourPriority) {
+                            listener.getLogger().println(
+                                    "Ignoring " + project + " from source #" + ourPriority + " as source #" +
+                                            oldPriority + " owns the branch name");
+                            return;
+                        } else {
+                            listener.getLogger().println(
+                                    "Takeover for " + project + " by source #" + ourPriority
+                                            + " from source #" + oldPriority);
+                        }
+                    }
+                }
+            }
             Action[] revisionActions = new Action[0];
             boolean headActionsFetched = false;
             try {
@@ -1362,12 +1635,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         revision, rawName));
             }
             if (project != null) {
-                if (!_factory.isProject(project)) {
-                    listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
-                    return;
-                }
-                Branch origBranch = _factory.getBranch(project);
-                boolean rebuild = origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead);
+                boolean rebuild = (origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead))
+                        || !(source.getId().equals(origBranch.getSourceId()));
                 if (!headActionsFetched) {
                     // we didn't fetch them so replicate previous actions
                     branch.setActions(origBranch.getActions());

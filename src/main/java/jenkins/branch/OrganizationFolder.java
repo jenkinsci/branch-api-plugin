@@ -732,6 +732,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
                     event.getTimestamp());
+            int matchCount = 0;
             if (CREATED == event.getType() || UPDATED == event.getType()) {
                 for (OrganizationFolder p : Jenkins.getActiveInstance().getAllItems(OrganizationFolder.class)) {
                     // we want to catch when a branch is created / updated and consequently becomes eligible
@@ -739,6 +740,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     SCMNavigator navigator = null;
                     for (SCMNavigator n : p.getSCMNavigators()) {
                         if (event.isMatch(n)) {
+                            matchCount++;
                             global.getLogger().format("Found match against %s%n", p.getFullName());
                             navigator = n;
                             break;
@@ -783,6 +785,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     }
                 }
             }
+            global.getLogger().format("[%tc] Finished processing %s %s event with timestamp %tc. Matched %d.%n",
+                    System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                    event.getTimestamp(), matchCount);
+
         }
 
         /**
