@@ -39,6 +39,7 @@ import jenkins.branch.BranchSource;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
+import jenkins.scm.api.SCMEvents;
 import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.impl.mock.MockSCMController;
@@ -1375,14 +1376,16 @@ public class EventsTest {
     }
 
     private void fire(MockSCMHeadEvent event) throws Exception {
+        long watermark = SCMEvents.getWatermark();
         SCMHeadEvent.fireNow(event);
-        Thread.sleep(100);
+        SCMEvents.awaitAll(watermark);
         r.waitUntilNoActivity();
     }
 
     private void fire(MockSCMSourceEvent event) throws Exception {
+        long watermark = SCMEvents.getWatermark();
         SCMSourceEvent.fireNow(event);
-        Thread.sleep(100);
+        SCMEvents.awaitAll(watermark);
         r.waitUntilNoActivity();
     }
 

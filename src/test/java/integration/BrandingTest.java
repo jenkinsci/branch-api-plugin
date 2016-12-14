@@ -40,6 +40,7 @@ import jenkins.branch.BranchSource;
 import jenkins.branch.DescriptionColumn;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
+import jenkins.scm.api.SCMEvents;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.mock.MockSCMController;
@@ -357,8 +358,9 @@ public class BrandingTest {
     }
 
     private void fire(MockSCMSourceEvent event) throws Exception {
+        long watermark = SCMEvents.getWatermark();
         SCMSourceEvent.fireNow(event);
-        Thread.sleep(100);
+        SCMEvents.awaitAll(watermark);
         r.waitUntilNoActivity();
     }
 
