@@ -1115,7 +1115,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 key = navigatorKeys.get(navigator);
             }
             if (key == null) {
-                key = Util.getDigestOf(Items.XSTREAM.toXML(navigator));
+                // we need to ensure that upgrading the plugin does not change the digest
+                // processing XML with a regex is usually a bad thing. In this case we have a sufficiently
+                // strict set of requirements to match (shortname)@(version) and the constraints on the
+                // shortname and version are such that we can have a high degree of certainty of a match
+                // and even if we glom some legitimate text, the chances of a duplicate that is otherwise
+                // the same but has a critical difference in a regular value that happens to contain
+                // plugin="xys@abc" is sufficiently low.
+                String xml = Items.XSTREAM.toXML(navigator)
+                        .replaceAll(" plugin=(('[^']+@[^']+')|(\"[^\"]+@[^\"]+\"))", "");
+                key = Util.getDigestOf(xml);
                 synchronized (navigatorKeys) {
                     // idempotent write
                     navigatorKeys.put(navigator, key); // cache the key
