@@ -157,6 +157,11 @@ public class CustomOrganizationFolderDescriptorTest {
 
     private static class MockNavigator extends SCMNavigator {
         @Override
+        protected String id() {
+            return "mock";
+        }
+
+        @Override
         public void visitSources(SCMSourceObserver observer) throws IOException, InterruptedException {}
     }
     private static abstract class MockNavigatorDescriptor extends SCMNavigatorDescriptor {

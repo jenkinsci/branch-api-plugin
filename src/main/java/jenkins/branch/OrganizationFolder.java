@@ -1071,12 +1071,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         private final Map<String,List<Action>> actions = new HashMap<>();
 
-        /**
-         * The digests of the {@link SCMNavigator} instances.
-         */
-        @GuardedBy("self")
-        private transient final WeakHashMap<SCMNavigator,String> navigatorKeys = new WeakHashMap<>();
-
         private State(OrganizationFolder owner) {
             this.owner = owner;
         }
@@ -1109,49 +1103,22 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             SaveableListener.fireOnChange(this, getStateFile());
         }
 
-        private String keyOf(SCMNavigator navigator) {
-            String key;
-            synchronized (navigatorKeys) {
-                key = navigatorKeys.get(navigator);
-            }
-            if (key == null) {
-                // we need to ensure that upgrading the plugin does not change the digest
-                // processing XML with a regex is usually a bad thing. In this case we have a sufficiently
-                // strict set of requirements to match (shortname)@(version) and the constraints on the
-                // shortname and version are such that we can have a high degree of certainty of a match
-                // and even if we glom some legitimate text, the chances of a duplicate that is otherwise
-                // the same but has a critical difference in a regular value that happens to contain
-                // plugin="xys@abc" is sufficiently low.
-                String xml = Items.XSTREAM.toXML(navigator)
-                        .replaceAll(" plugin=(('[^']+@[^']+')|(\"[^\"]+@[^\"]+\"))", "");
-                key = Util.getDigestOf(xml);
-                synchronized (navigatorKeys) {
-                    // idempotent write
-                    navigatorKeys.put(navigator, key); // cache the key
-                }
-            }
-            return key;
-        }
-
         public List<Action> getActions(SCMNavigator navigator) {
             if (owner.getSCMNavigators().contains(navigator)) {
-                String key = keyOf(navigator);
-                return Collections.unmodifiableList(Util.fixNull(actions.get(key)));
+                return Collections.unmodifiableList(Util.fixNull(actions.get(navigator.getId())));
             }
             return null;
         }
 
         public void setActions(SCMNavigator navigator, List<Action> actions) {
-            String key = keyOf(navigator);
-            this.actions.put(key, new ArrayList<Action>(actions));
+            this.actions.put(navigator.getId(), new ArrayList<Action>(actions));
         }
 
         public Map<SCMNavigator, List<Action>> getActions() {
             List<SCMNavigator> navigators = owner.getSCMNavigators();
             Map<SCMNavigator, List<Action>> result = new HashMap<>(navigators.size());
             for (SCMNavigator navigator: navigators) {
-                String key = keyOf(navigator);
-                result.put(navigator, Collections.unmodifiableList(Util.fixNull(actions.get(key))));
+                result.put(navigator, Collections.unmodifiableList(Util.fixNull(actions.get(navigator.getId()))));
             }
             return result;
         }
@@ -1159,9 +1126,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         public void setActions(Map<SCMNavigator, List<Action>> actions) {
             Set<String> keys = new HashSet<>();
             for (Map.Entry<SCMNavigator, List<Action>> entry: actions.entrySet()) {
-                String key = keyOf(entry.getKey());
-                this.actions.put(key, new ArrayList<Action>(Util.fixNull(entry.getValue())));
-                keys.add(key);
+                String id = entry.getKey().getId();
+                this.actions.put(id, new ArrayList<Action>(Util.fixNull(entry.getValue())));
+                keys.add(id);
             }
             this.actions.keySet().retainAll(keys);
         }
