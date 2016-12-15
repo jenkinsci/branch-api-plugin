@@ -1588,7 +1588,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 origBranch = null;
             } else {
                 if (!_factory.isProject(project)) {
-                    listener.getLogger().println("Detected unsupported subitem " + ModelHyperlinkNote.encodeTo(project) + ", skipping");
+                    listener.getLogger().println("Detected unsupported subitem "
+                            + ModelHyperlinkNote.encodeTo(project) + ", skipping");
                     return;
                 }
                 origBranch = _factory.getBranch(project);
