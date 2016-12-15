@@ -37,6 +37,7 @@ import hudson.BulkChange;
 import hudson.Extension;
 import hudson.Util;
 import hudson.XmlFile;
+import hudson.console.ModelHyperlinkNote;
 import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
@@ -76,6 +77,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.scene.control.Hyperlink;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
@@ -1586,7 +1588,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 origBranch = null;
             } else {
                 if (!_factory.isProject(project)) {
-                    listener.getLogger().println("Detected unsupported subitem " + project + ", skipping");
+                    listener.getLogger().println("Detected unsupported subitem " + ModelHyperlinkNote.encodeTo(project) + ", skipping");
                     return;
                 }
                 origBranch = _factory.getBranch(project);
@@ -1608,13 +1610,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                         if (oldPriority < ourPriority) {
                             listener.getLogger().println(
-                                    "Ignoring " + project + " from source #" + ourPriority + " as source #" +
+                                    "Ignoring " + ModelHyperlinkNote.encodeTo(project) + " from source #"
+                                            + ourPriority + " as source #" +
                                             oldPriority + " owns the branch name");
                             return;
                         } else {
-                            listener.getLogger().println(
-                                    "Takeover for " + project + " by source #" + ourPriority
-                                            + " from source #" + oldPriority);
+                            if (oldPriority == Integer.MAX_VALUE) {
+                                listener.getLogger().println(
+                                        "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
+                                                + ourPriority
+                                                + " from source that no longer exists");
+                            } else {
+                                listener.getLogger().println(
+                                        "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
+                                                + ourPriority
+                                                + " from source #" + oldPriority);
+                            }
                         }
                     }
                 }
