@@ -51,6 +51,7 @@ public class WorkspaceLocatorImplTest {
     @WithoutJenkins
     @Test
     public void minimize() {
+        WorkspaceLocatorImpl.setPathMax(80);
         assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM57BBNSYVIXGXHCE4KAEVPV5KZYQ", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("a_b_c_d-UMWYJ45JQ6FA3WXMSI3YEOLVQ5P6SFYWN26FRECRSFBUGUD27Y5A", WorkspaceLocatorImpl.minimize("a/b/c/d"));
         assertEquals("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
@@ -64,6 +65,54 @@ public class WorkspaceLocatorImplTest {
         assertEquals("lahblahblahblahblahblahXYZW-LRVIZHY37BWI3PKRF7WSERGRN3NGPY4T74VWKWNFRMR4IWGXJPQA", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZW"));
         assertEquals("ahblahblahblahblahblahXYZWV-KLYOGWEJODAVXII3MEM2SLNMRPE7HF6IADTBQ5MP66V3RYCL2LAA", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
         assertEquals("hblahblahblahblahblahXYZWVU-OSF24EPB4C42KAUXYHPP66XDQHOHKWPHGKZLIWREKOGZDZ46T2PQ", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
+        
+        WorkspaceLocatorImpl.setPathMax(40);
+        assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM", WorkspaceLocatorImpl.minimize("a/b"));
+        assertEquals("a_b_c_d-UMWYJ45JQ6FA3WXMSI3YEOLVQ", WorkspaceLocatorImpl.minimize("a/b/c/d"));
+        assertEquals("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
+        assertEquals("me_here_master-P3JSCCKIEGEC4PETCZJODHB27", WorkspaceLocatorImpl.minimize("some longish name here/master"));
+        assertEquals("rt_path_at_all-OB76NQGNPMSKZVYU5OTRBEWQC", WorkspaceLocatorImpl.minimize("really way too much to fit in a short path at all"));
+        assertEquals("abc_esky_-XHOKB7XHQS32PT7KIXIDYFSRS", WorkspaceLocatorImpl.minimize("abc!@#$%^&*()[]{}|česky™"));
+        assertEquals("ahblahblahblah-PKYGNQW7EX27MNOU63BZF4FUB", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblah"));
+        assertEquals("hblahblahblahX-B4K3CPB6GP6JRCDBAKDJNRGX4", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahX"));
+        assertEquals("blahblahblahXY-ZGH2VVOGO2FEM72MZYA7CWRLP", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXY"));
+        assertEquals("lahblahblahXYZ-I7NHG3VUEWUH3IFAPUM3HGRL7", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZ"));
+        assertEquals("ahblahblahXYZW-LRVIZHY37BWI3PKRF7WSERGRN", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZW"));
+        assertEquals("hblahblahXYZWV-KLYOGWEJODAVXII3MEM2SLNMR", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
+        assertEquals("blahblahXYZWVU-OSF24EPB4C42KAUXYHPP66XDQ", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
+        
+        WorkspaceLocatorImpl.setPathMax(20);
+        assertEquals("a_b-NX345YSMOYT4QUL", WorkspaceLocatorImpl.minimize("a/b"));
+        assertEquals("_c_d-UMWYJ45JQ6FA3WX", WorkspaceLocatorImpl.minimize("a/b/c/d"));
+        assertEquals("flow-L5GKER67QGVMJ2U", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
+        assertEquals("ster-P3JSCCKIEGEC4PE", WorkspaceLocatorImpl.minimize("some longish name here/master"));
+        assertEquals("_all-OB76NQGNPMSKZVY", WorkspaceLocatorImpl.minimize("really way too much to fit in a short path at all"));
+        assertEquals("sky_-XHOKB7XHQS32PT7", WorkspaceLocatorImpl.minimize("abc!@#$%^&*()[]{}|česky™"));
+        assertEquals("blah-PKYGNQW7EX27MNO", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblah"));
+        assertEquals("lahX-B4K3CPB6GP6JRCD", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahX"));
+        assertEquals("ahXY-ZGH2VVOGO2FEM72", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXY"));
+        assertEquals("hXYZ-I7NHG3VUEWUH3IF", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZ"));
+        assertEquals("XYZW-LRVIZHY37BWI3PK", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZW"));
+        assertEquals("YZWV-KLYOGWEJODAVXII", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
+        assertEquals("ZWVU-OSF24EPB4C42KAU", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
+        
+        WorkspaceLocatorImpl.setPathMax(1);
+        assertEquals("b-NX345YSMOY", WorkspaceLocatorImpl.minimize("a/b"));
+        assertEquals("d-UMWYJ45JQ6", WorkspaceLocatorImpl.minimize("a/b/c/d"));
+        assertEquals("w-L5GKER67QG", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
+        assertEquals("r-P3JSCCKIEG", WorkspaceLocatorImpl.minimize("some longish name here/master"));
+        assertEquals("l-OB76NQGNPM", WorkspaceLocatorImpl.minimize("really way too much to fit in a short path at all"));
+        assertEquals("_-XHOKB7XHQS", WorkspaceLocatorImpl.minimize("abc!@#$%^&*()[]{}|česky™"));
+        assertEquals("h-PKYGNQW7EX", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblah"));
+        assertEquals("X-B4K3CPB6GP", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahX"));
+        assertEquals("Y-ZGH2VVOGO2", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXY"));
+        assertEquals("Z-I7NHG3VUEW", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZ"));
+        assertEquals("W-LRVIZHY37B", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZW"));
+        assertEquals("V-KLYOGWEJOD", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
+        assertEquals("U-OSF24EPB4C", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
+        
+        // Reset back to 80 for other tests that assume it is 80.
+        WorkspaceLocatorImpl.setPathMax(80);
     }
 
     @Issue("JENKINS-34564")

@@ -56,7 +56,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
     /** The most characters to allow in a workspace directory name, relative to the root. Zero to disable altogether. */
     // TODO 2.4+ use SystemProperties
-    @SuppressWarnings("FieldMayBeFinal")
     private static /* not final */ int PATH_MAX = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".PATH_MAX", 80);
 
     @Override
@@ -78,6 +77,10 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
     }
 
+    static void setPathMax(int pathMax) {
+        PATH_MAX = pathMax;
+    }
+
     static String uniqueSuffix(String name) {
         // TODO still in beta: byte[] sha256 = Hashing.sha256().hashString(name).asBytes();
         byte[] sha256;
@@ -91,9 +94,19 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
     static String minimize(String name) {
         String mnemonic = name.replaceAll("(%[0-9A-F]{2}|[^a-zA-Z0-9-_.])+", "_");
-        int maxMnemonic = Math.max(PATH_MAX - /* ceil(256 / lg(32)) + length("-") */53, 1);
-        String result = StringUtils.right(mnemonic, maxMnemonic) + "-" + uniqueSuffix(name);
-        assert result.length() <= PATH_MAX : result + " does not fit inside " + PATH_MAX;
+        int maxSuffix = 53; /* ceil(256 / lg(32)) + length("-") */
+        int maxMnemonic = Math.max(PATH_MAX - maxSuffix, 1);
+        if (maxSuffix + maxMnemonic > PATH_MAX) {
+            // The whole suffix cannot be included in the path.  Trim the suffix
+            // and the mnemonic to fit inside PATH_MAX.  The mnemonic always gets
+            // at least one character.  The suffix always gets 10 characters plus
+            // the "-".  The rest of PATH_MAX is split evenly between the two.
+            final int minSuffix = 10 + /* length("-") */ 1;
+            maxMnemonic = Math.max((int)((PATH_MAX - minSuffix) / 2), 1);
+            maxSuffix = Math.max(PATH_MAX - maxMnemonic, minSuffix);
+        }
+        maxSuffix = maxSuffix - 1; // Remove the "-"
+        String result = StringUtils.right(mnemonic, maxMnemonic) + "-" + uniqueSuffix(name).substring(0, maxSuffix);
         return result;
     }
 
