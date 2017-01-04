@@ -26,6 +26,8 @@ package jenkins.branch;
 
 import hudson.Extension;
 import hudson.model.BallColor;
+import hudson.model.Descriptor;
+import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Item;
 import hudson.model.Job;
 import hudson.views.ListViewColumn;
@@ -93,7 +95,7 @@ public class BranchStatusColumn extends StatusColumn {
          */
         @Override
         public String getDisplayName() {
-            return Messages.DescriptionColumn_displayName();
+            return Messages.BranchStatusColumn_displayName();
         }
 
         /**
@@ -102,6 +104,21 @@ public class BranchStatusColumn extends StatusColumn {
         @Override
         public boolean shownByDefault() {
             return false;
+        }
+    }
+
+    /**
+     * Hide this column from user views as it would only confuse them.
+     */
+    @Extension
+    public static class DescriptorVisibilityFilterImpl extends DescriptorVisibilityFilter {
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean filter(Object context, Descriptor descriptor) {
+            return !(descriptor instanceof DescriptorImpl) || context instanceof MultiBranchProjectViewHolder.ViewImpl;
         }
     }
 }
