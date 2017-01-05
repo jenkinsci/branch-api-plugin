@@ -74,7 +74,8 @@ public class ItemColumn extends ListViewColumn {
     public String getDescription(Object job) {
         if (job instanceof Actionable) {
             ObjectMetadataAction action = ((Actionable)job).getAction(ObjectMetadataAction.class);
-            return action != null ? Util.escape(action.getObjectDescription()) : null;
+            String description = action != null ? action.getObjectDescription() : null;
+            return description != null ? Util.escape(description) : null;
         }
         return null;
     }
