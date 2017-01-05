@@ -50,6 +50,7 @@ import java.util.List;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHead.HeadByItem;
 import jenkins.scm.api.SCMRevision;
+import jenkins.scm.api.SCMSource;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 
@@ -273,6 +274,29 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
                     BranchProjectFactory projectFactory = ((MultiBranchProject) parent).getProjectFactory();
                     if (projectFactory.isProject(item)) {
                         return projectFactory.getBranch(projectFactory.asProject(item)).getHead();
+                    }
+                }
+            }
+            return null;
+        }
+
+    }
+
+    @Restricted(DoNotUse.class)
+    @Extension
+    public static class SourceByItemImpl extends SCMSource.SourceByItem {
+
+        /** {@inheritDoc} */
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        @Override
+        public SCMSource getSource(Item item) {
+            if (item instanceof Job) {
+                ItemGroup<?> parent = item.getParent();
+                if (parent instanceof MultiBranchProject) {
+                    BranchProjectFactory projectFactory = ((MultiBranchProject) parent).getProjectFactory();
+                    if (projectFactory.isProject(item)) {
+                        String sourceId = projectFactory.getBranch(projectFactory.asProject(item)).getSourceId();
+                        return ((MultiBranchProject) parent).getSCMSource(sourceId);
                     }
                 }
             }
