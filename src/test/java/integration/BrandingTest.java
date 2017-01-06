@@ -27,7 +27,9 @@ package integration;
 
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import hudson.model.FreeStyleProject;
 import hudson.model.ListView;
+import hudson.model.Result;
 import hudson.model.TopLevelItem;
 import hudson.views.JobColumn;
 import hudson.views.StatusColumn;
@@ -36,8 +38,10 @@ import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import java.util.Arrays;
 import java.util.Collections;
+import jenkins.branch.Branch;
 import jenkins.branch.BranchSource;
 import jenkins.branch.DescriptionColumn;
+import jenkins.branch.NameMangler;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEvents;
@@ -54,6 +58,7 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
@@ -152,6 +157,88 @@ public class BrandingTest {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
+        }
+    }
+
+    @Test
+    public void given_multibranch_when_sourceHasNonSafeNames_then_branchDisplayNameNotMangled() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createBranch("foo","特征/新");
+            c.createBranch("foo","특색/새로운");
+            c.createBranch("foo","gné/nua");
+            c.createBranch("foo","característica/nuevo");
+            c.createBranch("foo","особенность/новый");
+
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            assertThat(prj.getAction(MockSCMLink.class), nullValue());
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+
+            // now for the fun
+            FreeStyleProject master = null;
+            FreeStyleProject irish = null;
+            FreeStyleProject chinese = null;
+            FreeStyleProject korean = null;
+            FreeStyleProject spanish = null;
+            FreeStyleProject russian = null;
+
+            for (FreeStyleProject p: prj.getItems()) {
+                Branch branch = prj.getProjectFactory().getBranch(p);
+                String name = branch.getName();
+                if ("master".equals(name)) {
+                    master = p;
+                } else if ("gné/nua".equals(name)) {
+                    irish = p;
+                } else if ("特征/新".equals(name)) {
+                    chinese = p;
+                } else if ("특색/새로운".equals(name)) {
+                    korean = p;
+                } else if ("característica/nuevo".equals(name)) {
+                    spanish = p;
+                } else if ("особенность/новый".equals(name)) {
+                    russian = p;
+                }
+            }
+            assertThat("We have the master branch", master, notNullValue());
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch build was success", master.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(master.getDisplayName(), is("master"));
+            assertThat(master.getName(), is("master"));
+
+            assertThat("We have the Irish branch", irish, notNullValue());
+            assertThat("The Irish branch was built", irish.getLastBuild(), notNullValue());
+            assertThat("The Irish branch build was success", irish.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(irish.getDisplayName(), is("gné/nua"));
+            assertThat(irish.getName(), not(is("gné/nua")));
+
+            assertThat("We have the Chinese branch", chinese, notNullValue());
+            assertThat("The Chinese branch was built", chinese.getLastBuild(), notNullValue());
+            assertThat("The Chinese branch build was success", chinese.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(chinese.getDisplayName(), is("特征/新"));
+            assertThat(chinese.getName(), not(is("特征/新")));
+
+            assertThat("We have the Korean branch", korean, notNullValue());
+            assertThat("The Korean branch was built", korean.getLastBuild(), notNullValue());
+            assertThat("The Korean branch build was success", korean.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(korean.getDisplayName(), is("특색/새로운"));
+            assertThat(korean.getName(), not(is("특색/새로운")));
+
+            assertThat("We have the Spanish branch", spanish, notNullValue());
+            assertThat("The Spanish branch was built", spanish.getLastBuild(), notNullValue());
+            assertThat("The Spanish branch build was success", spanish.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(spanish.getDisplayName(), is("característica/nuevo"));
+            assertThat(spanish.getName(), not(is("característica/nuevo")));
+
+            assertThat("We have the Russian branch", russian, notNullValue());
+            assertThat("The Russian branch was built", russian.getLastBuild(), notNullValue());
+            assertThat("The Russian branch build was success", russian.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(russian.getDisplayName(), is("особенность/новый"));
+            assertThat(russian.getName(), not(is("особенность/новый")));
+
+            assertThat(prj.getItems(), containsInAnyOrder(master, irish, chinese, korean, spanish, russian));
         }
     }
 
