@@ -27,11 +27,15 @@ package jenkins.branch;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.Util;
+import hudson.markup.MarkupFormatter;
 import hudson.model.Actionable;
 import hudson.model.Item;
 import hudson.model.Job;
 import hudson.views.ListViewColumn;
 import hudson.views.ListViewColumnDescriptor;
+import java.io.IOException;
+import jenkins.model.Jenkins;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
@@ -77,12 +81,19 @@ public class DescriptionColumn extends ListViewColumn {
      */
     @Restricted(NoExternalUse.class)
     @SuppressWarnings("unused") // used via Jelly EL binding
-    public String description(@CheckForNull Object p, @NonNull Object job) {
+    public String description(@CheckForNull Object p, @NonNull Object job) throws IOException {
         if (p instanceof ObjectMetadataAction) {
-            return StringUtils.defaultIfBlank(((ObjectMetadataAction) p).getObjectDescription(),
-                    job instanceof Job ? ((Job) job).getDescription() : "");
+            // when the description comes from the metadata, assume plain text and use Util.escape
+            String description = Util.escape(((ObjectMetadataAction) p).getObjectDescription());
+            if (StringUtils.isNotBlank(description)) {
+                return description;
+            }
+        }
+        if (job instanceof Job) {
+            // when the description comes from the job configuration, assume user provided and use markup formatter
+            return Jenkins.getActiveInstance().getMarkupFormatter().translate(((Job) job).getDescription());
         } else {
-            return job instanceof Job ? ((Job) job).getDescription() : "";
+            return "";
         }
     }
 
