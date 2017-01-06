@@ -203,7 +203,7 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
                 getColumns().replaceBy(asList(
                         new StatusColumn(),
                         new WeatherColumn(),
-                        new JobColumn(),
+                        new ItemColumn(),
                         new DescriptionColumn()
                 ));
             } catch (IOException e) {

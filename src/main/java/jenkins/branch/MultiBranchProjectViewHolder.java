@@ -36,6 +36,7 @@ import hudson.model.ViewGroup;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.util.DescribableList;
+import hudson.views.JobColumn;
 import hudson.views.ListViewColumn;
 import hudson.views.StatusColumn;
 import hudson.views.ViewsTabBar;
@@ -210,6 +211,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
                 getJobFilters().replaceBy(Collections.singletonList(new BranchCategoryFilter(category)));
                 DescribableList<ListViewColumn, Descriptor<ListViewColumn>> columns = getColumns();
                 columns.replace(columns.get(StatusColumn.class), new BranchStatusColumn());
+                columns.replace(columns.get(JobColumn.class), new ItemColumn());
             } catch (IOException e) {
                 // ignore
             }
