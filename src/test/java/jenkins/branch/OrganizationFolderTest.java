@@ -45,7 +45,9 @@ import java.util.logging.SimpleFormatter;
 
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMSource;
+import jenkins.scm.impl.mock.MockSCM;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -64,21 +66,27 @@ public class OrganizationFolderTest {
     
     @Test
     public void configRoundTrip() throws Exception {
-        OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
-        List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-        assertEquals(1, projectFactories.size());
-        assertEquals(MockFactory.class, projectFactories.get(0).getClass());
-        projectFactories.add(new MockFactory());
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
-        top = r.configRoundtrip(top);
-        List<SCMNavigator> navigators = top.getNavigators();
-        assertEquals(1, navigators.size());
-        assertEquals(SingleSCMNavigator.class, navigators.get(0).getClass());
-        assertEquals("stuff", ((SingleSCMNavigator) navigators.get(0)).getName());
-        projectFactories = top.getProjectFactories();
-        assertEquals(2, projectFactories.size());
-        assertEquals(MockFactory.class, projectFactories.get(0).getClass());
-        assertEquals(MockFactory.class, projectFactories.get(1).getClass());
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("stuff");
+            OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
+            List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
+            assertEquals(1, projectFactories.size());
+            assertEquals(MockFactory.class, projectFactories.get(0).getClass());
+            projectFactories.add(new MockFactory());
+            top.getNavigators().add(new SingleSCMNavigator("stuff",
+                    Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",
+                            new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
+            );
+            top = r.configRoundtrip(top);
+            List<SCMNavigator> navigators = top.getNavigators();
+            assertEquals(1, navigators.size());
+            assertEquals(SingleSCMNavigator.class, navigators.get(0).getClass());
+            assertEquals("stuff", ((SingleSCMNavigator) navigators.get(0)).getName());
+            projectFactories = top.getProjectFactories();
+            assertEquals(2, projectFactories.size());
+            assertEquals(MockFactory.class, projectFactories.get(0).getClass());
+            assertEquals(MockFactory.class, projectFactories.get(1).getClass());
+        }
     }
 
     @Test
@@ -88,8 +96,6 @@ public class OrganizationFolderTest {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
             top.getNavigators().add(new MockSCMNavigator(c, true, true, true));
-            top = r.configRoundtrip(top);
-
             top.scheduleBuild(0);
             assertTrue(MultiBranchImpl.awaitIndexed(top, "stuff", 15, TimeUnit.SECONDS));
         }
