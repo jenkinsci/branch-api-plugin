@@ -26,7 +26,10 @@
 package integration;
 
 import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import hudson.AbortException;
 import hudson.model.FreeStyleProject;
+import hudson.model.Result;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
@@ -42,6 +45,7 @@ import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEvents;
 import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMSourceEvent;
+import jenkins.scm.impl.mock.MockFailure;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMNavigator;
@@ -272,6 +276,42 @@ public class EventsTest {
             assertThat("The branch was built", master.getLastBuild().getNumber(), is(1));
             assertThat("The tag was built", tag.getLastBuild(), notNullValue());
             assertThat("The tag was built", tag.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_indexedMultibranch_when_indexingFails_then_previouslyIndexedBranchesAreNotDeleted()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createTag("foo", "master", "master-1.0");
+            Integer crNum = c.openChangeRequest("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, true, true)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            FreeStyleProject master = prj.getItem("master");
+            FreeStyleProject tag = prj.getItem("master-1.0");
+            FreeStyleProject cr = prj.getItem("CR-" + crNum);
+            assertThat("We have tags and branches and change request",
+                    prj.getItems(), containsInAnyOrder(master, tag, cr));
+            r.waitUntilNoActivity();
+            c.addFault(new MockFailure() {
+                @Override
+                public void check(@CheckForNull String repository, @CheckForNull String branchOrCR,
+                                  @CheckForNull String revision, boolean actions)
+                        throws IOException {
+                    if (!actions && "foo".equals(repository)) {
+                        throw new AbortException("FAULT");
+                    }
+                }
+            });
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat(prj.getComputation().getResult(), is(Result.FAILURE));
+            assertThat("We have tags and branches and change request",
+                    prj.getItems(), containsInAnyOrder(master, tag, cr));
         }
     }
 
