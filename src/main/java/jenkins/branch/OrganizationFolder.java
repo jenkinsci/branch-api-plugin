@@ -136,6 +136,20 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     private transient /*almost final*/ State state = new State(this);
 
     /**
+     * The navigator digest used to detect if we need to trigger a rescan on save.
+     *
+     * @since 2.0
+     */
+    private transient String navDigest;
+
+    /**
+     * The factory digest used to detect if we need to trigger a rescan on save.
+     *
+     * @since 2.0
+     */
+    private transient String facDigest;
+
+    /**
      * {@inheritDoc}
      */
     public OrganizationFolder(ItemGroup parent, String name) {
@@ -184,6 +198,24 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             LOGGER.log(Level.WARNING, "Could not read persisted state, will be recovered on next index.", e);
             state.reset();
         }
+        if (getComputation().getLogFile().isFile()) {
+            // TODO find a more reliable way to detect if the folder has not been scanned since creation
+            // Basically we want the first save after a config change to trigger a scan.
+            // The above condition will cover the very first save, but will not cover the case of the configuration
+            // being changed *by code not the user*, saved and then Jenkins restarted before the scan occurs.
+            // Should not be a big deal as periodic scan will pick it up eventually and user can always manually force
+            // the issue by triggering a manual scan
+            try {
+                navDigest = Util.getDigestOf(Items.XSTREAM2.toXML(navigators));
+            } catch (XStreamException e) {
+                navDigest = null;
+            }
+            try {
+                facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(projectFactories));
+            } catch (XStreamException e) {
+                facDigest = null;
+            }
+        }
     }
 
     public DescribableList<SCMNavigator,SCMNavigatorDescriptor> getNavigators() {
@@ -208,6 +240,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      */
     @Override
     protected void submit(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, Descriptor.FormException {
+        super.submit(req, rsp);
+        navigators.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(SCMNavigatorDescriptor.class), "navigators");
+        projectFactories.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
+        for (SCMNavigator n : navigators) {
+            n.afterSave(this);
+        }
         String navDigest;
         try {
             navDigest = Util.getDigestOf(Items.XSTREAM2.toXML(navigators));
@@ -220,16 +258,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         } catch (XStreamException e) {
             facDigest = null;
         }
-        super.submit(req, rsp);
-        navigators.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(SCMNavigatorDescriptor.class), "navigators");
-        projectFactories.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
-        for (SCMNavigator n : navigators) {
-            n.afterSave(this);
-        }
-        recalculateAfterSubmitted(navDigest == null
-                || !navDigest.equals(Util.getDigestOf(Items.XSTREAM2.toXML(navigators))));
-        recalculateAfterSubmitted(facDigest == null
-                || !facDigest.equals(Util.getDigestOf(Items.XSTREAM2.toXML(projectFactories))));
+        recalculateAfterSubmitted(!StringUtils.equals(navDigest, this.navDigest));
+        recalculateAfterSubmitted(!StringUtils.equals(facDigest, this.facDigest));
+        this.navDigest = navDigest;
+        this.facDigest = facDigest;
     }
 
     /**
@@ -252,6 +284,17 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      */
     @Override
     protected void computeChildren(final ChildObserver<MultiBranchProject<?,?>> observer, final TaskListener listener) throws IOException, InterruptedException {
+        // capture the current digests to prevent unnecessary rescan if re-saving after scan
+        try {
+            navDigest = Util.getDigestOf(Items.XSTREAM2.toXML(navigators));
+        } catch (XStreamException e) {
+            navDigest = null;
+        }
+        try {
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(projectFactories));
+        } catch (XStreamException e) {
+            facDigest = null;
+        }
         long start = System.currentTimeMillis();
         listener.getLogger().format("[%tc] Starting organization scan...%n", start);
         try {
