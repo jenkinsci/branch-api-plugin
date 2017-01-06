@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2011-2016, CloudBees, Inc., Stephen Connolly.
+ * Copyright (c) 2011-2017, CloudBees, Inc., Stephen Connolly.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -93,6 +93,7 @@ import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
+import jenkins.scm.api.mixin.TagSCMHead;
 import jenkins.scm.impl.NullSCMSource;
 import jenkins.triggers.SCMTriggerItem;
 import net.sf.json.JSONObject;
@@ -429,6 +430,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @Override
     protected void computeChildren(final ChildObserver<P> observer, final TaskListener listener)
             throws IOException, InterruptedException {
+        // capture the current digests to prevent unnecessary reindex if re-saving after index
+        try {
+            srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
+        } catch (XStreamException e) {
+            srcDigest = null;
+        }
+        try {
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
+        } catch (XStreamException e) {
+            facDigest = null;
+        }
         long start = System.currentTimeMillis();
         listener.getLogger().format("[%tc] Starting branch indexing...%n", start);
         try {
@@ -1662,15 +1674,37 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             revision
                     );
                     needSave = true;
-                    scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(),
-                            revisionActions);
+                    if (isAutomaticBuild(source, head)) {
+                        scheduleBuild(
+                                _factory,
+                                project,
+                                revision,
+                                listener,
+                                rawName,
+                                causeFactory.create(),
+                                revisionActions
+                        );
+                    } else {
+                        listener.getLogger().format("No automatic builds for %s%n", rawName);
+                    }
                 } else if (revision.isDeterministic()) {
                     SCMRevision lastBuild = _factory.getRevision(project);
                     if (!revision.equals(lastBuild)) {
                         listener.getLogger().format("Changes detected: %s (%s → %s)%n", rawName, lastBuild, revision);
                         needSave = true;
-                        scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(),
-                                revisionActions);
+                        if (isAutomaticBuild(source, head)) {
+                            scheduleBuild(
+                                    _factory,
+                                    project,
+                                    revision,
+                                    listener,
+                                    rawName,
+                                    causeFactory.create(),
+                                    revisionActions
+                            );
+                        } else {
+                            listener.getLogger().format("No automatic builds for %s%n", rawName);
+                        }
                     } else {
                         listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
                     }
@@ -1682,8 +1716,19 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         if (pollingResult.hasChanges()) {
                             listener.getLogger().format("Changes detected: %s%n", rawName);
                             needSave = true;
-                            scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(),
-                                    revisionActions);
+                            if (isAutomaticBuild(source, head)) {
+                                scheduleBuild(
+                                        _factory,
+                                        project,
+                                        revision,
+                                        listener,
+                                        rawName,
+                                        causeFactory.create(),
+                                        revisionActions
+                                );
+                            } else {
+                                listener.getLogger().format("No automatic builds for %s%n", rawName);
+                            }
                         } else {
                             listener.getLogger().format("No changes detected: %s%n", rawName);
                         }
@@ -1726,7 +1771,51 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             _factory.decorate(project);
             // ok it is now up to the observer to ensure it does the actual save.
             observer.created(project);
-            scheduleBuild(_factory, project, revision, listener, rawName, causeFactory.create(), revisionActions);
+            if (isAutomaticBuild(source, head)) {
+                scheduleBuild(
+                        _factory,
+                        project,
+                        revision,
+                        listener,
+                        rawName,
+                        causeFactory.create(),
+                        revisionActions
+                );
+            } else {
+                listener.getLogger().format("No automatic builds for %s%n", rawName);
+            }
+        }
+    }
+
+    /**
+     * Tests if the specified {@link SCMHead} should be automatically built when discovered / modified.
+     * @param source the source.
+     * @param head the head.
+     * @return {@code true} if the head should be automatically built when discovered / modified.
+     */
+    private boolean isAutomaticBuild(SCMSource source, SCMHead head) {
+        BranchSource branchSource = null;
+        for (BranchSource s: sources) {
+            if (s.getSource().getId().equals(source.getId())) {
+                branchSource = s;
+                break;
+            }
+        }
+        if (branchSource == null) {
+            // no match, means no build
+            return false;
+        }
+        List<BranchBuildStrategy> buildStrategies = branchSource.getBuildStrategies();
+        if (buildStrategies.isEmpty()) {
+            // we will use default behaviour, build anything but tags
+            return !(head instanceof TagSCMHead);
+        } else {
+            for (BranchBuildStrategy s: buildStrategies) {
+                if (s.isAutomaticBuild(source, head)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 

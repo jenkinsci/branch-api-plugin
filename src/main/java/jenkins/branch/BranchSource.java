@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2011-2013, CloudBees, Inc., Stephen Connolly.
+ * Copyright (c) 2011-2017, CloudBees, Inc., Stephen Connolly.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,10 +23,13 @@
  */
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import java.util.ArrayList;
+import java.util.Collections;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -51,6 +54,14 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
      * The strategy.
      */
     private BranchPropertyStrategy strategy;
+
+    /**
+     * The rules for automatic building of branches.
+     *
+     * @since 2.0.0
+     */
+    @CheckForNull
+    private List<BranchBuildStrategy> buildStrategies;
 
     @DataBoundConstructor
     public BranchSource(SCMSource source) {
@@ -96,6 +107,32 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
     }
 
     /**
+     * Gets the rules for automatic building of branches to apply on this source.
+     *
+     * @return the rules for automatic building of branches to apply on this source.
+     * @since 2.0.0
+     */
+    @NonNull
+    public List<BranchBuildStrategy> getBuildStrategies() {
+        return buildStrategies == null
+                ? Collections.<BranchBuildStrategy>emptyList()
+                : Collections.unmodifiableList(buildStrategies);
+    }
+
+    /**
+     * Gets the rules for automatic building of branches to apply on this source.
+     *
+     * @param buildStrategies the rules for automatic building of branches to apply on this source.
+     * @since 2.0.0
+     */
+    @DataBoundSetter
+    public void setBuildStrategies(@CheckForNull List<BranchBuildStrategy> buildStrategies) {
+        this.buildStrategies = buildStrategies == null || buildStrategies.isEmpty()
+                ? null
+                : new ArrayList<>(buildStrategies);
+    }
+
+    /**
      * Our {@link Descriptor}.
      */
     @Extension
@@ -121,6 +158,20 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
         public List<BranchPropertyStrategyDescriptor> propertyStrategyDescriptors(
                 @NonNull MultiBranchProject project, @NonNull SCMSourceDescriptor sourceDescriptor) {
             return BranchPropertyStrategyDescriptor.all(project, sourceDescriptor);
+        }
+
+        /**
+         * Gets all the {@link BranchBuildStrategyDescriptor} instances applicable to the specified project and source.
+         *
+         * @param project          the project
+         * @param sourceDescriptor the source.
+         * @return all the {@link BranchBuildStrategyDescriptor} instances applicable to the specified project and
+         *         source.
+         * @since 2.0.0
+         */
+        public List<BranchBuildStrategyDescriptor> buildStrategiesDescriptors(
+                @NonNull MultiBranchProject project, @NonNull SCMSourceDescriptor sourceDescriptor) {
+            return BranchBuildStrategyDescriptor.all(project, sourceDescriptor);
         }
 
     }

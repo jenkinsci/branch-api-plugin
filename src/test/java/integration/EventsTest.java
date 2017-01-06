@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2016 CloudBees, Inc.
+ * Copyright (c) 2016-2017 CloudBees, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,16 +35,22 @@ import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import jenkins.branch.Branch;
+import jenkins.branch.BranchBuildStrategy;
+import jenkins.branch.BranchBuildStrategyDescriptor;
 import jenkins.branch.BranchSource;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEvents;
+import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadEvent;
+import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceEvent;
+import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.impl.mock.MockFailure;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMHeadEvent;
@@ -56,6 +62,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -214,8 +221,7 @@ public class EventsTest {
             assertThat("We have change request but no tags or branches",
                     prj.getItems(), containsInAnyOrder(tag));
             r.waitUntilNoActivity();
-            assertThat("The tag was built", tag.getLastBuild(), notNullValue());
-            assertThat("The tag was built", tag.getLastBuild().getNumber(), is(1));
+            assertThat("The tag was not built", tag.getLastBuild(), nullValue());
         }
     }
 
@@ -274,8 +280,7 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("The branch was built", master.getLastBuild(), notNullValue());
             assertThat("The branch was built", master.getLastBuild().getNumber(), is(1));
-            assertThat("The tag was built", tag.getLastBuild(), notNullValue());
-            assertThat("The tag was built", tag.getLastBuild().getNumber(), is(1));
+            assertThat("The tag was not built", tag.getLastBuild(), nullValue());
         }
     }
 
@@ -341,8 +346,99 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("The branch was built", master.getLastBuild(), notNullValue());
             assertThat("The branch was built", master.getLastBuild().getNumber(), is(1));
+            assertThat("The tag was not built", tag.getLastBuild(), nullValue());
+            assertThat("The change request was built", cr.getLastBuild(), notNullValue());
+            assertThat("The change request was built", cr.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    public static class BuildEverythingStrategyImpl extends BranchBuildStrategy {
+        @Override
+        public boolean isAutomaticBuild(SCMSource source, SCMHead head) {
+            return true;
+        }
+
+        @TestExtension(
+                "given_multibranchWithSourcesWantingEverythingAndBuildingTags_when_indexing_then_everythingIsFoundAndBuiltEvenTags")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
+
+        }
+    }
+
+    @Test
+    public void given_multibranchWithSourcesWantingEverythingAndBuildingTags_when_indexing_then_everythingIsFoundAndBuiltEvenTags()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createTag("foo", "master", "master-1.0");
+            Integer crNum = c.openChangeRequest("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, true, true));
+            source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new BuildEverythingStrategyImpl()));
+            prj.getSourcesList().add(source);
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("We now have projects",
+                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("We have master branch", master, notNullValue());
+            FreeStyleProject tag = prj.getItem("master-1.0");
+            assertThat("We have master-1.0 tag", tag, notNullValue());
+            FreeStyleProject cr = prj.getItem("CR-" + crNum);
+            assertThat("We now have the change request", cr, notNullValue());
+            assertThat("We have change request but no tags or branches",
+                    prj.getItems(), containsInAnyOrder(cr, master, tag));
+            r.waitUntilNoActivity();
+            assertThat("The branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The branch was built", master.getLastBuild().getNumber(), is(1));
             assertThat("The tag was built", tag.getLastBuild(), notNullValue());
             assertThat("The tag was built", tag.getLastBuild().getNumber(), is(1));
+            assertThat("The change request was built", cr.getLastBuild(), notNullValue());
+            assertThat("The change request was built", cr.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    public static class BuildChangeRequestsStrategyImpl extends BranchBuildStrategy {
+        @Override
+        public boolean isAutomaticBuild(SCMSource source, SCMHead head) {
+            return head instanceof ChangeRequestSCMHead;
+        }
+
+        @TestExtension(
+                "given_multibranchWithSourcesWantingEverythingAndBuildingCRs_when_indexing_then_everythingIsFoundAndOnlyCRsBuilt")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
+
+        }
+    }
+
+    @Test
+    public void given_multibranchWithSourcesWantingEverythingAndBuildingCRs_when_indexing_then_everythingIsFoundAndOnlyCRsBuilt()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createTag("foo", "master", "master-1.0");
+            Integer crNum = c.openChangeRequest("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, true, true));
+            source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new BuildChangeRequestsStrategyImpl()));
+            prj.getSourcesList().add(source);
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("We now have projects",
+                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("We have master branch", master, notNullValue());
+            FreeStyleProject tag = prj.getItem("master-1.0");
+            assertThat("We have master-1.0 tag", tag, notNullValue());
+            FreeStyleProject cr = prj.getItem("CR-" + crNum);
+            assertThat("We now have the change request", cr, notNullValue());
+            assertThat("We have change request but no tags or branches",
+                    prj.getItems(), containsInAnyOrder(cr, master, tag));
+            r.waitUntilNoActivity();
+            assertThat("The branch was not built", master.getLastBuild(), nullValue());
+            assertThat("The tag was not built", tag.getLastBuild(), nullValue());
             assertThat("The change request was built", cr.getLastBuild(), notNullValue());
             assertThat("The change request was built", cr.getLastBuild().getNumber(), is(1));
         }

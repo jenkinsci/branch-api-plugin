@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2016 CloudBees, Inc.
+ * Copyright (c) 2016-2017 CloudBees, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -71,7 +71,7 @@ public class ScmApiTest {
     public void given_multibranchJob_when_scmHeadHeadByItemFindHead_then_headReturned() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
-            c.createTag("foo", "master", "1.0");
+            long timestamp = c.createTag("foo", "master", "1.0");
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
@@ -80,7 +80,8 @@ public class ScmApiTest {
             r.waitUntilNoActivity();
             assertThat(SCMHead.HeadByItem.findHead(prj.getItem("master")),
                     is((SCMHead) new MockSCMHead("master")));
-            assertThat(SCMHead.HeadByItem.findHead(prj.getItem("1.0")), is((SCMHead) new MockTagSCMHead("1.0")));
+            assertThat(SCMHead.HeadByItem.findHead(prj.getItem("1.0")), is((SCMHead) new MockTagSCMHead("1.0",
+                    timestamp)));
             assertThat(SCMHead.HeadByItem.findHead(prj.getItem("CR-" + crNum)),
                     is((SCMHead) new MockChangeRequestSCMHead(crNum, "master")));
         }
