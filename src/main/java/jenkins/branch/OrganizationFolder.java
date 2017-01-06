@@ -1056,7 +1056,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         if (factory == null) {
                             return;
                         }
-                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(projectName);
+                        String encodedName = NameMangler.apply(projectName);
+                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(encodedName);
                         if (existing != null) {
                             PersistedList<BranchSource> sourcesList = existing.getSourcesList();
                             sourcesList.clear();
@@ -1066,13 +1067,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             existing.scheduleBuild();
                             return;
                         }
-                        if (!observer.mayCreate(projectName)) {
+                        if (!observer.mayCreate(encodedName)) {
                             listener.getLogger().println("Ignoring duplicate child " + projectName);
                             return;
                         }
                         MultiBranchProject<?, ?> project = factory.createNewProject(
-                                OrganizationFolder.this, projectName, sources, attributes, listener
+                                OrganizationFolder.this, encodedName, sources, attributes, listener
                         );
+                        if (!encodedName.equals(projectName)) {
+                            project.setDisplayName(projectName);
+                        }
                         project.setOrphanedItemStrategy(getOrphanedItemStrategy());
                         project.getSourcesList().addAll(createBranchSources());
                         try {
