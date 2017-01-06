@@ -78,13 +78,15 @@ public class DescriptionColumn extends ListViewColumn {
      * @param p   the metadata action.
      * @param job the job.
      * @return the description.
+     * @throws IOException if there was an issue encoding the description.
      */
     @Restricted(NoExternalUse.class)
     @SuppressWarnings("unused") // used via Jelly EL binding
     public String description(@CheckForNull Object p, @NonNull Object job) throws IOException {
         if (p instanceof ObjectMetadataAction) {
             // when the description comes from the metadata, assume plain text and use Util.escape
-            String description = Util.escape(((ObjectMetadataAction) p).getObjectDescription());
+            String objectDescription = ((ObjectMetadataAction) p).getObjectDescription();
+            String description = objectDescription == null ? null : Util.escape(objectDescription);
             if (StringUtils.isNotBlank(description)) {
                 return description;
             }
