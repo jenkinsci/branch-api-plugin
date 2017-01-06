@@ -41,6 +41,7 @@ import java.util.Collections;
 import jenkins.branch.Branch;
 import jenkins.branch.BranchSource;
 import jenkins.branch.DescriptionColumn;
+import jenkins.branch.MultiBranchProject;
 import jenkins.branch.NameMangler;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
@@ -254,6 +255,120 @@ public class BrandingTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getAction(MockSCMLink.class), hasProperty("id", is("organization")));
+        }
+    }
+
+    @Test
+    public void given_orgFolderWithI18nRepos_when_indexing_then_repoNamesEncoded()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("England");
+            c.createRepository("Éireann");
+            c.createRepository("Россия");
+            c.createRepository("中国");
+            c.createRepository("España");
+            c.createRepository("대한민국");
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "multicultural");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+            assertThat(prj.getAction(MockSCMLink.class), nullValue());
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            MultiBranchProject england = null;
+            MultiBranchProject ireland = null;
+            MultiBranchProject russia = null;
+            MultiBranchProject china = null;
+            MultiBranchProject spain = null;
+            MultiBranchProject korea = null;
+
+            for (MultiBranchProject p : prj.getItems()) {
+                String name = p.getDisplayName();
+                System.out.println(name);
+                if ("England".equals(name)) {
+                    england = p;
+                } else if ("Éireann".equals(name)) {
+                    ireland = p;
+                } else if ("Россия".equals(name)) {
+                    russia = p;
+                } else if ("中国".equals(name)) {
+                    china = p;
+                } else if ("España".equals(name)) {
+                    spain = p;
+                } else if ("대한민국".equals(name)) {
+                    korea = p;
+                }
+            }
+
+            assertThat("England", england, notNullValue());
+            assertThat("England/master", england.getItem("master"), notNullValue());
+            assertThat("England/master/lastBuild", england.getItem("master").getLastBuild(), notNullValue());
+
+            assertThat("Ireland", ireland, notNullValue());
+            assertThat("Ireland/master", ireland.getItem("master"), notNullValue());
+            assertThat("Ireland/master/lastBuild", ireland.getItem("master").getLastBuild(), notNullValue());
+
+            assertThat("Russia", russia, notNullValue());
+            assertThat("Russia/master", russia.getItem("master"), notNullValue());
+            assertThat("Russia/master/lastBuild", russia.getItem("master").getLastBuild(), notNullValue());
+
+            assertThat("China", china, notNullValue());
+            assertThat("China/master", china.getItem("master"), notNullValue());
+            assertThat("China/master/lastBuild", china.getItem("master").getLastBuild(), notNullValue());
+
+            assertThat("Spain", spain, notNullValue());
+            assertThat("Spain/master", spain.getItem("master"), notNullValue());
+            assertThat("Spain/master/lastBuild", spain.getItem("master").getLastBuild(), notNullValue());
+
+            assertThat("Korea", korea, notNullValue());
+            assertThat("Korea/master", korea.getItem("master"), notNullValue());
+            assertThat("Korea/master/lastBuild", korea.getItem("master").getLastBuild(), notNullValue());
+
+            assertThat(prj.getItems(), containsInAnyOrder(england, ireland, spain, china, russia, korea));
+        }
+    }
+
+    @Test
+    public void given_orgFolderWithNonSafeRepos_when_indexing_then_repoNamesEncoded()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("a?");
+            c.createRepository("a*");
+            c.createRepository("a/b");
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "multicultural");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+            assertThat(prj.getAction(MockSCMLink.class), nullValue());
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            MultiBranchProject question = null;
+            MultiBranchProject star = null;
+            MultiBranchProject slash = null;
+
+            for (MultiBranchProject p : prj.getItems()) {
+                String name = p.getDisplayName();
+                System.out.println(name);
+                if ("a?".equals(name)) {
+                    question = p;
+                } else if ("a*".equals(name)) {
+                    star = p;
+                } else if ("a/b".equals(name)) {
+                    slash = p;
+                }
+            }
+
+            assertThat("a?", question, notNullValue());
+            assertThat("a?/master", question.getItem("master"), notNullValue());
+            assertThat("a?/master/lastBuild", question.getItem("master").getLastBuild(), notNullValue());
+
+            assertThat("a*", star, notNullValue());
+            assertThat("a*/master", star.getItem("master"), notNullValue());
+            assertThat("a*/master/lastBuild", star.getItem("master").getLastBuild(), notNullValue());
+
+            assertThat("a/b", slash, notNullValue());
+            assertThat("a/b/master", slash.getItem("master"), notNullValue());
+            assertThat("a/b/master/lastBuild", slash.getItem("master").getLastBuild(), notNullValue());
+
+            assertThat(prj.getItems(), containsInAnyOrder(question, star, slash));
         }
     }
 
