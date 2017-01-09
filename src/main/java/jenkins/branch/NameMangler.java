@@ -55,7 +55,33 @@ public final class NameMangler {
                     break;
                 }
             }
-            if (!unsafe && (".".equals(name) || "..".equals(name))) {
+            // See https://msdn.microsoft.com/en-us/library/aa365247 we need to consistently reserve names across all OS
+            if (!unsafe && (".".equals(name)
+                    || "..".equals(name))
+                    || "con".equalsIgnoreCase(name)
+                    || "prn".equalsIgnoreCase(name)
+                    || "aux".equalsIgnoreCase(name)
+                    || "nul".equalsIgnoreCase(name)
+                    || "com1".equalsIgnoreCase(name)
+                    || "com2".equalsIgnoreCase(name)
+                    || "com3".equalsIgnoreCase(name)
+                    || "com4".equalsIgnoreCase(name)
+                    || "com5".equalsIgnoreCase(name)
+                    || "com6".equalsIgnoreCase(name)
+                    || "com7".equalsIgnoreCase(name)
+                    || "com8".equalsIgnoreCase(name)
+                    || "com9".equalsIgnoreCase(name)
+                    || "lpt1".equalsIgnoreCase(name)
+                    || "lpt2".equalsIgnoreCase(name)
+                    || "lpt3".equalsIgnoreCase(name)
+                    || "lpt4".equalsIgnoreCase(name)
+                    || "lpt5".equalsIgnoreCase(name)
+                    || "lpt6".equalsIgnoreCase(name)
+                    || "lpt7".equalsIgnoreCase(name)
+                    || "lpt8".equalsIgnoreCase(name)
+                    || "lpt9".equalsIgnoreCase(name)
+                    || name.endsWith(".")
+                    ) {
                 unsafe = true;
             }
             if (!unsafe) {
