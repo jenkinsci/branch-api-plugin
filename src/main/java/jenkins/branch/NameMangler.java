@@ -26,7 +26,6 @@ package jenkins.branch;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Locale;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -55,6 +54,9 @@ public final class NameMangler {
                     unsafe = true;
                     break;
                 }
+            }
+            if (!unsafe && (".".equals(name) || "..".equals(name))) {
+                unsafe = true;
             }
             if (!unsafe) {
                 return name;
