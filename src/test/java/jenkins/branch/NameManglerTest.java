@@ -38,6 +38,34 @@ public class NameManglerTest {
     }
 
     @Test
+    public void reservedNames() {
+        assertThat(NameMangler.apply("."), is(".-tkvgu3"));
+        assertThat(NameMangler.apply(".."), is("..-mpdh40"));
+        assertThat(NameMangler.apply("con"), is("con-lkb1gc"));
+        assertThat(NameMangler.apply("prn"), is("prn-n7ievs"));
+        assertThat(NameMangler.apply("aux"), is("aux-75carl"));
+        assertThat(NameMangler.apply("nul"), is("nul-3r8i6h"));
+        assertThat(NameMangler.apply("com1"), is("com1-k0564q"));
+        assertThat(NameMangler.apply("com2"), is("com2-ni698t"));
+        assertThat(NameMangler.apply("com3"), is("com3-8ad2lm"));
+        assertThat(NameMangler.apply("com4"), is("com4-j2s67g"));
+        assertThat(NameMangler.apply("com5"), is("com5-8fdiog"));
+        assertThat(NameMangler.apply("com6"), is("com6-v0rf0v"));
+        assertThat(NameMangler.apply("com7"), is("com7-v5tsfp"));
+        assertThat(NameMangler.apply("com8"), is("com8-o02opt"));
+        assertThat(NameMangler.apply("com9"), is("com9-3bmuo4"));
+        assertThat(NameMangler.apply("lpt1"), is("lpt1-cstki2"));
+        assertThat(NameMangler.apply("lpt2"), is("lpt2-136d1i"));
+        assertThat(NameMangler.apply("lpt3"), is("lpt3-cvdm8e"));
+        assertThat(NameMangler.apply("lpt4"), is("lpt4-upc9bu"));
+        assertThat(NameMangler.apply("lpt5"), is("lpt5-u2mmru"));
+        assertThat(NameMangler.apply("lpt6"), is("lpt6-n50rnj"));
+        assertThat(NameMangler.apply("lpt7"), is("lpt7-9eh7vi"));
+        assertThat(NameMangler.apply("lpt8"), is("lpt8-gm9r02"));
+        assertThat(NameMangler.apply("lpt9"), is("lpt9-55srnr"));
+    }
+
+    @Test
     public void slashNames() {
         assertThat(NameMangler.apply("foo/bar"), is("foo_bar-nj9av9"));
         assertThat(NameMangler.apply("foo/bar/fu manchu"), is("foo_bar_fu_manchu-k630nd"));
