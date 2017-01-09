@@ -93,6 +93,7 @@ import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
 import net.jcip.annotations.GuardedBy;
+import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.Icon;
@@ -189,6 +190,21 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         if (!(getIcon() instanceof MetadataActionFolderIcon)) {
             setIcon(newDefaultFolderIcon());
         }
+        // migrate any non-mangled names
+        List<MultiBranchProject<?, ?>> items = new ArrayList<>(getItems());
+        for (MultiBranchProject<?, ?> item : items) {
+            String itemName = item.getName();
+            String mangledName = NameMangler.apply(itemName);
+            if (!itemName.equals(mangledName)) {
+                if (getItem(mangledName) == null) {
+                    item.renameTo(mangledName);
+                    if (item.getDisplayNameOrNull() == null) {
+                        item.setDisplayName(itemName);
+                        item.save();
+                    }
+                }
+            }
+        }
         if (state == null) {
             state = new State(this);
         }
@@ -216,6 +232,15 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 facDigest = null;
             }
         }
+    }
+
+    @Override
+    public MultiBranchProject<?, ?> getItem(String name) throws AccessDeniedException {
+        MultiBranchProject<?, ?> item = super.getItem(name);
+        if (item == null && name != null) {
+            return super.getItem(NameMangler.apply(name));
+        }
+        return item;
     }
 
     public DescribableList<SCMNavigator,SCMNavigatorDescriptor> getNavigators() {

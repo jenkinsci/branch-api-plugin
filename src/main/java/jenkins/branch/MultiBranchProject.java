@@ -161,6 +161,21 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     public void onLoad(ItemGroup<? extends Item> parent, String name) throws IOException {
         super.onLoad(parent, name);
         init2();
+        // migrate any non-mangled names
+        ArrayList<P> items = new ArrayList<>(getItems());
+        for (P item : items) {
+            String itemName = item.getName();
+            String mangledName = NameMangler.apply(itemName);
+            if (!itemName.equals(mangledName)) {
+                if (getItem(mangledName) == null) {
+                    item.renameTo(mangledName);
+                    if (item.getDisplayNameOrNull() == null) {
+                        item.setDisplayName(itemName);
+                        item.save();
+                    }
+                }
+            }
+        }
         try {
             srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
         } catch (XStreamException e) {
@@ -563,9 +578,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             if (item != null) {
                 return item;
             }
+            item = super.getItem(NameMangler.apply(decoded));
+            if (item != null) {
+                return item;
+            }
             // fall through for double decoded call paths
         }
-        return super.getItem(name);
+        P item = super.getItem(name);
+        if (item != null) {
+            return item;
+        }
+        return super.getItem(NameMangler.apply(name));
     }
 
     /**
