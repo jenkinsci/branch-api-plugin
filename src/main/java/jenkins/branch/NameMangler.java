@@ -26,6 +26,7 @@ package jenkins.branch;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 import org.apache.commons.lang.StringUtils;
 
 /**
@@ -56,33 +57,41 @@ public final class NameMangler {
                 }
             }
             // See https://msdn.microsoft.com/en-us/library/aa365247 we need to consistently reserve names across all OS
-            if (!unsafe && (".".equals(name)
-                    || "..".equals(name))
-                    || "con".equalsIgnoreCase(name)
-                    || "prn".equalsIgnoreCase(name)
-                    || "aux".equalsIgnoreCase(name)
-                    || "nul".equalsIgnoreCase(name)
-                    || "com1".equalsIgnoreCase(name)
-                    || "com2".equalsIgnoreCase(name)
-                    || "com3".equalsIgnoreCase(name)
-                    || "com4".equalsIgnoreCase(name)
-                    || "com5".equalsIgnoreCase(name)
-                    || "com6".equalsIgnoreCase(name)
-                    || "com7".equalsIgnoreCase(name)
-                    || "com8".equalsIgnoreCase(name)
-                    || "com9".equalsIgnoreCase(name)
-                    || "lpt1".equalsIgnoreCase(name)
-                    || "lpt2".equalsIgnoreCase(name)
-                    || "lpt3".equalsIgnoreCase(name)
-                    || "lpt4".equalsIgnoreCase(name)
-                    || "lpt5".equalsIgnoreCase(name)
-                    || "lpt6".equalsIgnoreCase(name)
-                    || "lpt7".equalsIgnoreCase(name)
-                    || "lpt8".equalsIgnoreCase(name)
-                    || "lpt9".equalsIgnoreCase(name)
-                    || name.endsWith(".")
-                    ) {
-                unsafe = true;
+            if (!unsafe) {
+                // we know it is only US-ASCII if we got to here
+                switch (name.toLowerCase(Locale.ENGLISH)) {
+                    case ".":
+                    case "..":
+                    case "con":
+                    case "prn":
+                    case "aux":
+                    case "nul":
+                    case "com1":
+                    case "com2":
+                    case "com3":
+                    case "com4":
+                    case "com5":
+                    case "com6":
+                    case "com7":
+                    case "com8":
+                    case "com9":
+                    case "lpt1":
+                    case "lpt2":
+                    case "lpt3":
+                    case "lpt4":
+                    case "lpt5":
+                    case "lpt6":
+                    case "lpt7":
+                    case "lpt8":
+                    case "lpt9":
+                        unsafe = true;
+                        break;
+                    default:
+                        if (name.endsWith(".")) {
+                            unsafe = true;
+                        }
+                        break;
+                }
             }
             if (!unsafe) {
                 return name;
@@ -94,7 +103,7 @@ public final class NameMangler {
                 buf.append(c);
             } else if (c == '/' || c == '\\' || c == ' ') {
                 buf.append('_');
-            } else if (c <= 0xff){
+            } else if (c <= 0xff) {
                 buf.append('%');
                 buf.append(StringUtils.leftPad(Integer.toHexString(c & 0xff), 2, '0'));
             } else {
@@ -127,7 +136,7 @@ public final class NameMangler {
         }
         if (buf.length() <= MAX_SAFE_LENGTH - MIN_HASH_LENGTH - 1) {
             // we have room to add the min hash
-            buf.append('-');
+            buf.append('@');
             buf.append(StringUtils.right(digest, MIN_HASH_LENGTH));
             return buf.toString();
         }
@@ -135,11 +144,11 @@ public final class NameMangler {
         int overage = buf.length() - MAX_SAFE_LENGTH;
         String hash;
         if (overage <= MIN_HASH_LENGTH) {
-            hash = "-" + StringUtils.right(digest, MIN_HASH_LENGTH) + "-";
+            hash = "@" + StringUtils.right(digest, MIN_HASH_LENGTH) + "@";
         } else if (overage > MAX_HASH_LENGTH) {
-            hash = "-" + StringUtils.right(digest, MAX_HASH_LENGTH) + "-";
+            hash = "@" + StringUtils.right(digest, MAX_HASH_LENGTH) + "@";
         } else {
-            hash = "-" + StringUtils.right(digest, overage) + "-";
+            hash = "@" + StringUtils.right(digest, overage) + "@";
         }
         int start = (MAX_SAFE_LENGTH - hash.length()) / 2;
         buf.delete(start, start + hash.length() + overage);
@@ -158,7 +167,6 @@ public final class NameMangler {
                 || ('0' <= c && c <= '9')
                 || '_' == c
                 || '.' == c
-                || '-' == c
-                || '@' == c;
+                || '-' == c;
     }
 }
