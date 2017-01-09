@@ -165,6 +165,68 @@ public class BrandingTest {
     public void given_multibranch_when_sourceHasNonSafeNames_then_branchDisplayNameNotMangled() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
+            c.createBranch("foo", ".");
+            c.createBranch("foo", "..");
+            c.createBranch("foo", "../..");
+
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            assertThat(prj.getAction(MockSCMLink.class), nullValue());
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+
+            // now for the fun
+            FreeStyleProject master = null;
+            FreeStyleProject dot = null;
+            FreeStyleProject dotdot = null;
+            FreeStyleProject dotdotslashdotdot = null;
+
+            for (FreeStyleProject p : prj.getItems()) {
+                Branch branch = prj.getProjectFactory().getBranch(p);
+                String name = branch.getName();
+                if ("master".equals(name)) {
+                    master = p;
+                } else if (".".equals(name)) {
+                    dot = p;
+                } else if ("..".equals(name)) {
+                    dotdot = p;
+                } else if ("../..".equals(name)) {
+                    dotdotslashdotdot = p;
+                }
+            }
+            assertThat("We have the master branch", master, notNullValue());
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch build was success", master.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(master.getDisplayName(), is("master"));
+            assertThat(master.getName(), is("master"));
+
+            assertThat("We have the . branch", dot, notNullValue());
+            assertThat("The . branch was built", dot.getLastBuild(), notNullValue());
+            assertThat("The . branch build was success", dot.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(dot.getDisplayName(), is("."));
+            assertThat(dot.getName(), not(is(".")));
+
+            assertThat("We have the .. branch", dotdot, notNullValue());
+            assertThat("The .. branch was built", dotdot.getLastBuild(), notNullValue());
+            assertThat("The .. branch build was success", dotdot.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(dotdot.getDisplayName(), is(".."));
+            assertThat(dotdot.getName(), not(is("..")));
+
+            assertThat("We have the ../.. branch", dotdotslashdotdot, notNullValue());
+            assertThat("The ../.. branch was built", dotdotslashdotdot.getLastBuild(), notNullValue());
+            assertThat("The ../.. branch build was success", dotdotslashdotdot.getLastBuild().getResult(), is(Result.SUCCESS));
+            assertThat(dotdotslashdotdot.getDisplayName(), is("../.."));
+            assertThat(dotdotslashdotdot.getName(), not(is("../..")));
+
+            assertThat(prj.getItems(), containsInAnyOrder(master, dot, dotdot, dotdotslashdotdot));
+        }
+    }
+
+    @Test
+    public void given_multibranch_when_sourceHasI18nNames_then_branchDisplayNameNotMangled() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
             c.createBranch("foo","特征/新");
             c.createBranch("foo","특색/새로운");
             c.createBranch("foo","gné/nua");
