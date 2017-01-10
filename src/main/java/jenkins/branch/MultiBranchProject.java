@@ -163,16 +163,19 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         init2();
         // migrate any non-mangled names
         ArrayList<P> items = new ArrayList<>(getItems());
+        BranchProjectFactory<P, R> projectFactory = getProjectFactory();
         for (P item : items) {
-            String itemName = item.getName();
-            String mangledName = NameMangler.apply(itemName);
-            if (!itemName.equals(mangledName)) {
-                if (getItem(mangledName) == null) {
-                    item.renameTo(mangledName);
-                    if (item.getDisplayNameOrNull() == null) {
-                        item.setDisplayName(itemName);
-                        item.save();
-                    }
+            if (projectFactory.isProject(item)) {
+                String itemName = item.getName();
+                String mangledName = projectFactory.getBranch(item).getEncodedName();
+                if (!itemName.equals(mangledName)) {
+                    if (super.getItem(mangledName) == null) {
+                        item.renameTo(mangledName);
+                        if (item.getDisplayNameOrNull() == null) {
+                            item.setDisplayName(itemName);
+                            item.save();
+                        }
+                    } // else will be removed by the orphaned item strategy on next scan
                 }
             }
         }
@@ -182,7 +185,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             srcDigest = null;
         }
         try {
-            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(projectFactory));
         } catch (XStreamException e) {
             facDigest = null;
         }

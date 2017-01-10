@@ -196,13 +196,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             String itemName = item.getName();
             String mangledName = NameMangler.apply(itemName);
             if (!itemName.equals(mangledName)) {
-                if (getItem(mangledName) == null) {
+                if (super.getItem(mangledName) == null) {
                     item.renameTo(mangledName);
                     if (item.getDisplayNameOrNull() == null) {
                         item.setDisplayName(itemName);
                         item.save();
                     }
-                }
+                } // else will be removed by the orphaned item strategy on next scan
             }
         }
         if (state == null) {
