@@ -305,7 +305,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 try {
                     actions = navigator.fetchActions(this, null, listener);
                 } catch (IOException e) {
-                    e.printStackTrace(listener.error("Could not refresh actions for navigator"));
+                    e.printStackTrace(listener.error("[%tc] Could not refresh actions for navigator %s",
+                            System.currentTimeMillis(), navigator));
                     // preserve previous actions if we have some transient error fetching now (e.g. API rate limit)
                     actions = Util.fixNull(state.getActions().get(navigator));
                 }
@@ -323,9 +324,22 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 BulkChange bc = new BulkChange(state);
                 try {
                     state.setActions(navigatorActions);
-                    bc.commit();
+                    try {
+                        bc.commit();
+                    } catch (IOException | RuntimeException e) {
+                        e.printStackTrace(listener.error("[%tc] Could not persist folder level actions",
+                                System.currentTimeMillis()));
+                        throw e;
+                    }
                     if (saveProject) {
-                        save();
+                        try {
+                            save();
+                        } catch (IOException | RuntimeException e) {
+                            e.printStackTrace(listener.error(
+                                    "[%tc] Could not persist folder level configuration changes",
+                                    System.currentTimeMillis()));
+                            throw e;
+                        }
                     }
                 } finally {
                     bc.abort();
@@ -337,7 +351,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 }
                 listener.getLogger().format("[%tc] Consulting %s%n", System.currentTimeMillis(),
                         navigator.getDescriptor().getDisplayName());
-                navigator.visitSources(new SCMSourceObserverImpl(listener, observer));
+                try {
+                    navigator.visitSources(new SCMSourceObserverImpl(listener, observer));
+                } catch (IOException | InterruptedException | RuntimeException e) {
+                    e.printStackTrace(listener.error("[%tc] Could not fetch sources from navigator %s",
+                            System.currentTimeMillis(), navigator));
+                    throw e;
+                }
             }
         } finally {
             long end = System.currentTimeMillis();

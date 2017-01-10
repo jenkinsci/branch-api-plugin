@@ -448,7 +448,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             List<SCMSource> scmSources = getSCMSources();
             Map<String, List<Action>> sourceActions = new LinkedHashMap<>();
             for (SCMSource source : scmSources) {
-                sourceActions.put(source.getId(), source.fetchActions(null, listener));
+                try {
+                    sourceActions.put(source.getId(), source.fetchActions(null, listener));
+                } catch (IOException | InterruptedException | RuntimeException e) {
+                    e.printStackTrace(listener.error("[%tc] Could not update folder level actions from source %s",
+                            System.currentTimeMillis(), source.getId()));
+                    throw e;
+                }
             }
             // update any persistent actions for the SCMSource
             if (!sourceActions.equals(state.sourceActions)) {
@@ -463,17 +469,36 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 try {
                     state.sourceActions.keySet().retainAll(sourceActions.keySet());
                     state.sourceActions.putAll(sourceActions);
-                    bc.commit();
+                    try {
+                        bc.commit();
+                    } catch (IOException | RuntimeException e) {
+                        e.printStackTrace(listener.error("[%tc] Could not persist folder level actions",
+                                System.currentTimeMillis()));
+                        throw e;
+                    }
                     if (saveProject) {
-                        save();
+                        try {
+                            save();
+                        } catch (IOException | RuntimeException e) {
+                            e.printStackTrace(listener.error(
+                                    "[%tc] Could not persist folder level configuration changes",
+                                    System.currentTimeMillis()));
+                            throw e;
+                        }
                     }
                 } finally {
                     bc.abort();
                 }
             }
             for (final SCMSource source : scmSources) {
-                source.fetch(new SCMHeadObserverImpl(source, observer, listener, _factory,
-                        new IndexingCauseFactory(), null), listener);
+                try {
+                    source.fetch(new SCMHeadObserverImpl(source, observer, listener, _factory,
+                            new IndexingCauseFactory(), null), listener);
+                } catch (IOException | InterruptedException | RuntimeException e) {
+                    e.printStackTrace(listener.error("[%tc] Could not fetch branches from source %s",
+                            System.currentTimeMillis(), source.getId()));
+                    throw e;
+                }
             }
         } finally {
             long end = System.currentTimeMillis();
