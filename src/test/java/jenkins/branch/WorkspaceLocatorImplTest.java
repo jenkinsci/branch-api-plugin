@@ -76,9 +76,9 @@ public class WorkspaceLocatorImplTest {
         showComputation(stuff);
         FreeStyleProject master = r.jenkins.getItemByFullName("stuff/"+NameMangler.apply("dev/flow"), FreeStyleProject.class);
         assertNotNull(master);
-        assertEquals(r.jenkins.getRootPath().child("workspace/stuff_"+ NameMangler.apply("dev/flow").replace('@','_')+"-HEAQQA3VKMJWWMJ2LGY5PBAKURNMTX2PMQ3FG7E2R5NWAUUN4SZQ"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(r.jenkins.getRootPath().child("workspace/stuff_dev_flow_bn29c1-HEAQQA3VKMJWWMJ2LGY5PBAKURNMTX2PMQ3FG7E2R5NWAUUN4SZQ"), r.jenkins.getWorkspaceFor(master));
         DumbSlave slave = r.createOnlineSlave();
-        assertEquals(slave.getWorkspaceRoot().child("stuff_"+NameMangler.apply("dev/flow").replace('@', '_')+"-HEAQQA3VKMJWWMJ2LGY5PBAKURNMTX2PMQ3FG7E2R5NWAUUN4SZQ"), slave.getWorkspaceFor(master));
+        assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow_bn29c1-HEAQQA3VKMJWWMJ2LGY5PBAKURNMTX2PMQ3FG7E2R5NWAUUN4SZQ"), slave.getWorkspaceFor(master));
         FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
         assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
     }

@@ -35,6 +35,8 @@ public class NameManglerTest {
         assertThat(NameMangler.apply("foo"), is("foo"));
         assertThat(NameMangler.apply("foo-bar"), is("foo-bar"));
         assertThat(NameMangler.apply("foo bar"), is("foo_bar@074vf0"));
+        assertThat(NameMangler.apply("foo/bar"), is("foo_bar@nj9av9"));
+        assertThat(NameMangler.apply("foo\\bar"), is("foo_bar@730n59"));
     }
 
     @Test

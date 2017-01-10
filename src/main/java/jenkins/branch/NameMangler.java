@@ -132,7 +132,7 @@ public final class NameMangler {
             }
             digest = dd.toString();
         } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("MD5 not installed", e);    // impossible
+            throw new IllegalStateException("SHA-1 not installed", e);    // impossible
         }
         if (buf.length() <= MAX_SAFE_LENGTH - MIN_HASH_LENGTH - 1) {
             // we have room to add the min hash
