@@ -25,8 +25,6 @@
 package jenkins.branch;
 
 import hudson.Extension;
-import hudson.Util;
-import hudson.markup.MarkupFormatter;
 import hudson.model.Actionable;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
@@ -35,6 +33,7 @@ import hudson.views.ListViewColumn;
 import hudson.views.ListViewColumnDescriptor;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -65,17 +64,26 @@ public class ItemColumn extends ListViewColumn {
     }
 
     /**
-     * Gets the description of a job.
+     * Gets the tool-tip title of a job.
      *
      * @param job the job.
-     * @return the description.
+     * @return the tool-tip title unescaped for use in an attribute.
      */
     @SuppressWarnings("unused") // used via Jelly EL binding
-    public String getDescription(Object job) {
+    public String getTitle(Object job) {
+        // Jelly will take care of quote and ampersand escaping for us
         if (job instanceof Actionable) {
-            ObjectMetadataAction action = ((Actionable)job).getAction(ObjectMetadataAction.class);
-            String description = action != null ? action.getObjectDescription() : null;
-            return description != null ? Util.escape(description) : null;
+            Actionable actionable = (Actionable) job;
+            ObjectMetadataAction action = actionable.getAction(ObjectMetadataAction.class);
+            if (action != null) {
+                String dispayName = action.getObjectDisplayName();
+                if (StringUtils.isBlank(dispayName) || dispayName.equals(actionable.getDisplayName())) {
+                    // if the display name is the same, then the description is more useful
+                    String description = action.getObjectDescription();
+                    return description != null ? description : dispayName;
+                }
+                return dispayName;
+            }
         }
         return null;
     }

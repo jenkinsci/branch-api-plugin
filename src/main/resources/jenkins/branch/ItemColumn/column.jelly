@@ -29,13 +29,13 @@ THE SOFTWARE.
     <j:choose>
       <j:when test="${it.isPrimary(job)}">
         <strong>
-          <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside' title="${it.getDescription(job)}">
+          <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside' title="${it.getTitle(job)}">
             <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
           </a>
         </strong>
       </j:when>
       <j:otherwise>
-        <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside' title="${it.getDescription(job)}">
+        <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside' title="${it.getTitle(job)}">
           <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
         </a>
       </j:otherwise>
