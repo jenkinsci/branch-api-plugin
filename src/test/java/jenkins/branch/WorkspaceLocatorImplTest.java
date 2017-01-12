@@ -74,7 +74,7 @@ public class WorkspaceLocatorImplTest {
         stuff.scheduleBuild2(0).getFuture().get();
         r.waitUntilNoActivity();
         showComputation(stuff);
-        FreeStyleProject master = r.jenkins.getItemByFullName("stuff/"+NameMangler.apply("dev/flow"), FreeStyleProject.class);
+        FreeStyleProject master = r.jenkins.getItemByFullName("stuff/dev-flow.bn29c1", FreeStyleProject.class);
         assertNotNull(master);
         assertEquals(r.jenkins.getRootPath().child("workspace/stuff_dev-flow.bn29c1-7W3ZTDHY5QN5BTMYZEFLCFP56UUPM32ZI6RUODUT4HZONWY7MLFA"), r.jenkins.getWorkspaceFor(master));
         DumbSlave slave = r.createOnlineSlave();
