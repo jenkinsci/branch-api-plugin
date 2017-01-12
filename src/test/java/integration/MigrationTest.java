@@ -94,12 +94,19 @@ public class MigrationTest {
         // OS dependent encoding of the ñ in España when it is on the filesyste
         String espana = "España";
         String espanaEncoded = "Espa_f1a.9jabqu";
+        String ireland = "Éireann";
+        String irelandEncoded = "0_c9ireann.giuvlt";
         for (MultiBranchProject<?, ?> p : prj.getItems()) {
             System.out.printf("%s ==> %s%n", p.getName(), p.getDisplayName());
             if (p.getName().equals("Espan_03_03a.eqqe01")) {
                 // alternative encoding
                 espana = "Espa\u006e\u0303a";
                 espanaEncoded = "Espan_03_03a.eqqe01";
+            }
+            if (p.getName().equals("E_01_03ireann.0qtq11")) {
+                // alternative encoding
+                ireland = "E\u0103ireann";
+                irelandEncoded = "E_01_03ireann.0qtq11";
             }
             byName.put(p.getName(), p);
             byDisplayName.put(p.getDisplayName(), p);
@@ -111,7 +118,7 @@ public class MigrationTest {
         }
         assertThat("Display Names are repo names", byDisplayName.keySet(), containsInAnyOrder(
                 "test.example.com",
-                "Éireann",
+                ireland,
                 "Россия",
                 "中国",
                 espana,
@@ -119,7 +126,7 @@ public class MigrationTest {
         ));
         assertThat("Folder names have been mangled", byName.keySet(), containsInAnyOrder(
                 "test-example-com.34nhgh",
-                "0_c9ireann.giuvlt",  // Éireann
+                irelandEncoded,  // Éireann
                 "0_20_04_3e_0.pei3d7._38_04_4f_04", // Россия
                 "0_2d_4e_fd_56.m4k0dn", // 中国
                 espanaEncoded, // España
@@ -131,14 +138,14 @@ public class MigrationTest {
                 "foo » test.example.com » feature: browsing/part 1",
                 "foo » test.example.com » feature: browsing/part 2",
                 "foo » test.example.com » feature: welcome",
-                "foo » Éireann » master",
-                "foo » Éireann » gné/nua",
+                "foo » " + ireland + " » master",
+                "foo » " + ireland + " » gné/nua",
                 "foo » Россия » master",
                 "foo » Россия » особенность/новый",
                 "foo » 中国 » master",
                 "foo » 中国 » 特征/新",
-                "foo » "+espana+" » master",
-                "foo » "+espana+" » característica/nuevo",
+                "foo » " + espana + " » master",
+                "foo » " + espana + " » característica/nuevo",
                 "foo » 대한민국 » master",
                 "foo » 대한민국 » 특색/새로운"
         ));
@@ -147,19 +154,19 @@ public class MigrationTest {
                 "foo/test-example-com.34nhgh/feature_3a-b.jk8rfi.wsing-part-1",
                 "foo/test-example-com.34nhgh/feature_3a-b.m8lpav.wsing-part-2",
                 "foo/test-example-com.34nhgh/feature_3a-welcome.9dhrtb",
-                "foo/0_c9ireann.giuvlt/master",
-                "foo/0_c9ireann.giuvlt/gn_e9-nua.updi5h",
+                "foo/" + irelandEncoded + "/master",
+                "foo/" + irelandEncoded + "/gn_e9-nua.updi5h",
                 "foo/0_20_04_3e_0.pei3d7._38_04_4f_04/master",
                 "foo/0_20_04_3e_0.pei3d7._38_04_4f_04/0_3e_04_4.n168ksdsksof._04_39_04",
                 "foo/0_2d_4e_fd_56.m4k0dn/master",
                 "foo/0_2d_4e_fd_56.m4k0dn/0_79_72_81_5f-_b0_65.nt1m48",
-                "foo/"+espanaEncoded+"/master",
-                "foo/"+espanaEncoded+"/caracter_edstica-nuevo.h5da9f",
+                "foo/" + espanaEncoded + "/master",
+                "foo/" + espanaEncoded + "/caracter_edstica-nuevo.h5da9f",
                 "foo/0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs/master",
                 "foo/0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs/0_b9_d2_c9_c.ps50ht._5c_b8_b4_c6"
         ));
 
-        assertThat(prj.getItemByProjectName("Éireann"), notNullValue());
-        assertThat(prj.getItemByProjectName("Éireann").getItemByBranchName("gné/nua"), notNullValue());
+        assertThat(prj.getItemByProjectName(ireland), notNullValue());
+        assertThat(prj.getItemByProjectName(ireland).getItemByBranchName("gné/nua"), notNullValue());
     }
 }
