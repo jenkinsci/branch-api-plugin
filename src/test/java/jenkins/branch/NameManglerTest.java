@@ -102,11 +102,11 @@ public class NameManglerTest {
     public void nonSafeNames() {
         assertThat(NameMangler.apply("Is maith liom criospaí"), is("Is-maith-liom-criospa_ed.0g5uh9"));
         assertThat(NameMangler.apply("Ich liebe Fußball"), is("Ich-liebe-Fu_dfball.fp53tq"));
-        assertThat(NameMangler.apply("我喜欢披萨"), is("_11_62_9c_55.f9c1g4._ab_62_28_84"));
-        assertThat(NameMangler.apply("特征/新"), is("_79_72_81_5f-_b0_65.nt1m48"));
-        assertThat(NameMangler.apply("특색/새로운"), is("_b9_d2_c9_c0.ps50ht._5c_b8_b4_c6"));
+        assertThat(NameMangler.apply("我喜欢披萨"), is("0_11_62_9c_5.f9c1g4._ab_62_28_84"));
+        assertThat(NameMangler.apply("特征/新"), is("0_79_72_81_5f-_b0_65.nt1m48"));
+        assertThat(NameMangler.apply("특색/새로운"), is("0_b9_d2_c9_c.ps50ht._5c_b8_b4_c6"));
         assertThat(NameMangler.apply("gné/nua"), is("gn_e9-nua.updi5h"));
         assertThat(NameMangler.apply("característica/nuevo"), is("caracter_edstica-nuevo.h5da9f"));
-        assertThat(NameMangler.apply("особенность/новый"), is("_3e_04_41.n168ksdsksof._04_39_04"));
+        assertThat(NameMangler.apply("особенность/новый"), is("0_3e_04_4.n168ksdsksof._04_39_04"));
     }
 }
