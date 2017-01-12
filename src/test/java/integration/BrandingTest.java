@@ -302,6 +302,13 @@ public class BrandingTest {
             assertThat(russian.getName(), not(is("особенность/новый")));
 
             assertThat(prj.getItems(), containsInAnyOrder(master, irish, chinese, korean, spanish, russian));
+
+            assertThat(prj.getItemByBranchName("master"), is(master));
+            assertThat(prj.getItemByBranchName("gné/nua"), is(irish));
+            assertThat(prj.getItemByBranchName("особенность/новый"), is(russian));
+            assertThat(prj.getItemByBranchName("特征/新"), is(chinese));
+            assertThat(prj.getItemByBranchName("característica/nuevo"), is(spanish));
+            assertThat(prj.getItemByBranchName("특색/새로운"), is(korean));
         }
     }
 
@@ -345,7 +352,6 @@ public class BrandingTest {
 
             for (MultiBranchProject p : prj.getItems()) {
                 String name = p.getDisplayName();
-                System.out.println(name);
                 if ("England".equals(name)) {
                     england = p;
                 } else if ("Éireann".equals(name)) {
@@ -386,6 +392,13 @@ public class BrandingTest {
             assertThat("Korea/master/lastBuild", korea.getItem("master").getLastBuild(), notNullValue());
 
             assertThat(prj.getItems(), containsInAnyOrder(england, ireland, spain, china, russia, korea));
+
+            assertThat(prj.getItemByProjectName("England"), is(england));
+            assertThat(prj.getItemByProjectName("Éireann"), is(ireland));
+            assertThat(prj.getItemByProjectName("Россия"), is(russia));
+            assertThat(prj.getItemByProjectName("中国"), is(china));
+            assertThat(prj.getItemByProjectName("España"), is(spain));
+            assertThat(prj.getItemByProjectName("대한민국"), is(korea));
         }
     }
 

@@ -1,3 +1,28 @@
+/*
+ * The MIT License
+ *
+ * Copyright (c) 2017 CloudBees, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+
 package integration;
 
 import hudson.model.Job;
@@ -18,6 +43,7 @@ import org.jvnet.hudson.test.recipes.LocalData;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
 public class MigrationTest {
@@ -70,6 +96,8 @@ public class MigrationTest {
                 jobByDisplayName.put(j.getFullDisplayName(), j);
             }
         }
+        System.out.println(byName.keySet());
+        System.out.println(jobByName.keySet());
         assertThat("Display Names are repo names", byDisplayName.keySet(), containsInAnyOrder(
                 "test.example.com",
                 "Éireann",
@@ -79,12 +107,12 @@ public class MigrationTest {
                 "대한민국"
         ));
         assertThat("Folder names have been mangled", byName.keySet(), containsInAnyOrder(
-                "test.example.com",
-                "%c9ireann@giuvlt",  // Éireann
-                "%20%04%3e%04@pei3d7@%38%04%4f%04", // Россия
-                "%2d%4e%fd%56@m4k0dn", // 中国
-                "Espa%f1a@9jabqu", // España
-                "%00%b3%5c%d5%fc%bb%6d%ad@ufdgbs" // 대한민국
+                "test-example-com.34nhgh",
+                "0_c9ireann.giuvlt",  // Éireann
+                "0_20_04_3e_0.pei3d7._38_04_4f_04", // Россия
+                "0_2d_4e_fd_56.m4k0dn", // 中国
+                "Espa_f1a.9jabqu", // España
+                "0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs" // 대한민국
         ));
 
         assertThat("Display Names are branch names", jobByDisplayName.keySet(), containsInAnyOrder(
@@ -104,20 +132,23 @@ public class MigrationTest {
                 "foo » 대한민국 » 특색/새로운"
         ));
         assertThat("Job names have been mangled", jobByName.keySet(), containsInAnyOrder(
-                "foo/test.example.com/master",
-                "foo/test.example.com/feature%3a_b@jk8rfi@wsing_part_1",
-                "foo/test.example.com/feature%3a_b@m8lpav@wsing_part_2",
-                "foo/test.example.com/feature%3a_welcome@9dhrtb",
-                "foo/%c9ireann@giuvlt/master",
-                "foo/%c9ireann@giuvlt/gn%e9_nua@updi5h",
-                "foo/%20%04%3e%04@pei3d7@%38%04%4f%04/master",
-                "foo/%20%04%3e%04@pei3d7@%38%04%4f%04/%3e%04%41@n168ksdsksof@%04%39%04",
-                "foo/%2d%4e%fd%56@m4k0dn/master",
-                "foo/%2d%4e%fd%56@m4k0dn/%79%72%81%5f_%b0%65@nt1m48",
-                "foo/Espa%f1a@9jabqu/master",
-                "foo/Espa%f1a@9jabqu/caracter%edstica_nuevo@h5da9f",
-                "foo/%00%b3%5c%d5%fc%bb%6d%ad@ufdgbs/master",
-                "foo/%00%b3%5c%d5%fc%bb%6d%ad@ufdgbs/%b9%d2%c9%c0@ps50ht@%5c%b8%b4%c6"
+                "foo/test-example-com.34nhgh/master",
+                "foo/test-example-com.34nhgh/feature_3a-b.jk8rfi.wsing-part-1",
+                "foo/test-example-com.34nhgh/feature_3a-b.m8lpav.wsing-part-2",
+                "foo/test-example-com.34nhgh/feature_3a-welcome.9dhrtb",
+                "foo/0_c9ireann.giuvlt/master",
+                "foo/0_c9ireann.giuvlt/gn_e9-nua.updi5h",
+                "foo/0_20_04_3e_0.pei3d7._38_04_4f_04/master",
+                "foo/0_20_04_3e_0.pei3d7._38_04_4f_04/0_3e_04_4.n168ksdsksof._04_39_04",
+                "foo/0_2d_4e_fd_56.m4k0dn/master",
+                "foo/0_2d_4e_fd_56.m4k0dn/0_79_72_81_5f-_b0_65.nt1m48",
+                "foo/Espa_f1a.9jabqu/master",
+                "foo/Espa_f1a.9jabqu/caracter_edstica-nuevo.h5da9f",
+                "foo/0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs/master",
+                "foo/0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs/0_b9_d2_c9_c.ps50ht._5c_b8_b4_c6"
         ));
+
+        assertThat(prj.getItemByProjectName("Éireann"), notNullValue());
+        assertThat(prj.getItemByProjectName("Éireann").getItemByBranchName("gné/nua"), notNullValue());
     }
 }

@@ -598,6 +598,25 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
+     * Returns the child job with the specified branch name or {@code null} if no such child job exists.
+     *
+     * @param branchName the name of the branch.
+     * @return the child job or {@code null} if no such job exists or if the requesting user does ave permission to
+     * view it.
+     * @since 2.0.0
+     */
+    @CheckForNull
+    public P getItemByBranchName(@NonNull String branchName) {
+        BranchProjectFactory<P, R> factory = getProjectFactory();
+        for (P p: getItems()) {
+            if (factory.isProject(p) && branchName.equals(factory.getBranch(p).getName())) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns the named branch job or {@code null} if no such branch exists.
      *
      * @param name the name of the branch

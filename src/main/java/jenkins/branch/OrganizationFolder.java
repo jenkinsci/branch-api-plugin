@@ -193,6 +193,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         // migrate any non-mangled names
         List<MultiBranchProject<?, ?>> items = new ArrayList<>(getItems());
         for (MultiBranchProject<?, ?> item : items) {
+            ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
+            if (property != null) {
+                continue;
+            }
             String itemName = item.getName();
             String mangledName = NameMangler.apply(itemName);
             if (!itemName.equals(mangledName)) {
@@ -200,10 +204,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     LOGGER.log(Level.INFO, "Non-mangled name detected for repository {0}. Renaming {1}/{2} to {1}/{3}",
                             new Object[]{itemName, getFullName(), itemName, mangledName});
                     item.renameTo(mangledName);
-                    if (item.getDisplayNameOrNull() == null) {
-                        item.setDisplayName(itemName);
-                        item.save();
+                    BulkChange bc = new BulkChange(item);
+                    try {
+                        item.addProperty(new ProjectNameProperty(itemName));
+                        if (item.getDisplayNameOrNull() == null) {
+                            item.setDisplayName(itemName);
+                        }
+                    } finally {
+                        bc.commit();
                     }
+
                 } // else will be removed by the orphaned item strategy on next scan
             }
         }
@@ -244,6 +254,26 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
         return item;
     }
+
+    /**
+     * Returns the child job with the specified project name or {@code null} if no such child job exists.
+     *
+     * @param projectName the name of the project.
+     * @return the child job or {@code null} if no such job exists or if the requesting user does ave permission to
+     * view it.
+     * @since 2.0.0
+     */
+    @edu.umd.cs.findbugs.annotations.CheckForNull
+    public MultiBranchProject<?,?> getItemByProjectName(@NonNull String projectName) {
+        for (MultiBranchProject<?,?> p : getItems()) {
+            ProjectNameProperty property = p.getProperties().get(ProjectNameProperty.class);
+            if (property != null && projectName.equals(property.getName())) {
+                return p;
+            }
+        }
+        return null;
+    }
+
 
     public DescribableList<SCMNavigator,SCMNavigatorDescriptor> getNavigators() {
         return navigators;
@@ -1086,11 +1116,22 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         String encodedName = NameMangler.apply(projectName);
                         MultiBranchProject<?, ?> existing = observer.shouldUpdate(encodedName);
                         if (existing != null) {
-                            PersistedList<BranchSource> sourcesList = existing.getSourcesList();
-                            sourcesList.clear();
-                            sourcesList.addAll(createBranchSources());
-                            existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                            factory.updateExistingProject(existing, attributes, listener);
+                            BulkChange bc = new BulkChange(existing);
+                            try {
+                                PersistedList<BranchSource> sourcesList = existing.getSourcesList();
+                                sourcesList.clear();
+                                sourcesList.addAll(createBranchSources());
+                                existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                                factory.updateExistingProject(existing, attributes, listener);
+                                ProjectNameProperty property =
+                                        existing.getProperties().get(ProjectNameProperty.class);
+                                if (property == null || !projectName.equals(property.getName())) {
+                                    existing.getProperties().remove(ProjectNameProperty.class);
+                                    existing.addProperty(new ProjectNameProperty(projectName));
+                                }
+                            } finally {
+                                bc.commit();
+                            }
                             existing.scheduleBuild();
                             return;
                         }
@@ -1101,15 +1142,21 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         MultiBranchProject<?, ?> project = factory.createNewProject(
                                 OrganizationFolder.this, encodedName, sources, attributes, listener
                         );
-                        if (!encodedName.equals(projectName)) {
-                            project.setDisplayName(projectName);
-                        }
-                        project.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                        project.getSourcesList().addAll(createBranchSources());
+                        BulkChange bc = new BulkChange(project);
                         try {
-                            project.addTrigger(new PeriodicFolderTrigger("1d"));
-                        } catch (ANTLRException x) {
-                            throw new IllegalStateException(x);
+                            if (!encodedName.equals(projectName)) {
+                                project.setDisplayName(projectName);
+                            }
+                            project.addProperty(new ProjectNameProperty(projectName));
+                            project.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                            project.getSourcesList().addAll(createBranchSources());
+                            try {
+                                project.addTrigger(new PeriodicFolderTrigger("1d"));
+                            } catch (ANTLRException x) {
+                                throw new IllegalStateException(x);
+                            }
+                        } finally {
+                            bc.commit();
                         }
                         observer.created(project);
                         project.scheduleBuild();

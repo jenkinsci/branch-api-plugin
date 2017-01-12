@@ -31,6 +31,11 @@ import org.apache.commons.lang.StringUtils;
 
 /**
  * Mangles names that are not nice so that they are safe to use on filesystem.
+ * We try to keep names that are alpha-numeric and optionally contain the {@code -} character unmangled as long as they
+ * are shorter than {@link #MAX_SAFE_LENGTH} characters. For all other names we mangle. In mangling we try to keep
+ * the semantic meaning of separator characters like {@code /\._} and space by mangling as {@code -}. All other
+ * characters are encoded using {@code _} as a prefix for the hex code. Finally we inject the hash with {@code .} used
+ * to identify the hash portion.
  *
  * @since 2.0.0
  */
@@ -50,7 +55,16 @@ public final class NameMangler {
     public static String apply(String name) {
         if (name.length() <= MAX_SAFE_LENGTH) {
             boolean unsafe = false;
+            boolean first = true;
             for (char c : name.toCharArray()) {
+                if (first) {
+                    if (c == '-') {
+                        // no leading dash
+                        unsafe = true;
+                        break;
+                    }
+                    first = false;
+                }
                 if (!isSafe(c)) {
                     unsafe = true;
                     break;
@@ -101,15 +115,27 @@ public final class NameMangler {
         for (char c : name.toCharArray()) {
             if (isSafe(c)) {
                 buf.append(c);
-            } else if (c == '/' || c == '\\' || c == ' ') {
-                buf.append('_');
+            } else if (c == '/' || c == '\\' || c == ' ' || c == '.' || c == '_') {
+                if (buf.length() == 0) {
+                    buf.append("0-");
+                } else {
+                    buf.append('-');
+                }
             } else if (c <= 0xff) {
-                buf.append('%');
+                if (buf.length() == 0) {
+                    buf.append("0_");
+                } else {
+                    buf.append('_');
+                }
                 buf.append(StringUtils.leftPad(Integer.toHexString(c & 0xff), 2, '0'));
             } else {
-                buf.append('%');
+                if (buf.length() == 0) {
+                    buf.append("0_");
+                } else {
+                    buf.append('_');
+                }
                 buf.append(StringUtils.leftPad(Integer.toHexString(c & 0xff), 2, '0'));
-                buf.append('%');
+                buf.append('_');
                 buf.append(StringUtils.leftPad(Integer.toHexString((c & 0xffff) >> 8), 2, '0'));
             }
         }
@@ -136,7 +162,7 @@ public final class NameMangler {
         }
         if (buf.length() <= MAX_SAFE_LENGTH - MIN_HASH_LENGTH - 1) {
             // we have room to add the min hash
-            buf.append('@');
+            buf.append('.');
             buf.append(StringUtils.right(digest, MIN_HASH_LENGTH));
             return buf.toString();
         }
@@ -144,11 +170,11 @@ public final class NameMangler {
         int overage = buf.length() - MAX_SAFE_LENGTH;
         String hash;
         if (overage <= MIN_HASH_LENGTH) {
-            hash = "@" + StringUtils.right(digest, MIN_HASH_LENGTH) + "@";
+            hash = "." + StringUtils.right(digest, MIN_HASH_LENGTH) + ".";
         } else if (overage > MAX_HASH_LENGTH) {
-            hash = "@" + StringUtils.right(digest, MAX_HASH_LENGTH) + "@";
+            hash = "." + StringUtils.right(digest, MAX_HASH_LENGTH) + ".";
         } else {
-            hash = "@" + StringUtils.right(digest, overage) + "@";
+            hash = "." + StringUtils.right(digest, overage) + ".";
         }
         int start = (MAX_SAFE_LENGTH - hash.length()) / 2;
         buf.delete(start, start + hash.length() + overage);
@@ -165,8 +191,6 @@ public final class NameMangler {
         return ('a' <= c && c <= 'z')
                 || ('A' <= c && c <= 'Z')
                 || ('0' <= c && c <= '9')
-                || '_' == c
-                || '.' == c
                 || '-' == c;
     }
 }
