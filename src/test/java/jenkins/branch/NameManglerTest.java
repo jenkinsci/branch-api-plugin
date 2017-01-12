@@ -102,12 +102,12 @@ public class NameManglerTest {
     public void nonSafeNames() {
         assertThat(NameMangler.apply("Is maith liom criospaí"), is("Is-maith-liom-criospa_ed.0g5uh9"));
         assertThat(NameMangler.apply("Ich liebe Fußball"), is("Ich-liebe-Fu_dfball.fp53tq"));
-        assertThat(NameMangler.apply("我喜欢披萨"), is("0_11_62_9c_5.f9c1g4._ab_62_28_84"));
-        assertThat(NameMangler.apply("特征/新"), is("0_79_72_81_5f-_b0_65.nt1m48"));
-        assertThat(NameMangler.apply("특색/새로운"), is("0_b9_d2_c9_c.ps50ht._5c_b8_b4_c6"));
+        assertThat(NameMangler.apply("我喜欢披萨"), is("0_62_11_55_9.f9c1g4._62_ab_84_28"));
+        assertThat(NameMangler.apply("特征/新"), is("0_72_79_5f_81-_65_b0.nt1m48"));
+        assertThat(NameMangler.apply("특색/새로운"), is("0_d2_b9_c0_c.ps50ht._b8_5c_c6_b4"));
         assertThat(NameMangler.apply("gné/nua"), is("gn_e9-nua.updi5h"));
         assertThat(NameMangler.apply("característica/nuevo"), is("caracter_edstica-nuevo.h5da9f"));
-        assertThat(NameMangler.apply("особенность/новый"), is("0_3e_04_4.n168ksdsksof._04_39_04"));
+        assertThat(NameMangler.apply("особенность/новый"), is("0_04_3e_0.n168ksdsksof._4b_04_39"));
     }
 
     @Test
@@ -115,5 +115,11 @@ public class NameManglerTest {
         assertThat(NameMangler.apply("Espana"), is("Espana"));
         assertThat(NameMangler.apply("España"), is("Espa_f1a.9jabqu"));
         assertThat(NameMangler.apply("Espa\u006e\u0303a"), is("Espan_03_03a.eqqe01"));
+    }
+    @Test
+    public void ireland() {
+        assertThat(NameMangler.apply("Eireann"), is("Eireann"));
+        assertThat(NameMangler.apply("Éireann"), is("0_c9ireann.giuvlt"));
+        assertThat(NameMangler.apply("E\u0301ireann"), is("E_03_01ireann.0qtq11"));
     }
 }

@@ -103,10 +103,10 @@ public class MigrationTest {
                 espana = "Espa\u006e\u0303a";
                 espanaEncoded = "Espan_03_03a.eqqe01";
             }
-            if (p.getName().equals("E_01_03ireann.0qtq11")) {
+            if (p.getName().equals("E_03_01ireann.0qtq11")) {
                 // alternative encoding
-                ireland = "E\u0103ireann";
-                irelandEncoded = "E_01_03ireann.0qtq11";
+                ireland = "E\u0301ireann";
+                irelandEncoded = "E_03_01ireann.0qtq11";
             }
             byName.put(p.getName(), p);
             byDisplayName.put(p.getDisplayName(), p);
@@ -127,10 +127,10 @@ public class MigrationTest {
         assertThat("Folder names have been mangled", byName.keySet(), containsInAnyOrder(
                 "test-example-com.34nhgh",
                 irelandEncoded,  // Éireann
-                "0_20_04_3e_0.pei3d7._38_04_4f_04", // Россия
-                "0_2d_4e_fd_56.m4k0dn", // 中国
+                "0_04_20_04_3.pei3d7._04_38_04_4f", // Россия
+                "0_4e_2d_56_fd.m4k0dn", // 中国
                 espanaEncoded, // España
-                "0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs" // 대한민국
+                "0_b3_00_d5_5c_bb_fc_ad_6d.ufdgbs" // 대한민국
         ));
 
         assertThat("Display Names are branch names", jobByDisplayName.keySet(), containsInAnyOrder(
@@ -156,14 +156,14 @@ public class MigrationTest {
                 "foo/test-example-com.34nhgh/feature_3a-welcome.9dhrtb",
                 "foo/" + irelandEncoded + "/master",
                 "foo/" + irelandEncoded + "/gn_e9-nua.updi5h",
-                "foo/0_20_04_3e_0.pei3d7._38_04_4f_04/master",
-                "foo/0_20_04_3e_0.pei3d7._38_04_4f_04/0_3e_04_4.n168ksdsksof._04_39_04",
-                "foo/0_2d_4e_fd_56.m4k0dn/master",
-                "foo/0_2d_4e_fd_56.m4k0dn/0_79_72_81_5f-_b0_65.nt1m48",
+                "foo/0_04_20_04_3.pei3d7._04_38_04_4f/master",
+                "foo/0_04_20_04_3.pei3d7._04_38_04_4f/0_04_3e_0.n168ksdsksof._4b_04_39",
+                "foo/0_4e_2d_56_fd.m4k0dn/master",
+                "foo/0_4e_2d_56_fd.m4k0dn/0_72_79_5f_81-_65_b0.nt1m48",
                 "foo/" + espanaEncoded + "/master",
                 "foo/" + espanaEncoded + "/caracter_edstica-nuevo.h5da9f",
-                "foo/0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs/master",
-                "foo/0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs/0_b9_d2_c9_c.ps50ht._5c_b8_b4_c6"
+                "foo/0_b3_00_d5_5c_bb_fc_ad_6d.ufdgbs/master",
+                "foo/0_b3_00_d5_5c_bb_fc_ad_6d.ufdgbs/0_d2_b9_c0_c.ps50ht._b8_5c_c6_b4"
         ));
 
         assertThat(prj.getItemByProjectName(ireland), notNullValue());
