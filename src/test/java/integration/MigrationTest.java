@@ -88,16 +88,19 @@ public class MigrationTest {
         Map<String, MultiBranchProject> byDisplayName = new HashMap<>();
         Map<String, Job> jobByName = new HashMap<>();
         Map<String, Job> jobByDisplayName = new HashMap<>();
+        System.out.println("Jobs");
+        System.out.println("====");
+        System.out.println();
         for (MultiBranchProject<?, ?> p : prj.getItems()) {
+            System.out.printf("%s ==> %s%n", p.getName(), p.getDisplayName());
             byName.put(p.getName(), p);
             byDisplayName.put(p.getDisplayName(), p);
             for (Job<?, ?> j : p.getItems()) {
+                System.out.printf("  %s ==> %s%n", j.getName(), j.getDisplayName());
                 jobByName.put(j.getFullName(), j);
                 jobByDisplayName.put(j.getFullDisplayName(), j);
             }
         }
-        System.out.println(byName.keySet());
-        System.out.println(jobByName.keySet());
         assertThat("Display Names are repo names", byDisplayName.keySet(), containsInAnyOrder(
                 "test.example.com",
                 "Éireann",
