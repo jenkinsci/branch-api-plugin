@@ -91,22 +91,33 @@ public class MigrationTest {
         System.out.println("Jobs");
         System.out.println("====");
         System.out.println();
-        // OS dependent encoding of the ñ in España when it is on the filesyste
+        // Assume NFC
         String espana = "España";
         String espanaEncoded = "Espa_f1a.9jabqu";
         String ireland = "Éireann";
         String irelandEncoded = "0_c9ireann.giuvlt";
+        String korea = "대한민국";
+        String koreaEncoded = "0_b3_00_d5_5c_bb_fc_ad_6d.ufdgbs";
+        String korea2 = "특색/새로운";
+        String korea2Encoded = "0_d2_b9_c0_c.ps50ht._b8_5c_c6_b4";
         for (MultiBranchProject<?, ?> p : prj.getItems()) {
             System.out.printf("%s ==> %s%n", p.getName(), p.getDisplayName());
             if (p.getName().equals("Espan_03_03a.eqqe01")) {
-                // alternative encoding
+                // NFD
                 espana = "Espa\u006e\u0303a";
                 espanaEncoded = "Espan_03_03a.eqqe01";
             }
             if (p.getName().equals("E_03_01ireann.0qtq11")) {
-                // alternative encoding
+                // NFD
                 ireland = "E\u0301ireann";
                 irelandEncoded = "E_03_01ireann.0qtq11";
+            }
+            if (p.getName().equals("0_11_03_1.3gi5g2rs7pg4._6e_11_a8")) {
+                // NFD
+                korea = "\u1103\u1162\u1112\u1161\u11ab\u1106\u1175\u11ab\u1100\u116e\u11a8";
+                koreaEncoded = "0_11_03_1.3gi5g2rs7pg4._6e_11_a8";
+                korea2 = "\u1110\u1173\u11a8\u1109\u1162\u11a8/\u1109\u1162\u1105\u1169\u110b\u116e\u11ab";
+                korea2Encoded = "0_11_10_1.m479ph0h00p7._6e_11_ab";
             }
             byName.put(p.getName(), p);
             byDisplayName.put(p.getDisplayName(), p);
@@ -122,7 +133,7 @@ public class MigrationTest {
                 "Россия",
                 "中国",
                 espana,
-                "대한민국"
+                korea
         ));
         assertThat("Folder names have been mangled", byName.keySet(), containsInAnyOrder(
                 "test-example-com.34nhgh",
@@ -130,7 +141,7 @@ public class MigrationTest {
                 "0_04_20_04_3.pei3d7._04_38_04_4f", // Россия
                 "0_4e_2d_56_fd.m4k0dn", // 中国
                 espanaEncoded, // España
-                "0_b3_00_d5_5c_bb_fc_ad_6d.ufdgbs" // 대한민국
+                koreaEncoded // 대한민국
         ));
 
         assertThat("Display Names are branch names", jobByDisplayName.keySet(), containsInAnyOrder(
@@ -146,8 +157,8 @@ public class MigrationTest {
                 "foo » 中国 » 特征/新",
                 "foo » " + espana + " » master",
                 "foo » " + espana + " » característica/nuevo",
-                "foo » 대한민국 » master",
-                "foo » 대한민국 » 특색/새로운"
+                "foo » " + korea + " » master",
+                "foo » " + korea + " » " + korea2
         ));
         assertThat("Job names have been mangled", jobByName.keySet(), containsInAnyOrder(
                 "foo/test-example-com.34nhgh/master",
@@ -162,8 +173,8 @@ public class MigrationTest {
                 "foo/0_4e_2d_56_fd.m4k0dn/0_72_79_5f_81-_65_b0.nt1m48",
                 "foo/" + espanaEncoded + "/master",
                 "foo/" + espanaEncoded + "/caracter_edstica-nuevo.h5da9f",
-                "foo/0_b3_00_d5_5c_bb_fc_ad_6d.ufdgbs/master",
-                "foo/0_b3_00_d5_5c_bb_fc_ad_6d.ufdgbs/0_d2_b9_c0_c.ps50ht._b8_5c_c6_b4"
+                "foo/" + koreaEncoded + "/master",
+                "foo/" + koreaEncoded + "/" + korea2Encoded
         ));
 
         assertThat(prj.getItemByProjectName(ireland), notNullValue());
