@@ -104,14 +104,14 @@ public class CategorizationTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),
-                    contains(hasProperty("name", is("master")))
+                    contains(hasProperty("displayName", is("master")))
             );
             assertThat(prj.getViews(),
                     contains(
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(UncategorizedSCMHeadCategory.DEFAULT.getName())),
-                                    hasProperty("items", contains(hasProperty("name", is("master"))))
+                                    hasProperty("items", contains(hasProperty("displayName", is("master"))))
                             )
                     )
             );
@@ -132,8 +132,8 @@ public class CategorizationTest {
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),
                     containsInAnyOrder(
-                            hasProperty("name", is("master")),
-                            hasProperty("name", is("CR-" + crNum))
+                            hasProperty("displayName", is("master")),
+                            hasProperty("displayName", is("CR-" + crNum))
                     )
             );
             assertThat(prj.getViews(),
@@ -166,8 +166,8 @@ public class CategorizationTest {
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),
                     containsInAnyOrder(
-                            hasProperty("name", is("master")),
-                            hasProperty("name", is("master-1.0"))
+                            hasProperty("displayName", is("master")),
+                            hasProperty("displayName", is("master-1.0"))
                     )
             );
             assertThat(prj.getViews(),
@@ -175,12 +175,12 @@ public class CategorizationTest {
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(UncategorizedSCMHeadCategory.DEFAULT.getName())),
-                                    hasProperty("items", contains(hasProperty("name", is("master"))))
+                                    hasProperty("items", contains(hasProperty("displayName", is("master"))))
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(TagSCMHeadCategory.DEFAULT.getName())),
-                                    hasProperty("items", contains(hasProperty("name", is("master-1.0"))))
+                                    hasProperty("items", contains(hasProperty("displayName", is("master-1.0"))))
                             )
                     ));
         }
@@ -200,8 +200,8 @@ public class CategorizationTest {
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),
                     containsInAnyOrder(
-                            hasProperty("name", is("master-1.0")),
-                            hasProperty("name", is("CR-" + crNum))
+                            hasProperty("displayName", is("master-1.0")),
+                            hasProperty("displayName", is("CR-" + crNum))
                     )
             );
             assertThat(prj.getViews(),
@@ -214,12 +214,12 @@ public class CategorizationTest {
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(TagSCMHeadCategory.DEFAULT.getName())),
-                                    hasProperty("items", contains(hasProperty("name", is("master-1.0"))))
+                                    hasProperty("items", contains(hasProperty("displayName", is("master-1.0"))))
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(ChangeRequestSCMHeadCategory.DEFAULT.getName())),
-                                    hasProperty("items", contains(hasProperty("name", is("CR-" + crNum))))
+                                    hasProperty("items", contains(hasProperty("displayName", is("CR-" + crNum))))
                             )
                     ));
         }
@@ -246,12 +246,12 @@ public class CategorizationTest {
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),
                     containsInAnyOrder(
-                            hasProperty("name", is("master")),
-                            hasProperty("name", is("feature")),
-                            hasProperty("name", is("master-1.0")),
-                            hasProperty("name", is("master-1.1")),
-                            hasProperty("name", is("CR-" + crNum1)),
-                            hasProperty("name", is("CR-" + crNum2))
+                            hasProperty("displayName", is("master")),
+                            hasProperty("displayName", is("feature")),
+                            hasProperty("displayName", is("master-1.0")),
+                            hasProperty("displayName", is("master-1.1")),
+                            hasProperty("displayName", is("CR-" + crNum1)),
+                            hasProperty("displayName", is("CR-" + crNum2))
                     )
             );
             assertThat(prj.getViews(),
@@ -260,24 +260,24 @@ public class CategorizationTest {
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(UncategorizedSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", containsInAnyOrder(
-                                            hasProperty("name", is("master")),
-                                            hasProperty("name", is("feature"))
+                                            hasProperty("displayName", is("master")),
+                                            hasProperty("displayName", is("feature"))
                                     ))
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(TagSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", containsInAnyOrder(
-                                            hasProperty("name", is("master-1.0")),
-                                            hasProperty("name", is("master-1.1"))
+                                            hasProperty("displayName", is("master-1.0")),
+                                            hasProperty("displayName", is("master-1.1"))
                                     ))
                             ),
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(ChangeRequestSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", containsInAnyOrder(
-                                            hasProperty("name", is("CR-" + crNum2)),
-                                            hasProperty("name", is("CR-" + crNum1))
+                                            hasProperty("displayName", is("CR-" + crNum2)),
+                                            hasProperty("displayName", is("CR-" + crNum1))
                                     ))
                             )
                     ));

@@ -161,13 +161,34 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     public void onLoad(ItemGroup<? extends Item> parent, String name) throws IOException {
         super.onLoad(parent, name);
         init2();
+        // migrate any non-mangled names
+        ArrayList<P> items = new ArrayList<>(getItems());
+        BranchProjectFactory<P, R> projectFactory = getProjectFactory();
+        for (P item : items) {
+            if (projectFactory.isProject(item)) {
+                String itemName = item.getName();
+                Branch branch = projectFactory.getBranch(item);
+                String mangledName = branch.getEncodedName();
+                if (!itemName.equals(mangledName)) {
+                    if (super.getItem(mangledName) == null) {
+                        LOGGER.log(Level.INFO, "Non-mangled name detected for branch {0}. Renaming {1}/{2} to {1}/{3}",
+                                new Object[]{branch.getName(), getFullName(), itemName, mangledName});
+                        item.renameTo(mangledName);
+                        if (item.getDisplayNameOrNull() == null) {
+                            item.setDisplayName(branch.getName());
+                            item.save();
+                        }
+                    } // else will be removed by the orphaned item strategy on next scan
+                }
+            }
+        }
         try {
             srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
         } catch (XStreamException e) {
             srcDigest = null;
         }
         try {
-            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(projectFactory));
         } catch (XStreamException e) {
             facDigest = null;
         }
@@ -563,9 +584,40 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             if (item != null) {
                 return item;
             }
+            item = super.getItem(NameMangler.apply(decoded));
+            if (item != null) {
+                return item;
+            }
             // fall through for double decoded call paths
         }
-        return super.getItem(name);
+        P item = super.getItem(name);
+        if (item != null) {
+            return item;
+        }
+        return super.getItem(NameMangler.apply(name));
+    }
+
+    /**
+     * Returns the child job with the specified branch name or {@code null} if no such child job exists.
+     *
+     * @param branchName the name of the branch.
+     * @return the child job or {@code null} if no such job exists or if the requesting user does ave permission to
+     * view it.
+     * @since 2.0.0
+     */
+    @CheckForNull
+    public P getItemByBranchName(@NonNull String branchName) {
+        BranchProjectFactory<P, R> factory = getProjectFactory();
+        P item = getItem(NameMangler.apply(branchName));
+        if (item != null && factory.isProject(item) && branchName.equals(factory.getBranch(item).getName())) {
+            return item;
+        }
+        for (P p: getItems()) {
+            if (factory.isProject(p) && branchName.equals(factory.getBranch(p).getName())) {
+                return p;
+            }
+        }
+        return null;
     }
 
     /**

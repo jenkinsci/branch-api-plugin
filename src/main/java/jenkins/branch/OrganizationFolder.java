@@ -93,6 +93,7 @@ import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
 import net.jcip.annotations.GuardedBy;
+import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.Icon;
@@ -189,6 +190,33 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         if (!(getIcon() instanceof MetadataActionFolderIcon)) {
             setIcon(newDefaultFolderIcon());
         }
+        // migrate any non-mangled names
+        List<MultiBranchProject<?, ?>> items = new ArrayList<>(getItems());
+        for (MultiBranchProject<?, ?> item : items) {
+            ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
+            if (property != null) {
+                continue;
+            }
+            String itemName = item.getName();
+            String mangledName = NameMangler.apply(itemName);
+            if (!itemName.equals(mangledName)) {
+                if (super.getItem(mangledName) == null) {
+                    LOGGER.log(Level.INFO, "Non-mangled name detected for repository {0}. Renaming {1}/{2} to {1}/{3}",
+                            new Object[]{itemName, getFullName(), itemName, mangledName});
+                    item.renameTo(mangledName);
+                    BulkChange bc = new BulkChange(item);
+                    try {
+                        item.addProperty(new ProjectNameProperty(itemName));
+                        if (item.getDisplayNameOrNull() == null) {
+                            item.setDisplayName(itemName);
+                        }
+                    } finally {
+                        bc.commit();
+                    }
+
+                } // else will be removed by the orphaned item strategy on next scan
+            }
+        }
         if (state == null) {
             state = new State(this);
         }
@@ -217,6 +245,43 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             }
         }
     }
+
+    @Override
+    public MultiBranchProject<?, ?> getItem(String name) throws AccessDeniedException {
+        MultiBranchProject<?, ?> item = super.getItem(name);
+        if (item == null && name != null) {
+            return super.getItem(NameMangler.apply(name));
+        }
+        return item;
+    }
+
+    /**
+     * Returns the child job with the specified project name or {@code null} if no such child job exists.
+     *
+     * @param projectName the name of the project.
+     * @return the child job or {@code null} if no such job exists or if the requesting user does ave permission to
+     * view it.
+     * @since 2.0.0
+     */
+    @edu.umd.cs.findbugs.annotations.CheckForNull
+    public MultiBranchProject<?,?> getItemByProjectName(@NonNull String projectName) {
+        MultiBranchProject<?, ?> item = getItem(NameMangler.apply(projectName));
+        if (item != null){
+            ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
+            if (property != null && projectName.equals(property.getName())) {
+                return item;
+            }
+        }
+
+        for (MultiBranchProject<?,?> p : getItems()) {
+            ProjectNameProperty property = p.getProperties().get(ProjectNameProperty.class);
+            if (property != null && projectName.equals(property.getName())) {
+                return p;
+            }
+        }
+        return null;
+    }
+
 
     public DescribableList<SCMNavigator,SCMNavigatorDescriptor> getNavigators() {
         return navigators;
@@ -1056,29 +1121,50 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         if (factory == null) {
                             return;
                         }
-                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(projectName);
+                        String encodedName = NameMangler.apply(projectName);
+                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(encodedName);
                         if (existing != null) {
-                            PersistedList<BranchSource> sourcesList = existing.getSourcesList();
-                            sourcesList.clear();
-                            sourcesList.addAll(createBranchSources());
-                            existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                            factory.updateExistingProject(existing, attributes, listener);
+                            BulkChange bc = new BulkChange(existing);
+                            try {
+                                PersistedList<BranchSource> sourcesList = existing.getSourcesList();
+                                sourcesList.clear();
+                                sourcesList.addAll(createBranchSources());
+                                existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                                factory.updateExistingProject(existing, attributes, listener);
+                                ProjectNameProperty property =
+                                        existing.getProperties().get(ProjectNameProperty.class);
+                                if (property == null || !projectName.equals(property.getName())) {
+                                    existing.getProperties().remove(ProjectNameProperty.class);
+                                    existing.addProperty(new ProjectNameProperty(projectName));
+                                }
+                            } finally {
+                                bc.commit();
+                            }
                             existing.scheduleBuild();
                             return;
                         }
-                        if (!observer.mayCreate(projectName)) {
+                        if (!observer.mayCreate(encodedName)) {
                             listener.getLogger().println("Ignoring duplicate child " + projectName);
                             return;
                         }
                         MultiBranchProject<?, ?> project = factory.createNewProject(
-                                OrganizationFolder.this, projectName, sources, attributes, listener
+                                OrganizationFolder.this, encodedName, sources, attributes, listener
                         );
-                        project.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                        project.getSourcesList().addAll(createBranchSources());
+                        BulkChange bc = new BulkChange(project);
                         try {
-                            project.addTrigger(new PeriodicFolderTrigger("1d"));
-                        } catch (ANTLRException x) {
-                            throw new IllegalStateException(x);
+                            if (!encodedName.equals(projectName)) {
+                                project.setDisplayName(projectName);
+                            }
+                            project.addProperty(new ProjectNameProperty(projectName));
+                            project.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                            project.getSourcesList().addAll(createBranchSources());
+                            try {
+                                project.addTrigger(new PeriodicFolderTrigger("1d"));
+                            } catch (ANTLRException x) {
+                                throw new IllegalStateException(x);
+                            }
+                        } finally {
+                            bc.commit();
                         }
                         observer.created(project);
                         project.scheduleBuild();
