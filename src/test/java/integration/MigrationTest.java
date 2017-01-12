@@ -91,8 +91,16 @@ public class MigrationTest {
         System.out.println("Jobs");
         System.out.println("====");
         System.out.println();
+        // OS dependent encoding of the ñ in España when it is on the filesyste
+        String espana = "España";
+        String espanaEncoded = "Espa_f1a.9jabqu";
         for (MultiBranchProject<?, ?> p : prj.getItems()) {
             System.out.printf("%s ==> %s%n", p.getName(), p.getDisplayName());
+            if (p.getName().equals("Espan_03_03a.eqqe01")) {
+                // alternative encoding
+                espana = "Espa\u006e\u0303a";
+                espanaEncoded = "Espan_03_03a.eqqe01";
+            }
             byName.put(p.getName(), p);
             byDisplayName.put(p.getDisplayName(), p);
             for (Job<?, ?> j : p.getItems()) {
@@ -106,7 +114,7 @@ public class MigrationTest {
                 "Éireann",
                 "Россия",
                 "中国",
-                "España",
+                espana,
                 "대한민국"
         ));
         assertThat("Folder names have been mangled", byName.keySet(), containsInAnyOrder(
@@ -114,7 +122,7 @@ public class MigrationTest {
                 "0_c9ireann.giuvlt",  // Éireann
                 "0_20_04_3e_0.pei3d7._38_04_4f_04", // Россия
                 "0_2d_4e_fd_56.m4k0dn", // 中国
-                "Espa_f1a.9jabqu", // España
+                espanaEncoded, // España
                 "0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs" // 대한민국
         ));
 
@@ -129,8 +137,8 @@ public class MigrationTest {
                 "foo » Россия » особенность/новый",
                 "foo » 中国 » master",
                 "foo » 中国 » 特征/新",
-                "foo » España » master",
-                "foo » España » característica/nuevo",
+                "foo » "+espana+" » master",
+                "foo » "+espana+" » característica/nuevo",
                 "foo » 대한민국 » master",
                 "foo » 대한민국 » 특색/새로운"
         ));
@@ -145,8 +153,8 @@ public class MigrationTest {
                 "foo/0_20_04_3e_0.pei3d7._38_04_4f_04/0_3e_04_4.n168ksdsksof._04_39_04",
                 "foo/0_2d_4e_fd_56.m4k0dn/master",
                 "foo/0_2d_4e_fd_56.m4k0dn/0_79_72_81_5f-_b0_65.nt1m48",
-                "foo/Espa_f1a.9jabqu/master",
-                "foo/Espa_f1a.9jabqu/caracter_edstica-nuevo.h5da9f",
+                "foo/"+espanaEncoded+"/master",
+                "foo/"+espanaEncoded+"/caracter_edstica-nuevo.h5da9f",
                 "foo/0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs/master",
                 "foo/0_00_b3_5c_d5_fc_bb_6d_ad.ufdgbs/0_b9_d2_c9_c.ps50ht._5c_b8_b4_c6"
         ));

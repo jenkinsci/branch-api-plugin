@@ -109,4 +109,11 @@ public class NameManglerTest {
         assertThat(NameMangler.apply("característica/nuevo"), is("caracter_edstica-nuevo.h5da9f"));
         assertThat(NameMangler.apply("особенность/новый"), is("0_3e_04_4.n168ksdsksof._04_39_04"));
     }
+
+    @Test
+    public void spain() {
+        assertThat(NameMangler.apply("Espana"), is("Espana"));
+        assertThat(NameMangler.apply("España"), is("Espa_f1a.9jabqu"));
+        assertThat(NameMangler.apply("Espa\u006e\u0303a"), is("Espan_03_03a.eqqe01"));
+    }
 }

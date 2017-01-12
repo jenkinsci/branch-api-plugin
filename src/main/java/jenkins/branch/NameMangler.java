@@ -136,7 +136,7 @@ public final class NameMangler {
                 }
                 buf.append(StringUtils.leftPad(Integer.toHexString(c & 0xff), 2, '0'));
                 buf.append('_');
-                buf.append(StringUtils.leftPad(Integer.toHexString((c & 0xffff) >> 8), 2, '0'));
+                buf.append(StringUtils.leftPad(Integer.toHexString(((c & 0xffff) >> 8)&0xff), 2, '0'));
             }
         }
         // use the digest of the original name
