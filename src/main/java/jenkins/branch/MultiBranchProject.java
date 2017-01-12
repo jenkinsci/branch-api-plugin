@@ -608,6 +608,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @CheckForNull
     public P getItemByBranchName(@NonNull String branchName) {
         BranchProjectFactory<P, R> factory = getProjectFactory();
+        P item = getItem(NameMangler.apply(branchName));
+        if (item != null && factory.isProject(item) && branchName.equals(factory.getBranch(item).getName())) {
+            return item;
+        }
         for (P p: getItems()) {
             if (factory.isProject(p) && branchName.equals(factory.getBranch(p).getName())) {
                 return p;

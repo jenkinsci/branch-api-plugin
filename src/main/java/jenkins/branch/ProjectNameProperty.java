@@ -30,11 +30,21 @@ import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
 import hudson.Extension;
 import hudson.model.Descriptor;
+import jenkins.scm.api.SCMNavigator;
+import jenkins.scm.api.SCMSourceObserver;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
- * Holds the unmangled project name of a {@link MultiBranchProject} within a {@link OrganizationFolder}.
+ * Holds the unmangled project name provided to {@link SCMSourceObserver#observe(String)} and used to create a
+ * {@link MultiBranchProject} within a {@link OrganizationFolder}. Normally one would hope that the name provided by
+ * {@link SCMSourceObserver#observe(String)} can be directly mapped to {@link MultiBranchProject#getName()}
+ * however as we have no control over either the length or the characters coming from the {@link SCMNavigator}
+ * we need to mangle the name with {@link NameMangler#apply(String)}. As unmangled names are not reconstructable
+ * from the mangled name, we need to store the original unmangled name, hence this property.
+ * <p>
+ * Note that this is not an issue for the children of {@link MultiBranchProject} as {@link Branch#getName()} is
+ * the unmangled name of the branch.
  *
  * @since 2.0.0
  */
