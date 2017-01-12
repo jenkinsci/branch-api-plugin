@@ -116,13 +116,16 @@ public class MigrationTest {
                 // NFD
                 korea = "\u1103\u1162\u1112\u1161\u11ab\u1106\u1175\u11ab\u1100\u116e\u11a8";
                 koreaEncoded = "0_11_03_1.3gi5g2rs7pg4._6e_11_a8";
-                korea2 = "\u1110\u1173\u11a8\u1109\u1162\u11a8/\u1109\u1162\u1105\u1169\u110b\u116e\u11ab";
-                korea2Encoded = "0_11_10_1.m479ph0h00p7._6e_11_ab";
             }
             byName.put(p.getName(), p);
             byDisplayName.put(p.getDisplayName(), p);
             for (Job<?, ?> j : p.getItems()) {
                 System.out.printf("  %s ==> %s%n", j.getName(), j.getDisplayName());
+                if (j.getName().equals("0_11_10_1.m479ph0h00p7._6e_11_ab")) {
+                    // NFD
+                    korea2 = "\u1110\u1173\u11a8\u1109\u1162\u11a8/\u1109\u1162\u1105\u1169\u110b\u116e\u11ab";
+                    korea2Encoded = "0_11_10_1.m479ph0h00p7._6e_11_ab";
+                }
                 jobByName.put(j.getFullName(), j);
                 jobByDisplayName.put(j.getFullDisplayName(), j);
             }
