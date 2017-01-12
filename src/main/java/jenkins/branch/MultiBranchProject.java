@@ -167,12 +167,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         for (P item : items) {
             if (projectFactory.isProject(item)) {
                 String itemName = item.getName();
-                String mangledName = projectFactory.getBranch(item).getEncodedName();
+                Branch branch = projectFactory.getBranch(item);
+                String mangledName = branch.getEncodedName();
                 if (!itemName.equals(mangledName)) {
                     if (super.getItem(mangledName) == null) {
+                        LOGGER.log(Level.INFO, "Non-mangled name detected for branch {0}. Renaming {1}/{2} to {1}/{3}",
+                                new Object[]{branch.getName(), getFullName(), itemName, mangledName});
                         item.renameTo(mangledName);
                         if (item.getDisplayNameOrNull() == null) {
-                            item.setDisplayName(itemName);
+                            item.setDisplayName(branch.getName());
                             item.save();
                         }
                     } // else will be removed by the orphaned item strategy on next scan

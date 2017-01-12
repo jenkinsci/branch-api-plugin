@@ -197,6 +197,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             String mangledName = NameMangler.apply(itemName);
             if (!itemName.equals(mangledName)) {
                 if (super.getItem(mangledName) == null) {
+                    LOGGER.log(Level.INFO, "Non-mangled name detected for repository {0}. Renaming {1}/{2} to {1}/{3}",
+                            new Object[]{itemName, getFullName(), itemName, mangledName});
                     item.renameTo(mangledName);
                     if (item.getDisplayNameOrNull() == null) {
                         item.setDisplayName(itemName);
