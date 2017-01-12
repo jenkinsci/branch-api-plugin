@@ -265,6 +265,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      */
     @edu.umd.cs.findbugs.annotations.CheckForNull
     public MultiBranchProject<?,?> getItemByProjectName(@NonNull String projectName) {
+        MultiBranchProject<?, ?> item = getItem(NameMangler.apply(projectName));
+        if (item != null){
+            ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
+            if (property != null && projectName.equals(property.getName())) {
+                return item;
+            }
+        }
+
         for (MultiBranchProject<?,?> p : getItems()) {
             ProjectNameProperty property = p.getProperties().get(ProjectNameProperty.class);
             if (property != null && projectName.equals(property.getName())) {
