@@ -37,6 +37,7 @@ import hudson.BulkChange;
 import hudson.Extension;
 import hudson.Util;
 import hudson.XmlFile;
+import hudson.console.HyperlinkNote;
 import hudson.console.ModelHyperlinkNote;
 import hudson.model.Action;
 import hudson.model.Cause;
@@ -1782,6 +1783,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         && revision.isDeterministic()) {
                     // JENKINS-41121 suppress automatic rebuild for branches being re-assoicated with the correct
                     // source id on their first successful scan only.
+                    listener.getLogger().format("%s rediscovered: %s (%s) suspecting %s and suppressing rebuild%n",
+                            StringUtils.defaultIfEmpty(head.getPronoun(), "Branch"),
+                            rawName,
+                            revision,
+                            HyperlinkNote.encodeTo("https://issues.jenkins-ci.org/browse/JENKINS-41121", "JENKINS-41121")
+                            );
                     needSave = true;
                 } else if (rebuild) {
                     listener.getLogger().format(
