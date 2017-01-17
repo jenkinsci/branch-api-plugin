@@ -38,6 +38,8 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.PluginManager;
+import hudson.PluginWrapper;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.init.InitMilestone;
@@ -55,6 +57,7 @@ import hudson.model.listeners.SaveableListener;
 import hudson.util.DescribableList;
 import hudson.util.LogTaskListener;
 import hudson.util.PersistedList;
+import hudson.util.VersionNumber;
 import hudson.util.io.ReopenableRotatingFileOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -149,6 +152,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * @since 2.0
      */
     private transient String facDigest;
+    /**
+     * JENKINS-41121
+     */
+    private transient Boolean legacyScmNavigator;
 
     /**
      * {@inheritDoc}
@@ -253,6 +260,36 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             return super.getItem(NameMangler.apply(name));
         }
         return item;
+    }
+
+    boolean hasLegacySCMNavigator() {
+        if (legacyScmNavigator == null) {
+            boolean legacyScmNaviagtor = false;
+            PluginManager pluginManager = Jenkins.getActiveInstance().getPluginManager();
+            OUTER:
+            for (SCMNavigator n : getSCMNavigators()) {
+                PluginWrapper wrapper = pluginManager.whichPlugin(n.getClass());
+                if (wrapper != null) {
+                    for (PluginWrapper.Dependency d : wrapper.getDependencies()) {
+                        if ("scm-api".equals(d.shortName)) {
+                            if (new VersionNumber(d.version).isOlderThan(new VersionNumber("2.0.0"))) {
+                                LOGGER.log(Level.WARNING, "Using a SCMNavigator in {0} from the plugin {1}."
+                                                + "That plugin does not comply with scm-api 2.0.0+ contracts on "
+                                                + "discovered projects (see JENKINS-41121). Indexing will not "
+                                                + "trigger builds until after the first full scan with the plugin "
+                                                + "updated to a version that depends on scm-api 2.0.0 or newer.",
+                                        new Object[]{getParent(), wrapper.getShortName()});
+                                legacyScmNaviagtor = true;
+                                break OUTER;
+                            }
+                        }
+                    }
+                }
+            }
+            // idempotent, no need to synchronize
+            legacyScmNavigator = legacyScmNaviagtor;
+        }
+        return legacyScmNavigator;
     }
 
     /**
