@@ -79,6 +79,24 @@ import static org.junit.Assert.assertThat;
 public class EventsTest {
 
     /**
+     * A branch name that contains a slash
+     */
+    private static final String SLASHY_BRANCH_NAME = "feature/ux-1";
+    /**
+     * The mangled name of {@link #SLASHY_BRANCH_NAME}
+     */
+    private static final String SLASHY_JOB_NAME = "feature-ux-1.0gorp7";
+    /**
+     * A branch name with unicode characters that have a two canonical forms (Korean for New Features).
+     * There are two normalize forms: {@code "\uc0c8\ub85c\uc6b4 \ud2b9\uc9d5"} and
+     * {@code "\u1109\u1162\u1105\u1169\u110b\u116e\u11ab \u1110\u1173\u11a8\u110c\u1175\u11bc"}
+     */
+    private static final String I18N_BRANCH_NAME = "\uc0c8\ub85c\uc6b4 \ud2b9\uc9d5";
+    /**
+     * The mangled name of {@link #I18N_BRANCH_NAME}
+     */
+    private static final String I18N_JOB_NAME = "0_c0_c8_b8_5.ns0v4p._d2_b9_c9_d5";
+    /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
@@ -464,6 +482,50 @@ public class EventsTest {
     }
 
     @Test
+    public void given_multibranchWithSlashySources_when_matchingEvent_then_branchesAreFoundAndBuilt() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createBranch("foo", SLASHY_BRANCH_NAME);
+            c.deleteBranch("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", SLASHY_BRANCH_NAME, "junkHash"));
+            assertThat("We now have branches",
+                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+            FreeStyleProject branch = prj.getItem(SLASHY_JOB_NAME);
+            assertThat("We now have the "+SLASHY_BRANCH_NAME+" branch", branch, notNullValue());
+            assertThat("We now have the "+SLASHY_BRANCH_NAME+" branch", branch.getName(), is(SLASHY_JOB_NAME));
+            assertThat("We now have the "+SLASHY_BRANCH_NAME+" branch", branch.getDisplayName(), is(SLASHY_BRANCH_NAME));
+            r.waitUntilNoActivity();
+            assertThat("The "+SLASHY_BRANCH_NAME+" branch was built", branch.getLastBuild(), notNullValue());
+            assertThat("The " + SLASHY_BRANCH_NAME + " branch was built", branch.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithI18nSources_when_matchingEvent_then_branchesAreFoundAndBuilt() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createBranch("foo", I18N_BRANCH_NAME);
+            c.deleteBranch("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", I18N_BRANCH_NAME, "junkHash"));
+            assertThat("We now have branches",
+                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+            FreeStyleProject branch = prj.getItem(I18N_JOB_NAME);
+            assertThat("We now have the "+ I18N_BRANCH_NAME+" branch", branch, notNullValue());
+            assertThat("We now have the "+ I18N_BRANCH_NAME+" branch", branch.getName(), is(I18N_JOB_NAME));
+            assertThat("We now have the "+ I18N_BRANCH_NAME+"branch", branch.getDisplayName(), is(I18N_BRANCH_NAME));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", branch.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", branch.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
     public void given_multibranchWithSources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -483,6 +545,52 @@ public class EventsTest {
     }
 
     @Test
+    public void given_multibranchWithSlashySources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createBranch("foo", SLASHY_BRANCH_NAME);
+            c.deleteBranch("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, c.getRevision("foo",
+                    SLASHY_BRANCH_NAME)));
+            FreeStyleProject branch = prj.getItem(SLASHY_JOB_NAME);
+            r.waitUntilNoActivity();
+            assertThat("The "+SLASHY_BRANCH_NAME+" branch was built", branch.getLastBuild().getNumber(), is(1));
+            c.addFile("foo", SLASHY_BRANCH_NAME, "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo",
+                    SLASHY_BRANCH_NAME, c.getRevision("foo", SLASHY_BRANCH_NAME)));
+            r.waitUntilNoActivity();
+            assertThat("The " + SLASHY_BRANCH_NAME + " branch was built", branch.getLastBuild(), notNullValue());
+            assertThat("The " + SLASHY_BRANCH_NAME + " branch was built", branch.getLastBuild().getNumber(), is(2));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithI18nSources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createBranch("foo", I18N_BRANCH_NAME);
+            c.deleteBranch("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, c.getRevision("foo",
+                    I18N_BRANCH_NAME)));
+            FreeStyleProject branch = prj.getItem(I18N_JOB_NAME);
+            r.waitUntilNoActivity();
+            assertThat("The " + I18N_BRANCH_NAME + " branch was built", branch.getLastBuild().getNumber(), is(1));
+            c.addFile("foo", I18N_BRANCH_NAME, "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo",
+                    I18N_BRANCH_NAME, c.getRevision("foo", I18N_BRANCH_NAME)));
+            r.waitUntilNoActivity();
+            assertThat("The " + I18N_BRANCH_NAME + " branch was built", branch.getLastBuild(), notNullValue());
+            assertThat("The " + I18N_BRANCH_NAME + " branch was built", branch.getLastBuild().getNumber(), is(2));
+        }
+    }
+
+    @Test
     public void given_multibranchWithSources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -498,6 +606,48 @@ public class EventsTest {
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", revision));
             r.waitUntilNoActivity();
             assertThat("The master branch was not built", master.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithSlashySources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createBranch("foo", SLASHY_BRANCH_NAME);
+            c.deleteBranch("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, c.getRevision("foo", SLASHY_BRANCH_NAME)));
+            FreeStyleProject master = prj.getItem(SLASHY_JOB_NAME);
+            r.waitUntilNoActivity();
+            assertThat("The branch was built", master.getLastBuild().getNumber(), is(1));
+            String revision = c.getRevision("foo", SLASHY_BRANCH_NAME);
+            c.addFile("foo", SLASHY_BRANCH_NAME, "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", SLASHY_BRANCH_NAME, revision));
+            r.waitUntilNoActivity();
+            assertThat("The branch was not built", master.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithI18nSources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createBranch("foo", I18N_BRANCH_NAME);
+            c.deleteBranch("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, c.getRevision("foo", I18N_BRANCH_NAME)));
+            FreeStyleProject master = prj.getItem(I18N_JOB_NAME);
+            r.waitUntilNoActivity();
+            assertThat("The branch was built", master.getLastBuild().getNumber(), is(1));
+            String revision = c.getRevision("foo", I18N_BRANCH_NAME);
+            c.addFile("foo", I18N_BRANCH_NAME, "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", I18N_BRANCH_NAME, revision));
+            r.waitUntilNoActivity();
+            assertThat("The branch was not built", master.getLastBuild().getNumber(), is(1));
         }
     }
 
@@ -987,6 +1137,58 @@ public class EventsTest {
     }
 
     @Test
+    public void given_orgFolder_when_someSlashyReposMatch_then_eventCreatesMatchingProject() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.createRepository("manchu");
+            c.createBranch("foo", SLASHY_BRANCH_NAME);
+            c.deleteBranch("foo", "master");
+            c.createBranch("bar", SLASHY_BRANCH_NAME);
+            c.deleteBranch("bar", "master");
+            c.addFile("foo", SLASHY_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
+            c.addFile("bar", SLASHY_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", SLASHY_BRANCH_NAME, "junkHash"));
+            BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
+            assertThat("We now have the second project matching", bar, notNullValue());
+            assertThat("We now have only the two projects matching",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(bar));
+            assertThat("The matching branch exists", bar.getItem(SLASHY_JOB_NAME), notNullValue());
+        }
+    }
+
+    @Test
+    public void given_orgFolder_when_someI18nReposMatch_then_eventCreatesMatchingProject() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.createRepository("manchu");
+            c.createBranch("foo", I18N_BRANCH_NAME);
+            c.deleteBranch("foo", "master");
+            c.createBranch("bar", I18N_BRANCH_NAME);
+            c.deleteBranch("bar", "master");
+            c.addFile("foo", I18N_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
+            c.addFile("bar", I18N_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", I18N_BRANCH_NAME, "junkHash"));
+            BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
+            assertThat("We now have the second project matching", bar, notNullValue());
+            assertThat("We now have only the two projects matching",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(bar));
+            assertThat("The matching branch exists", bar.getItem(I18N_JOB_NAME), notNullValue());
+        }
+    }
+
+    @Test
     public void given_orgFolder_when_someReposMatch_then_eventsAreValidated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
@@ -1053,6 +1255,52 @@ public class EventsTest {
     }
 
     @Test
+    public void given_orgFolder_when_eventCreatesASlashyBranchWithAMatch_then_projectIsCreated() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.createRepository("manchu");
+            c.cloneBranch("foo", "master", SLASHY_BRANCH_NAME);
+            c.addFile("foo", SLASHY_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, "junkHash"));
+            BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
+            assertThat("We now have the one project matching", foo, notNullValue());
+            assertThat("We now have only the one project matching",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+            assertThat("The matching branch exists", foo.getItem(SLASHY_JOB_NAME), notNullValue());
+            assertThat("The non-matching branch does not exists", foo.getItem("master"), nullValue());
+        }
+    }
+
+    @Test
+    public void given_orgFolder_when_eventCreatesAI18nBranchWithAMatch_then_projectIsCreated() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.createRepository("manchu");
+            c.cloneBranch("foo", "master", I18N_BRANCH_NAME);
+            c.addFile("foo", I18N_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, "junkHash"));
+            BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
+            assertThat("We now have the one project matching", foo, notNullValue());
+            assertThat("We now have only the one project matching",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+            assertThat("The matching branch exists", foo.getItem(I18N_JOB_NAME), notNullValue());
+            assertThat("The non-matching branch does not exists", foo.getItem("master"), nullValue());
+        }
+    }
+
+    @Test
     public void given_orgFolder_when_eventCreatesARepoWithAMatch_then_projectIsCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
@@ -1097,7 +1345,7 @@ public class EventsTest {
                     prj.getItems(),
                     Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("feature"), notNullValue());
-            assertThat("Á full index occurred when adding the repo", foo.getItem("sustaining"), notNullValue());
+            assertThat("A full index occurred when adding the repo", foo.getItem("sustaining"), notNullValue());
             assertThat("The non-matching branch does not exists", foo.getItem("master"), nullValue());
         }
     }
