@@ -1036,7 +1036,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         );
                         for (SCMHead h : event.heads(source).keySet()) {
                             String name = h.getName();
-                            Job job = p.getItem(name);
+                            Job job = p.getItemByBranchName(name);
                             if (job == null) {
                                 LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Match: {5}",
                                         new Object[]{
@@ -1168,8 +1168,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return matchCount;
         }
 
-        private int processHeadUpdate(SCMHeadEvent<?> event, TaskListener global, String eventClass, String eventType, long eventTimestamp,
-                                      int matchCount) {
+        private int processHeadUpdate(SCMHeadEvent<?> event, TaskListener global, String eventClass, String eventType,
+                                      long eventTimestamp, int matchCount) {
             Map<SCMSource, SCMHead> matches = new IdentityHashMap<>();
             Set<String> candidateNames = new HashSet<>();
             Map<SCMSource, Map<SCMHead,SCMRevision>> revisionMaps = new IdentityHashMap<>();
@@ -1196,15 +1196,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
                 jobs.clear();
                 for (Job i : p.getItems()) {
-                    if (!candidateNames.contains(i.getName())) {
-                        continue;
-                    }
                     if (_factory.isProject(i)) {
                         Branch branch = _factory.getBranch(i);
+                        if (!candidateNames.contains(branch.getName())) {
+                            continue;
+                        }
                         if (branch instanceof Branch.Dead) {
-                            LOGGER.log(Level.FINEST, "{0} {1} {2,date} {2,time}: Checking {3} -> Resurrect dead branch {4} ?",
+                            LOGGER.log(Level.FINEST, "{0} {1} {2,date} {2,time}: Checking {3} -> Resurrect dead "
+                                            + "branch {4} (job {5})?",
                                     new Object[]{
-                                            eventClass, eventType, eventTimestamp, pFullName, i.getName()
+                                            eventClass, eventType, eventTimestamp, pFullName, branch.getName(),
+                                            i.getName()
                                     }
                             );
                             // try to bring back from the dead by checking all sources in sequence
@@ -1228,9 +1230,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         } else {
                             // TODO takeover
                             LOGGER.log(Level.FINEST,
-                                    "{0} {1} {2,date} {2,time}: Checking {3} -> Matches existing branch {4} ?",
+                                    "{0} {1} {2,date} {2,time}: Checking {3} -> Matches existing branch {4} "
+                                            + "(job {5})?",
                                     new Object[]{
-                                            eventClass, eventType, eventTimestamp, pFullName, i.getName()
+                                            eventClass, eventType, eventTimestamp, pFullName, branch.getName(),
+                                            i.getName()
                                     }
                             );
                             SCMSource src = p.getSCMSource(branch.getSourceId());
@@ -1244,9 +1248,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 // to see if this is a takeover
                                 LOGGER.log(Level.FINEST,
                                         "{0} {1} {2,date} {2,time}: Checking {3} -> Event does not match current "
-                                                + "source of {4}, checking for take-over",
+                                                + "source of {4} (job {5}), checking for take-over",
                                         new Object[]{
-                                                eventClass, eventType, eventTimestamp, pFullName, i.getName()
+                                                eventClass, eventType, eventTimestamp, pFullName, branch.getName(),
+                                                i.getName()
                                         }
                                 );
 
@@ -1261,7 +1266,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     if (ourPriority > priority && oldPriority > priority && rMap != null) {
                                         // only need to check for takeover when the event is higher priority
                                         for (SCMHead h: rMap.keySet()) {
-                                            if (i.getName().equals(h.getName())) {
+                                            if (branch.getName().equals(h.getName())) {
                                                 ourPriority = priority;
                                                 ourSource = s;
                                                 break;
@@ -1276,20 +1281,20 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 if (oldPriority < ourPriority) {
                                     LOGGER.log(Level.FINEST,
                                             "{0} {1} {2,date} {2,time}: Checking {3} -> Ignoring event for {4} "
-                                                    + "from source #{5} as source #{6} owns the branch name",
+                                                    + "(job {5}) from source #{6} as source #{7} owns the branch name",
                                             new Object[]{
-                                                    eventClass, eventType, eventTimestamp, pFullName, i.getName(),
-                                                    ourPriority, oldPriority
+                                                    eventClass, eventType, eventTimestamp, pFullName, branch.getName(),
+                                                    i.getName(), ourPriority, oldPriority
                                             }
                                     );
                                     continue;
                                 } else {
                                     LOGGER.log(Level.FINER,
                                             "{0} {1} {2,date} {2,time}: Checking {3} -> Takeover event for {4} "
-                                                    + "by source #{5} from source #{6}",
+                                                    + "(job {5}) by source #{5} from source #{6}",
                                             new Object[]{
-                                                    eventClass, eventType, eventTimestamp, pFullName, i.getName(),
-                                                    ourPriority, oldPriority
+                                                    eventClass, eventType, eventTimestamp, pFullName, branch.getName(),
+                                                    i.getName(), ourPriority, oldPriority
                                             }
                                     );
                                     assert ourSource != null;
@@ -1309,9 +1314,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             }
                             if (match) {
                                 LOGGER.log(Level.FINE,
-                                        "{0} {1} {2,date} {2,time}: Checking {3} -> Event matches source of {4}",
+                                        "{0} {1} {2,date} {2,time}: Checking {3} -> Event matches source of {4} "
+                                                + "(job {5})",
                                         new Object[]{
-                                                eventClass, eventType, eventTimestamp, pFullName, i.getName()
+                                                eventClass, eventType, eventTimestamp, pFullName, branch.getName(),
+                                                i.getName()
                                         }
                                 );
                                 if (SCMEvent.Type.UPDATED == event.getType()) {
@@ -1323,13 +1330,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                             // we have already seen
                                             LOGGER.log(Level.FINE,
                                                     "{0} {1} {2,date} {2,time}: Checking {3} -> Ignoring event as "
-                                                            + "revision {4} is same as last build of {5}",
+                                                            + "revision {4} is same as last build of {5} (job {6})",
                                                     new Object[]{
                                                             eventClass,
                                                             eventType,
                                                             eventTimestamp,
                                                             pFullName,
                                                             revision,
+                                                            branch.getName(),
                                                             i.getName()
                                                     }
                                             );
@@ -1409,7 +1417,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     for (SCMSource source : p.getSCMSources()) {
                         if (event.isMatch(source)) {
                             for (SCMHead h : event.heads(source).keySet()) {
-                                if (p.getItem(h.getName()) == null) {
+                                if (p.getItemByBranchName(h.getName()) == null) {
                                     // only interested in create events that actually could create a new branch
                                     haveMatch = true;
                                     break;
