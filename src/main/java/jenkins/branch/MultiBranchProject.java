@@ -99,6 +99,7 @@ import jenkins.triggers.SCMTriggerItem;
 import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.stapler.StaplerRequest;
@@ -142,6 +143,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     private BranchProjectFactory<P, R> factory;
 
     private transient String srcDigest, facDigest;
+
+    /**
+     * Work-around for JENKINS-41121 issues.
+     */
+    private transient Set<String> legacySourceIds;
 
     /**
      * Constructor, mandated by {@link TopLevelItem}.
@@ -194,6 +200,18 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         if (state == null) {
             state = new State(this);
+        }
+        if (new File(getRootDir(), ".jenkins-41121").isFile()) {
+            legacySourceIds = new HashSet<>(FileUtils.readLines(new File(getRootDir(), ".jenkins-41121")));
+        } else if (state.getStateFile().exists()) {
+            legacySourceIds = null;
+        } else {
+            legacySourceIds = new HashSet<>();
+            for (BranchSource source : sources) {
+                legacySourceIds.add(source.getSource().getId());
+            }
+            // store the IDs across restarts until we have a full run
+            FileUtils.writeLines(new File(getRootDir(), ".jenkins-41121"), legacySourceIds);
         }
         try {
             state.load();
@@ -520,6 +538,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             System.currentTimeMillis(), source.getId()));
                     throw e;
                 }
+            }
+            // JENKINS-41121 we have done the first full scan, all branches correctly attributed now
+            if (legacySourceIds != null) {
+                FileUtils.deleteQuietly(new File(getRootDir(), ".jenkins-41121"));
+                legacySourceIds = null;
             }
         } finally {
             long end = System.currentTimeMillis();
@@ -1751,7 +1774,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
                 boolean needSave = !branch.equals(origBranch) || !branch.getActions().equals(origBranch.getActions());
                 _factory.decorate(_factory.setBranch(project, branch));
-                if (rebuild) {
+                if (rebuild
+                        && event == null // JENKINS-41121 doesn't apply to events, they are new builds
+                        && legacySourceIds != null // JENKINS-41121 doesn't apply to new projects or after first index
+                        && !(legacySourceIds.contains(source.getId())) // JENKINS-41121 doesn't apply if source retained
+                        && legacySourceIds.contains(origBranch.getSourceId())
+                        && revision.isDeterministic()) {
+                    // JENKINS-41121 suppress automatic rebuild for branches being re-assoicated with the correct
+                    // source id on their first successful scan only.
+                    needSave = true;
+                } else if (rebuild) {
                     listener.getLogger().format(
                             "%s reopened: %s (%s)%n",
                             StringUtils.defaultIfEmpty(head.getPronoun(), "Branch"),
