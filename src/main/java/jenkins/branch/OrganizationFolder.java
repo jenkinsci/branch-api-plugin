@@ -771,6 +771,17 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     private static class ChildNameGeneratorImpl extends ChildNameGenerator<OrganizationFolder, MultiBranchProject<?,?>> {
 
         private static final ChildNameGeneratorImpl INSTANCE = new ChildNameGeneratorImpl();
+        private final WeakHashMap<ProjectNamePropertyKey, ProjectNameProperty> awaitingCreation = new WeakHashMap<>();
+
+        public synchronized ProjectNamePropertyKey beforeNewProject(@NonNull OrganizationFolder parent, @NonNull String name, ProjectNameProperty property) {
+            ProjectNamePropertyKey key = new ProjectNamePropertyKey(parent, name);
+            awaitingCreation.put(key, property);
+            return key;
+        }
+
+        public synchronized void afterNewProject(ProjectNamePropertyKey key) {
+            awaitingCreation.remove(key); // not critical as will get cleared by GC but we can help it out too
+        }
 
         @Override
         @CheckForNull
@@ -778,16 +789,34 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
             if (property != null) {
                 return NameEncoder.encode(property.getName());
-            } else {
-                return null;
             }
+            if (item.getName() != null) {
+                synchronized (this) {
+                    property = awaitingCreation.get(new ProjectNamePropertyKey(parent, item.getName()));
+                }
+                if (property != null) {
+                    return NameEncoder.encode(property.getName());
+                }
+            }
+            return null;
         }
 
         @Override
         @CheckForNull
         public String dirNameFromItem(@NonNull OrganizationFolder parent, @NonNull MultiBranchProject<?, ?> item) {
             ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
-            return property != null ? NameMangler.apply(property.getName()) : null;
+            if (property != null) {
+                return NameMangler.apply(property.getName());
+            }
+            if (item.getName() != null) {
+                synchronized (this) {
+                    property = awaitingCreation.get(new ProjectNamePropertyKey(parent, item.getName()));
+                }
+                if (property != null) {
+                    return NameMangler.apply(property.getName());
+                }
+            }
+            return null;
         }
 
         @Override
@@ -800,6 +829,38 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @NonNull
         public String dirNameFromLegacy(@NonNull OrganizationFolder parent, @NonNull String legacyDirName) {
             return NameMangler.apply(NameEncoder.decode(legacyDirName));
+        }
+    }
+
+    private static class ProjectNamePropertyKey {
+        private final OrganizationFolder parent;
+        private final String projectName;
+
+        public ProjectNamePropertyKey(OrganizationFolder parent, String projectName) {
+            this.parent = parent;
+            this.projectName = projectName;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            ProjectNamePropertyKey that = (ProjectNamePropertyKey) o;
+
+            if (parent != that.parent) {
+                return false;
+            }
+            return projectName.equals(that.projectName);
+        }
+
+        @Override
+        public int hashCode() {
+            return projectName.hashCode();
         }
     }
 
@@ -1159,15 +1220,23 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             listener.getLogger().println("Ignoring duplicate child " + projectName + " named " + folderName);
                             return;
                         }
-                        MultiBranchProject<?, ?> project = factory.createNewProject(
-                                OrganizationFolder.this, folderName, sources, attributes, listener
-                        );
+                        ProjectNameProperty property = new ProjectNameProperty(projectName);
+                        ProjectNamePropertyKey propertyKey = ChildNameGeneratorImpl.INSTANCE
+                                .beforeNewProject(OrganizationFolder.this, folderName, property);
+                        MultiBranchProject<?, ?> project;
+                        try {
+                            project = factory.createNewProject(
+                                    OrganizationFolder.this, folderName, sources, attributes, listener
+                            );
+                        } finally {
+                            ChildNameGeneratorImpl.INSTANCE.afterNewProject(propertyKey);
+                        }
                         BulkChange bc = new BulkChange(project);
                         try {
                             if (!projectName.equals(folderName)) {
                                 project.setDisplayName(projectName);
                             }
-                            project.addProperty(new ProjectNameProperty(projectName));
+                            project.addProperty(property);
                             project.setOrphanedItemStrategy(getOrphanedItemStrategy());
                             project.getSourcesList().addAll(createBranchSources());
                             try {

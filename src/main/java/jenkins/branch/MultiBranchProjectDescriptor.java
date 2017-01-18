@@ -40,6 +40,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.WeakHashMap;
 import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
@@ -223,7 +224,21 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     public static class ChildNameGeneratorImpl<P extends Job<P, R> & TopLevelItem,
             R extends Run<P, R>> extends ChildNameGenerator<MultiBranchProject<P,R>,P> {
 
-        public static final ChildNameGeneratorImpl INSTANCE = new ChildNameGeneratorImpl();
+        /*package*/ static final ChildNameGeneratorImpl INSTANCE = new ChildNameGeneratorImpl();
+        private final WeakHashMap<BranchNameKey, Branch> awaitingCreation =
+                new WeakHashMap<>();
+
+        public synchronized BranchNameKey beforeNewProject(
+                @NonNull MultiBranchProject<?,?> parent, @NonNull String name, Branch branch) {
+            BranchNameKey key = new BranchNameKey(parent, name);
+            awaitingCreation.put(key, branch);
+            return key;
+        }
+
+        public synchronized void afterNewProject(BranchNameKey key) {
+            awaitingCreation.remove(key); // not critical as will get cleared by GC but we can help it out too
+        }
+
 
         @Override
         @CheckForNull
@@ -231,9 +246,17 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
             BranchProjectFactory<P, R> factory = parent.getProjectFactory();
             if (factory.isProject(item)) {
                 return NameEncoder.encode(factory.getBranch(item).getName());
-            } else {
-                return null;
             }
+            if (item.getName() != null) {
+                Branch branch;
+                synchronized (this) {
+                    branch = awaitingCreation.get(new BranchNameKey(parent, item.getName()));
+                }
+                if (branch != null) {
+                    return NameEncoder.encode(branch.getName());
+                }
+            }
+            return null;
         }
 
         @Override
@@ -242,9 +265,17 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
             BranchProjectFactory<P, R> factory = parent.getProjectFactory();
             if (factory.isProject(item)) {
                 return NameMangler.apply(factory.getBranch(item).getName());
-            } else {
-                return null;
             }
+            if (item.getName() != null) {
+                Branch branch;
+                synchronized (this) {
+                    branch = awaitingCreation.get(new BranchNameKey(parent, item.getName()));
+                }
+                if (branch != null) {
+                    return NameMangler.apply(branch.getName());
+                }
+            }
+            return null;
         }
 
         @Override
@@ -258,6 +289,40 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
         public String dirNameFromLegacy(@NonNull MultiBranchProject<P, R> parent, @NonNull String legacyDirName) {
             return NameMangler.apply(NameEncoder.decode(legacyDirName));
         }
+
+    }
+
+    /*package*/ static class BranchNameKey {
+        private final MultiBranchProject<?, ?> parent;
+        private final String projectName;
+
+        public BranchNameKey(MultiBranchProject<?, ?> parent, String projectName) {
+            this.parent = parent;
+            this.projectName = projectName;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            BranchNameKey that = (BranchNameKey) o;
+
+            if (parent != that.parent) {
+                return false;
+            }
+            return projectName.equals(that.projectName);
+        }
+
+        @Override
+        public int hashCode() {
+            return projectName.hashCode();
+        }
+
     }
 
 }

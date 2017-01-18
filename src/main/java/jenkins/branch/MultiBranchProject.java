@@ -1798,7 +1798,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 listener.getLogger().println("Ignoring duplicate branch project " + rawName);
                 return;
             }
-            project = _factory.newInstance(branch);
+            MultiBranchProjectDescriptor.BranchNameKey branchNameKey =
+                    MultiBranchProjectDescriptor.ChildNameGeneratorImpl.INSTANCE
+                            .beforeNewProject(MultiBranchProject.this, encodedName, branch);
+            try {
+                project = _factory.newInstance(branch);
+            } finally {
+                MultiBranchProjectDescriptor.ChildNameGeneratorImpl.INSTANCE.afterNewProject(branchNameKey);
+            }
             if (!project.getName().equals(encodedName)) {
                 throw new IllegalStateException(
                         "Name of created project " + project + " did not match expected " + encodedName);
