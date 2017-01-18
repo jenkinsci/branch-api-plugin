@@ -226,7 +226,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             return null;
         }
         MultiBranchProject<?, ?> item = super.getItem(name);
-        if (item == null && name.indexOf('%') != -1) {
+        if (item != null) {
+            return item;
+        }
+        if (name.indexOf('%') != -1) {
             String decoded = NameEncoder.decode(name);
             item = super.getItem(decoded);
             if (item != null) {

@@ -558,7 +558,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return null;
         }
         P item = super.getItem(name);
-        if (item == null && name.indexOf('%') != -1) {
+        if (item != null) {
+            return item;
+        }
+        if (name.indexOf('%') != -1) {
             String decoded = NameEncoder.decode(name);
             item = super.getItem(decoded);
             if (item != null) {
