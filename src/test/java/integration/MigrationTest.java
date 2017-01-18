@@ -25,18 +25,20 @@
 
 package integration;
 
-import hudson.Util;
+import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import hudson.model.Job;
 import hudson.model.TopLevelItem;
+import integration.harness.BasicMultiBranchProjectFactory;
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.OrganizationFolder;
-import jenkins.model.Jenkins;
 import jenkins.scm.impl.mock.MockSCMController;
-import org.apache.commons.io.FilenameUtils;
+import jenkins.scm.impl.mock.MockSCMNavigator;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -47,6 +49,7 @@ import org.jvnet.hudson.test.recipes.LocalData;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
@@ -82,10 +85,103 @@ public class MigrationTest {
         c = null;
     }
 
+    /**
+     * Checks that data is migrated correctly from 1.x to current version.
+     */
     @Test
     @LocalData
-    public void nameMangling() throws IOException {
+    public void nameMangling() throws Exception {
         TopLevelItem foo = j.jenkins.getItem("foo");
+        assertDataMigrated(foo);
+    }
+
+    /**
+     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
+     */
+    @Test
+    @LocalData
+    public void nameMangling_2() throws Exception {
+        TopLevelItem foo = j.jenkins.getItem("foo");
+        assertDataMigrated(foo);
+    }
+
+    @Test
+    public void createdFromScratch() throws Exception {
+        OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
+        foo.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+        foo.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+        foo.scheduleBuild2(0).getFuture().get();
+        j.waitUntilNoActivity();
+        assertDataMigrated(foo);
+    }
+
+    /**
+     * Checks that data is migrated correctly from 1.x to current version.
+     */
+    @Test
+    @LocalData
+    public void nameMangling_full_reload() throws Exception {
+        TopLevelItem foo = j.jenkins.getItem("foo");
+        j.jenkins.reload();
+        assertDataMigrated(foo);
+    }
+
+    /**
+     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
+     */
+    @Test
+    @LocalData
+    public void nameMangling_2_full_reload() throws Exception {
+        TopLevelItem foo = j.jenkins.getItem("foo");
+        j.jenkins.reload();
+        assertDataMigrated(foo);
+    }
+
+    @Test
+    public void createdFromScratch_full_reload() throws Exception {
+        OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
+        foo.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+        foo.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+        foo.scheduleBuild2(0).getFuture().get();
+        j.waitUntilNoActivity();
+        j.jenkins.reload();
+        assertDataMigrated(foo);
+    }
+
+    /**
+     * Checks that data is migrated correctly from 1.x to current version.
+     */
+    @Test
+    @LocalData
+    public void nameMangling_folder_reload() throws Exception {
+        OrganizationFolder foo = (OrganizationFolder)j.jenkins.getItem("foo");
+        foo.doReload();
+        assertDataMigrated(foo);
+    }
+
+    /**
+     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
+     */
+    @Test
+    @LocalData
+    public void nameMangling_2_folder_reload() throws Exception {
+        OrganizationFolder foo = (OrganizationFolder)j.jenkins.getItem("foo");
+        foo.doReload();
+        assertDataMigrated(foo);
+    }
+
+    @Test
+    public void createdFromScratch_folder_reload() throws Exception {
+        OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
+        foo.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+        foo.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+        foo.scheduleBuild2(0).getFuture().get();
+        j.waitUntilNoActivity();
+        foo.doReload();
+        assertDataMigrated(foo);
+    }
+
+    private void assertDataMigrated(TopLevelItem foo) throws Exception {
         assertThat(foo, instanceOf(OrganizationFolder.class));
         OrganizationFolder prj = (OrganizationFolder) foo;
         Map<String, MultiBranchProject> byName = new HashMap<>();
@@ -138,7 +234,13 @@ public class MigrationTest {
                 jobByName.put(j.getFullName(), j);
                 jobByDirName.put(jobDirName, j);
                 jobByDisplayName.put(j.getFullDisplayName(), j);
+                File nameFile = new File(j.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
+                assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
+                assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile), is(j.getName()));
             }
+            File nameFile = new File(p.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
+            assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
+            assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile), is(p.getName()));
         }
         assertThat("Display Names are repo names", byDisplayName.keySet(), containsInAnyOrder(
                 "test.example.com",
