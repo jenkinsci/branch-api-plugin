@@ -91,18 +91,21 @@ public final class NameEncoder {
             In other words "/" / "?" / "#" / "[" / "]" everything else is going to be encoded for us anyway.
 
             Note for safety, we will also encode "\" as some browsers convert that to a "/" so we want it double encoded
-            on the browser url.
+            on the browser url. And finally we need to escape our escape character "%"
           */
             switch (c) {
+                case '#':
+                    buf.append("%23");
+                    break;
+                case '%':
+                    buf.append("%25");
+                    break;
                 case '/':
                     buf.append("%2F");
                     break;
                 case '?':
-                    buf.append("%3F");
-                    break;
-                case '#':
-                    buf.append("%23");
-                    break;
+                buf.append("%3F");
+                break;
                 case '[':
                     buf.append("%5B");
                     break;
@@ -154,6 +157,9 @@ public final class NameEncoder {
                             switch (c) {
                                 case '3':
                                     buf.append('#');
+                                    break;
+                                case '5':
+                                    buf.append('%');
                                     break;
                                 case 'F':
                                     buf.append('/');

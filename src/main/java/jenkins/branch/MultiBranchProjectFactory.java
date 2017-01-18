@@ -205,7 +205,7 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          * @param source a repository
          * @return criteria for treating its branches as a match
          */
-        @NonNull
+        @CheckForNull
         protected abstract SCMSourceCriteria getSCMSourceCriteria(@NonNull SCMSource source);
 
         /**
