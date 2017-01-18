@@ -1133,7 +1133,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         if (factory == null) {
                             return;
                         }
-                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(projectName);
+                        String folderName = NameEncoder.encode(projectName);
+                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(folderName);
                         if (existing != null) {
                             BulkChange bc = new BulkChange(existing);
                             try {
@@ -1154,16 +1155,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             existing.scheduleBuild();
                             return;
                         }
-                        if (!observer.mayCreate(projectName)) {
-                            listener.getLogger().println("Ignoring duplicate child " + projectName);
+                        if (!observer.mayCreate(folderName)) {
+                            listener.getLogger().println("Ignoring duplicate child " + projectName + " named " + folderName);
                             return;
                         }
                         MultiBranchProject<?, ?> project = factory.createNewProject(
-                                OrganizationFolder.this, projectName, sources, attributes, listener
+                                OrganizationFolder.this, folderName, sources, attributes, listener
                         );
                         BulkChange bc = new BulkChange(project);
                         try {
-                            if (!projectName.equals(projectName)) {
+                            if (!projectName.equals(folderName)) {
                                 project.setDisplayName(projectName);
                             }
                             project.addProperty(new ProjectNameProperty(projectName));
