@@ -31,6 +31,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ListView;
 import hudson.model.Result;
 import hudson.model.TopLevelItem;
+import hudson.util.StreamTaskListener;
 import hudson.views.JobColumn;
 import hudson.views.StatusColumn;
 import hudson.views.WeatherColumn;

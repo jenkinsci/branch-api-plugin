@@ -153,7 +153,7 @@ public class Branch {
      * @since 0.2-beta-7
      */
     public String getEncodedName() {
-        return NameMangler.apply(getName());
+        return NameEncoder.encode(getName());
     }
 
     /**

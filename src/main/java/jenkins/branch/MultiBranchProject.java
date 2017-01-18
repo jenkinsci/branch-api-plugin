@@ -161,34 +161,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     public void onLoad(ItemGroup<? extends Item> parent, String name) throws IOException {
         super.onLoad(parent, name);
         init2();
-        // migrate any non-mangled names
-        ArrayList<P> items = new ArrayList<>(getItems());
-        BranchProjectFactory<P, R> projectFactory = getProjectFactory();
-        for (P item : items) {
-            if (projectFactory.isProject(item)) {
-                String itemName = item.getName();
-                Branch branch = projectFactory.getBranch(item);
-                String mangledName = branch.getEncodedName();
-                if (!itemName.equals(mangledName)) {
-                    if (super.getItem(mangledName) == null) {
-                        LOGGER.log(Level.INFO, "Non-mangled name detected for branch {0}. Renaming {1}/{2} to {1}/{3}",
-                                new Object[]{branch.getName(), getFullName(), itemName, mangledName});
-                        item.renameTo(mangledName);
-                        if (item.getDisplayNameOrNull() == null) {
-                            item.setDisplayName(branch.getName());
-                            item.save();
-                        }
-                    } // else will be removed by the orphaned item strategy on next scan
-                }
-            }
-        }
         try {
             srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
         } catch (XStreamException e) {
             srcDigest = null;
         }
         try {
-            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(projectFactory));
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
         } catch (XStreamException e) {
             facDigest = null;
         }
@@ -578,23 +557,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         if (name == null) {
             return null;
         }
-        if (name.indexOf('%') != -1) {
-            String decoded = rawDecode(name);
-            P item = super.getItem(decoded);
-            if (item != null) {
-                return item;
-            }
-            item = super.getItem(NameMangler.apply(decoded));
-            if (item != null) {
-                return item;
-            }
-            // fall through for double decoded call paths
-        }
         P item = super.getItem(name);
-        if (item != null) {
-            return item;
+        if (item == null && name.indexOf('%') != -1) {
+            String decoded = NameEncoder.decode(name);
+            item = super.getItem(decoded);
+            if (item != null) {
+                return item;
+            }
+            // fall through for double decoded call paths // TODO is this necessary
         }
-        return super.getItem(NameMangler.apply(name));
+        return super.getItem(NameEncoder.encode(name));
     }
 
     /**
@@ -607,17 +579,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @CheckForNull
     public P getItemByBranchName(@NonNull String branchName) {
-        BranchProjectFactory<P, R> factory = getProjectFactory();
-        P item = getItem(NameMangler.apply(branchName));
-        if (item != null && factory.isProject(item) && branchName.equals(factory.getBranch(item).getName())) {
-            return item;
-        }
-        for (P p: getItems()) {
-            if (factory.isProject(p) && branchName.equals(factory.getBranch(p).getName())) {
-                return p;
-            }
-        }
-        return null;
+        return super.getItem(NameEncoder.encode(branchName));
     }
 
     /**

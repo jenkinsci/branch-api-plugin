@@ -43,6 +43,7 @@ import jenkins.branch.BranchBuildStrategy;
 import jenkins.branch.BranchBuildStrategyDescriptor;
 import jenkins.branch.BranchSource;
 import jenkins.branch.MultiBranchProject;
+import jenkins.branch.NameEncoder;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEvents;
@@ -83,9 +84,9 @@ public class EventsTest {
      */
     private static final String SLASHY_BRANCH_NAME = "feature/ux-1";
     /**
-     * The mangled name of {@link #SLASHY_BRANCH_NAME}
+     * The encoded name of {@link #SLASHY_BRANCH_NAME}, see {@link NameEncoder#encode(String)}
      */
-    private static final String SLASHY_JOB_NAME = "feature-ux-1.0gorp7";
+    private static final String SLASHY_JOB_NAME = "feature%2Fux-1";
     /**
      * A branch name with unicode characters that have a two canonical forms (Korean for New Features).
      * There are two normalize forms: {@code "\uc0c8\ub85c\uc6b4 \ud2b9\uc9d5"} and
@@ -93,9 +94,9 @@ public class EventsTest {
      */
     private static final String I18N_BRANCH_NAME = "\uc0c8\ub85c\uc6b4 \ud2b9\uc9d5";
     /**
-     * The mangled name of {@link #I18N_BRANCH_NAME}
+     * The encoded name of {@link #I18N_BRANCH_NAME}, see {@link NameEncoder#encode(String)}
      */
-    private static final String I18N_JOB_NAME = "0_c0_c8_b8_5.ns0v4p._d2_b9_c9_d5";
+    private static final String I18N_JOB_NAME = "\uc0c8\ub85c\uc6b4 \ud2b9\uc9d5";
     /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
