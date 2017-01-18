@@ -70,7 +70,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
@@ -93,7 +92,6 @@ import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
-import net.jcip.annotations.GuardedBy;
 import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
@@ -771,17 +769,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     private static class ChildNameGeneratorImpl extends ChildNameGenerator<OrganizationFolder, MultiBranchProject<?,?>> {
 
         private static final ChildNameGeneratorImpl INSTANCE = new ChildNameGeneratorImpl();
-        private final WeakHashMap<ProjectNamePropertyKey, ProjectNameProperty> awaitingCreation = new WeakHashMap<>();
-
-        public synchronized ProjectNamePropertyKey beforeNewProject(@NonNull OrganizationFolder parent, @NonNull String name, ProjectNameProperty property) {
-            ProjectNamePropertyKey key = new ProjectNamePropertyKey(parent, name);
-            awaitingCreation.put(key, property);
-            return key;
-        }
-
-        public synchronized void afterNewProject(ProjectNamePropertyKey key) {
-            awaitingCreation.remove(key); // not critical as will get cleared by GC but we can help it out too
-        }
 
         @Override
         @CheckForNull
@@ -790,13 +777,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             if (property != null) {
                 return NameEncoder.encode(property.getName());
             }
-            if (item.getName() != null) {
-                synchronized (this) {
-                    property = awaitingCreation.get(new ProjectNamePropertyKey(parent, item.getName()));
-                }
-                if (property != null) {
-                    return NameEncoder.encode(property.getName());
-                }
+            String idealName = idealNameFromItem(parent, item);
+            if (idealName != null) {
+                return NameEncoder.encode(idealName);
             }
             return null;
         }
@@ -808,13 +791,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             if (property != null) {
                 return NameMangler.apply(property.getName());
             }
-            if (item.getName() != null) {
-                synchronized (this) {
-                    property = awaitingCreation.get(new ProjectNamePropertyKey(parent, item.getName()));
-                }
-                if (property != null) {
-                    return NameMangler.apply(property.getName());
-                }
+            String idealName = idealNameFromItem(parent, item);
+            if (idealName != null) {
+                return NameMangler.apply(idealName);
             }
             return null;
         }
@@ -829,38 +808,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @NonNull
         public String dirNameFromLegacy(@NonNull OrganizationFolder parent, @NonNull String legacyDirName) {
             return NameMangler.apply(NameEncoder.decode(legacyDirName));
-        }
-    }
-
-    private static class ProjectNamePropertyKey {
-        private final OrganizationFolder parent;
-        private final String projectName;
-
-        public ProjectNamePropertyKey(OrganizationFolder parent, String projectName) {
-            this.parent = parent;
-            this.projectName = projectName;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            ProjectNamePropertyKey that = (ProjectNamePropertyKey) o;
-
-            if (parent != that.parent) {
-                return false;
-            }
-            return projectName.equals(that.projectName);
-        }
-
-        @Override
-        public int hashCode() {
-            return projectName.hashCode();
         }
     }
 
@@ -1220,23 +1167,23 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             listener.getLogger().println("Ignoring duplicate child " + projectName + " named " + folderName);
                             return;
                         }
-                        ProjectNameProperty property = new ProjectNameProperty(projectName);
-                        ProjectNamePropertyKey propertyKey = ChildNameGeneratorImpl.INSTANCE
-                                .beforeNewProject(OrganizationFolder.this, folderName, property);
+                        ChildNameGenerator.Trace trace = ChildNameGeneratorImpl.INSTANCE.beforeCreateItem(
+                                OrganizationFolder.this, folderName, projectName
+                        );
                         MultiBranchProject<?, ?> project;
                         try {
                             project = factory.createNewProject(
                                     OrganizationFolder.this, folderName, sources, attributes, listener
                             );
                         } finally {
-                            ChildNameGeneratorImpl.INSTANCE.afterNewProject(propertyKey);
+                            ChildNameGeneratorImpl.INSTANCE.afterItemCreated(trace);
                         }
                         BulkChange bc = new BulkChange(project);
                         try {
                             if (!projectName.equals(folderName)) {
                                 project.setDisplayName(projectName);
                             }
-                            project.addProperty(property);
+                            project.addProperty(new ProjectNameProperty(projectName));
                             project.setOrphanedItemStrategy(getOrphanedItemStrategy());
                             project.getSourcesList().addAll(createBranchSources());
                             try {

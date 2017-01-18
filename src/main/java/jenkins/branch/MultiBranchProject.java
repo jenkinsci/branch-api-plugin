@@ -24,6 +24,8 @@
 
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.AbstractFolder;
+import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIcon;
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
@@ -1798,13 +1800,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 listener.getLogger().println("Ignoring duplicate branch project " + rawName);
                 return;
             }
-            MultiBranchProjectDescriptor.BranchNameKey branchNameKey =
-                    MultiBranchProjectDescriptor.ChildNameGeneratorImpl.INSTANCE
-                            .beforeNewProject(MultiBranchProject.this, encodedName, branch);
+            ChildNameGenerator<AbstractFolder<P>, P> childNameGenerator = getDescriptor().<P>childNameGenerator();
+            ChildNameGenerator.Trace trace = childNameGenerator.beforeCreateItem(
+                    MultiBranchProject.this, branch.getEncodedName(), branch.getName()
+            );
             try {
                 project = _factory.newInstance(branch);
             } finally {
-                MultiBranchProjectDescriptor.ChildNameGeneratorImpl.INSTANCE.afterNewProject(branchNameKey);
+                childNameGenerator.afterItemCreated(trace);
             }
             if (!project.getName().equals(encodedName)) {
                 throw new IllegalStateException(
