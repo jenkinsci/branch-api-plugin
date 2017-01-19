@@ -82,7 +82,7 @@ public class Branch {
      * representation is simpler.
      * @since 2.0
      */
-    private List<Action> actions = new ArrayList<>();
+    private List<Action> actions;
 
     /**
      * Constructs a branch instance.
@@ -97,6 +97,7 @@ public class Branch {
         this.head = head;
         this.scm = scm;
         this.properties.addAll(properties);
+        this.actions = new ArrayList<>();
     }
 
     /**
@@ -122,7 +123,7 @@ public class Branch {
      */
     private Object readResolve() throws ObjectStreamException {
         if (actions == null) {
-            return new Branch(sourceId, head, scm, properties);
+            actions = new ArrayList<>();
         }
         return this;
     }
@@ -220,7 +221,7 @@ public class Branch {
      */
     @NonNull
     public List<Action> getActions() {
-        return Collections.unmodifiableList(actions);
+        return actions == null ? Collections.<Action>emptyList() : Collections.unmodifiableList(actions);
     }
 
     /**
@@ -240,6 +241,9 @@ public class Branch {
      */
     @CheckForNull
     public <T extends Action> T getAction(Class<T> clazz) {
+        if (actions == null) {
+            return null;
+        }
         for (Action p : actions) {
             if (clazz.isInstance(p)) {
                 return clazz.cast(p);
@@ -313,21 +317,6 @@ public class Branch {
          */
         public Dead(Branch b) {
             super(NullSCMSource.ID, new NullSCM(), b);
-        }
-
-        /**
-         * Ensure actions is never null.
-         *
-         * @return the deserialized object.
-         * @throws ObjectStreamException if things go wrong.
-         */
-        @SuppressWarnings("ConstantConditions")
-        @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
-        private Object readResolve() throws ObjectStreamException {
-            if (getActions() == null) {
-                return new Branch.Dead(getHead(), getProperties());
-            }
-            return this;
         }
 
         /**
