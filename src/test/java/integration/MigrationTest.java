@@ -99,6 +99,13 @@ public class MigrationTest {
                 assertDataMigrated(foo);
             }
         });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
     }
 
     /**
@@ -107,6 +114,13 @@ public class MigrationTest {
     @Test
     @LocalData
     public void nameMangling_2() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
         r.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -130,6 +144,13 @@ public class MigrationTest {
                 assertDataMigrated(foo);
             }
         });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
     }
 
     /**
@@ -146,6 +167,13 @@ public class MigrationTest {
                 assertDataMigrated(foo);
             }
         });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
     }
 
     /**
@@ -159,6 +187,13 @@ public class MigrationTest {
             public void evaluate() throws Throwable {
                 TopLevelItem foo = r.j.jenkins.getItem("foo");
                 r.j.jenkins.reload();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
             }
         });
@@ -179,6 +214,13 @@ public class MigrationTest {
                 assertDataMigrated(foo);
             }
         });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
     }
 
     /**
@@ -192,6 +234,13 @@ public class MigrationTest {
             public void evaluate() throws Throwable {
                 OrganizationFolder foo = (OrganizationFolder) r.j.jenkins.getItem("foo");
                 foo.doReload();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
             }
         });
@@ -211,6 +260,13 @@ public class MigrationTest {
                 assertDataMigrated(foo);
             }
         });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
     }
 
     @Test
@@ -225,6 +281,13 @@ public class MigrationTest {
                 foo.scheduleBuild2(0).getFuture().get();
                 r.j.waitUntilNoActivity();
                 foo.doReload();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
             }
         });
