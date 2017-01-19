@@ -809,6 +809,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         public String dirNameFromLegacy(@NonNull OrganizationFolder parent, @NonNull String legacyDirName) {
             return NameMangler.apply(NameEncoder.decode(legacyDirName));
         }
+
+        @Override
+        public void recordLegacyName(OrganizationFolder parent, MultiBranchProject<?, ?> item, String legacyDirName)
+                throws IOException {
+            item.addProperty(new ProjectNameProperty(legacyDirName));
+        }
     }
 
     /**
@@ -1167,16 +1173,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             listener.getLogger().println("Ignoring duplicate child " + projectName + " named " + folderName);
                             return;
                         }
-                        ChildNameGenerator.Trace trace = ChildNameGeneratorImpl.INSTANCE.beforeCreateItem(
-                                OrganizationFolder.this, folderName, projectName
-                        );
                         MultiBranchProject<?, ?> project;
-                        try {
+                        try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
+                                OrganizationFolder.this, folderName, projectName
+                        )) {
                             project = factory.createNewProject(
                                     OrganizationFolder.this, folderName, sources, attributes, listener
                             );
-                        } finally {
-                            ChildNameGeneratorImpl.INSTANCE.afterItemCreated(trace);
                         }
                         BulkChange bc = new BulkChange(project);
                         try {
