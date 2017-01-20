@@ -58,12 +58,15 @@ import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.util.LogTaskListener;
 import hudson.util.PersistedList;
+import hudson.util.XStream2;
 import hudson.util.io.ReopenableRotatingFileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -72,6 +75,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -355,6 +359,146 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @NonNull
     public PersistedList<BranchSource> getSourcesList() {
         return sources;
+    }
+
+    /**
+     * Offers direct access to set the configurable list of branch sources <strong>while</strong> preserving
+     * branch source id associations for sources that are otherwise unmodified
+     * @param sources
+     * @throws IOException
+     */
+    public void setSourcesList(List<BranchSource> sources) throws IOException {
+        if (this.sources.isEmpty() || sources.isEmpty()) {
+            // easy
+            this.sources.replaceBy(sources);
+            return;
+        }
+        Set<String> oldIds = sourceIds(this.sources);
+        Set<String> newIds = sourceIds(sources);
+        if (oldIds.containsAll(newIds) || newIds.containsAll(oldIds)) {
+            // either adding, removing, or updating without an id change
+            this.sources.replaceBy(sources);
+            return;
+        }
+        // Now we need to check if any of the new entries are effectively the same as an old entry that is being removed
+        // we will store the ID changes in a map and process all the affected branches to update their sourceIds
+        Map<String,String> changedIds = new HashMap<>();
+        Set<String> additions = new HashSet<>(newIds);
+        additions.removeAll(oldIds);
+        Set<String> removals = new HashSet<>(oldIds);
+        removals.removeAll(newIds);
+
+        // we will be manipulating the sources, so make sure we own the backing list impl
+        sources = new ArrayList<>(sources);
+        for (ListIterator<BranchSource> i = sources.listIterator(); i.hasNext(); ) {
+            BranchSource addition = i.next();
+            if (!additions.contains(addition.getSource().getId())) {
+                continue;
+            }
+            for (BranchSource removal: this.sources) {
+                if (!removals.contains(removal.getSource().getId())) {
+                    continue;
+                }
+                if (!equalButForId(removal.getSource(), addition.getSource())) {
+                    continue;
+                }
+                changedIds.put(removal.getSource().getId(), addition.getSource().getId());
+                // now take this one out of consideration
+                removals.remove(removal.getSource().getId());
+                break;
+            }
+        }
+        this.sources.replaceBy(sources);
+        BranchProjectFactory<P,R> factory = getProjectFactory();
+        for (P item: getItems()) {
+            if (!factory.isProject(item)) {
+                continue;
+            }
+            Branch oldBranch = factory.getBranch(item);
+            if (changedIds.containsKey(oldBranch.getSourceId())) {
+                Branch newBranch = new Branch(changedIds.get(oldBranch.getSourceId()), oldBranch.getHead(), oldBranch.getScm(), oldBranch.getProperties());
+                newBranch.setActions(oldBranch.getActions());
+                factory.setBranch(item, newBranch);
+            }
+        }
+    }
+
+    private Set<String> sourceIds(List<BranchSource> sources) {
+        Set<String> result = new HashSet<>();
+        for (BranchSource s: sources) {
+            result.add(s.getSource().getId());
+        }
+        return result;
+    }
+
+    private boolean equalButForId(SCMSource a, SCMSource b) {
+        if (!a.getClass().equals(b.getClass())) {
+            return false;
+        }
+        boolean fallBack = false;
+        Class<?> clazz = a.getClass();
+        REFLECTION:
+        while (clazz != null && SCMSource.class.isAssignableFrom(clazz) && clazz != SCMSource.class) {
+            for (Field field : clazz.getDeclaredFields()) {
+                int modifiers = field.getModifiers();
+                if (Modifier.isStatic(modifiers)) {
+                    continue;
+                }
+                if (Modifier.isTransient(modifiers)) {
+                    continue;
+                }
+                // TODO Will Java 9 modules lock setAccessible permissions? Likely would break XStream too!
+                if (!field.isAccessible()) {
+                    field.setAccessible(true);
+                }
+                if (!field.isAccessible()) {
+                    // err on the side of caution
+                    fallBack = true;
+                    break REFLECTION;
+                }
+                Object aField;
+                Object bField;
+                try {
+                    aField = field.get(a);
+                    bField = field.get(b);
+                } catch (IllegalAccessException e) {
+                    // err on the side of caution
+                    fallBack = true;
+                    break REFLECTION;
+                }
+                if (aField == null && bField == null) {
+                    // next field
+                    continue;
+                }
+                if (aField == null || bField == null) {
+                    // we know they are different
+                    return false;
+                }
+                if (aField.equals(bField)) {
+                    // next field
+                    continue;
+                }
+                if (aField instanceof Boolean || aField instanceof Number || aField instanceof String) {
+                    // no need to compare primatives by XML, we know they are different
+                    return false;
+                }
+                if (SOURCE_ID_OMITTED_XSTREAM.toXML(aField).equals(SOURCE_ID_OMITTED_XSTREAM.toXML(bField))) {
+                    // next field
+                    continue;
+                }
+                // different enough
+                return false;
+            }
+
+            clazz = clazz.getSuperclass();
+        }
+        return !fallBack || SOURCE_ID_OMITTED_XSTREAM.toXML(a).equals(SOURCE_ID_OMITTED_XSTREAM.toXML(b));
+    }
+
+    private final static XStream2 SOURCE_ID_OMITTED_XSTREAM = new XStream2();
+
+    static {
+        SOURCE_ID_OMITTED_XSTREAM.omitField(SCMSource.class, "id");
     }
 
     /**
@@ -756,7 +900,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         List<SCMSource> _sources = new ArrayList<>();
         synchronized (this) {
             JSONObject json = req.getSubmittedForm();
-            sources.replaceBy(req.bindJSONToList(BranchSource.class, json.opt("sources")));
+            setSourcesList(req.bindJSONToList(BranchSource.class, json.opt("sources")));
             for (SCMSource scmSource : getSCMSources()) {
                 scmSource.setOwner(this);
                 _sources.add(scmSource);

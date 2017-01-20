@@ -1126,9 +1126,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         if (existing != null) {
                             BulkChange bc = new BulkChange(existing);
                             try {
-                                PersistedList<BranchSource> sourcesList = existing.getSourcesList();
-                                sourcesList.clear();
-                                sourcesList.addAll(createBranchSources());
+                                existing.setSourcesList(createBranchSources());
                                 existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
                                 factory.updateExistingProject(existing, attributes, listener);
                                 ProjectNameProperty property =
