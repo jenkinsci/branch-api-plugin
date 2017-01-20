@@ -76,6 +76,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
@@ -86,6 +87,7 @@ import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEventListener;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadEvent;
+import jenkins.scm.api.SCMHeadMigration;
 import jenkins.scm.api.SCMHeadObserver;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
@@ -200,6 +202,48 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         } catch (XStreamException | IOException e) {
             LOGGER.log(Level.WARNING, "Could not read persisted state, will be recovered on next index.", e);
             state.reset();
+        }
+        BranchProjectFactory<P, R> factory = getProjectFactory();
+        // optimize lookup of sources by building a temporary map that is equivalent to getSCMSource(id) in results
+        Map<String,SCMSource> sourceMap = new HashMap<>();
+        for (BranchSource source : sources) {
+            SCMSource s = source.getSource();
+            String id = s.getId();
+            if (!sourceMap.containsKey(id)) { // only the first match should win
+                sourceMap.put(id, s);
+            }
+        }
+        for (P item : getItems()) {
+            if (projectFactory.isProject(item)) {
+                Branch oldBranch = projectFactory.getBranch(item);
+                SCMSource source = sourceMap.get(oldBranch.getSourceId());
+                if (source == null || source instanceof NullSCMSource) {
+                    continue;
+                }
+                SCMHead oldHead = oldBranch.getHead();
+                SCMHead newHead = SCMHeadMigration.readResolveSCMHead(source, oldHead);
+                if (newHead != oldHead) {
+                    LOGGER.log(Level.INFO, "Job {0}: a plugin upgrade is requesting migration of branch from {1} to {2}",
+                            new Object[]{item.getFullName(), oldHead.getClass(), newHead.getClass()}
+                    );
+                    try {
+                        Branch newBranch = new Branch(oldBranch.getSourceId(), newHead, oldBranch.getScm(),
+                                oldBranch.getProperties());
+                        newBranch.setActions(oldBranch.getActions());
+                        projectFactory.setBranch(item, newBranch);
+                        SCMRevision revision = projectFactory.getRevision(item);
+                        projectFactory.setRevisionHash(item, SCMHeadMigration.readResolveSCMRevision(source, revision));
+                    } catch (IOException | RuntimeException e) {
+                        LogRecord lr = new LogRecord(Level.WARNING,
+                                "Job {0}: Could not complete migration of branch from type {1} to {2}. "
+                                        + "The side-effect of this is that the next index may trigger a rebuild "
+                                        + "of the job (after which the issue will be resolved)");
+                        lr.setThrown(e);
+                        lr.setParameters(new Object[]{item.getFullName(), oldHead.getClass(), newHead.getClass()});
+                        LOGGER.log(lr);
+                    }
+                }
+            }
         }
     }
 
