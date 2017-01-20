@@ -392,19 +392,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         sources = new ArrayList<>(sources);
         for (ListIterator<BranchSource> i = sources.listIterator(); i.hasNext(); ) {
             BranchSource addition = i.next();
-            if (!additions.contains(addition.getSource().getId())) {
+            String additionId = addition.getSource().getId();
+            if (!additions.contains(additionId)) {
                 continue;
             }
             for (BranchSource removal: this.sources) {
-                if (!removals.contains(removal.getSource().getId())) {
+                String removalId = removal.getSource().getId();
+                if (!removals.contains(removalId)) {
                     continue;
                 }
                 if (!equalButForId(removal.getSource(), addition.getSource())) {
                     continue;
                 }
-                changedIds.put(removal.getSource().getId(), addition.getSource().getId());
-                // now take this one out of consideration
-                removals.remove(removal.getSource().getId());
+                changedIds.put(removalId, additionId);
+                // now take these two out of consideration
+                removals.remove(removalId);
+                additions.remove(additionId);
                 break;
             }
         }
