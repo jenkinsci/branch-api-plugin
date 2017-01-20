@@ -214,8 +214,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
         for (P item : getItems()) {
-            if (projectFactory.isProject(item)) {
-                Branch oldBranch = projectFactory.getBranch(item);
+            if (factory.isProject(item)) {
+                Branch oldBranch = factory.getBranch(item);
                 SCMSource source = sourceMap.get(oldBranch.getSourceId());
                 if (source == null || source instanceof NullSCMSource) {
                     continue;
@@ -230,9 +230,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         Branch newBranch = new Branch(oldBranch.getSourceId(), newHead, oldBranch.getScm(),
                                 oldBranch.getProperties());
                         newBranch.setActions(oldBranch.getActions());
-                        projectFactory.setBranch(item, newBranch);
-                        SCMRevision revision = projectFactory.getRevision(item);
-                        projectFactory.setRevisionHash(item, SCMHeadMigration.readResolveSCMRevision(source, revision));
+                        factory.setBranch(item, newBranch);
+                        SCMRevision revision = factory.getRevision(item);
+                        factory.setRevisionHash(item, SCMHeadMigration.readResolveSCMRevision(source, revision));
                     } catch (IOException | RuntimeException e) {
                         LogRecord lr = new LogRecord(Level.WARNING,
                                 "Job {0}: Could not complete migration of branch from type {1} to {2}. "
