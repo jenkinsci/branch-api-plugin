@@ -58,6 +58,7 @@ import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.util.LogTaskListener;
 import hudson.util.PersistedList;
+import hudson.util.XStream2;
 import hudson.util.io.ReopenableRotatingFileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -399,6 +400,90 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @NonNull
     public PersistedList<BranchSource> getSourcesList() {
         return sources;
+    }
+
+    /**
+     * Offers direct access to set the configurable list of branch sources <strong>while</strong> preserving
+     * branch source id associations for sources that are otherwise unmodified
+     *
+     * @param sources the new sources.
+     * @throws IOException if the sources could not be persisted to disk.
+     */
+    public void setSourcesList(List<BranchSource> sources) throws IOException {
+        if (this.sources.isEmpty() || sources.isEmpty()) {
+            // easy
+            this.sources.replaceBy(sources);
+            return;
+        }
+        Set<String> oldIds = sourceIds(this.sources);
+        Set<String> newIds = sourceIds(sources);
+        if (oldIds.containsAll(newIds) || newIds.containsAll(oldIds)) {
+            // either adding, removing, or updating without an id change
+            this.sources.replaceBy(sources);
+            return;
+        }
+        // Now we need to check if any of the new entries are effectively the same as an old entry that is being removed
+        // we will store the ID changes in a map and process all the affected branches to update their sourceIds
+        Map<String,String> changedIds = new HashMap<>();
+        Set<String> additions = new HashSet<>(newIds);
+        additions.removeAll(oldIds);
+        Set<String> removals = new HashSet<>(oldIds);
+        removals.removeAll(newIds);
+
+        for (BranchSource addition : sources) {
+            String additionId = addition.getSource().getId();
+            if (!additions.contains(additionId)) {
+                continue;
+            }
+            for (BranchSource removal : this.sources) {
+                String removalId = removal.getSource().getId();
+                if (!removals.contains(removalId)) {
+                    continue;
+                }
+                if (!equalButForId(removal.getSource(), addition.getSource())) {
+                    continue;
+                }
+                changedIds.put(removalId, additionId);
+                // now take these two out of consideration
+                removals.remove(removalId);
+                additions.remove(additionId);
+                break;
+            }
+        }
+        this.sources.replaceBy(sources);
+        BranchProjectFactory<P,R> factory = getProjectFactory();
+        for (P item: getItems()) {
+            if (!factory.isProject(item)) {
+                continue;
+            }
+            Branch oldBranch = factory.getBranch(item);
+            if (changedIds.containsKey(oldBranch.getSourceId())) {
+                Branch newBranch = new Branch(changedIds.get(oldBranch.getSourceId()), oldBranch.getHead(), oldBranch.getScm(), oldBranch.getProperties());
+                newBranch.setActions(oldBranch.getActions());
+                factory.setBranch(item, newBranch);
+            }
+        }
+    }
+
+    private Set<String> sourceIds(List<BranchSource> sources) {
+        Set<String> result = new HashSet<>();
+        for (BranchSource s: sources) {
+            result.add(s.getSource().getId());
+        }
+        return result;
+    }
+
+    private boolean equalButForId(SCMSource a, SCMSource b) {
+        if (!a.getClass().equals(b.getClass())) {
+            return false;
+        }
+        return SOURCE_ID_OMITTED_XSTREAM.toXML(a).equals(SOURCE_ID_OMITTED_XSTREAM.toXML(b));
+    }
+
+    private final static XStream2 SOURCE_ID_OMITTED_XSTREAM = new XStream2();
+
+    static {
+        SOURCE_ID_OMITTED_XSTREAM.omitField(SCMSource.class, "id");
     }
 
     /**
@@ -800,7 +885,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         List<SCMSource> _sources = new ArrayList<>();
         synchronized (this) {
             JSONObject json = req.getSubmittedForm();
-            sources.replaceBy(req.bindJSONToList(BranchSource.class, json.opt("sources")));
+            setSourcesList(req.bindJSONToList(BranchSource.class, json.opt("sources")));
             for (SCMSource scmSource : getSCMSources()) {
                 scmSource.setOwner(this);
                 _sources.add(scmSource);

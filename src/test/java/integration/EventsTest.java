@@ -61,6 +61,7 @@ import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
@@ -185,6 +186,93 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild(), notNullValue());
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    @Issue("JENKINS-41255")
+    public void given_multibranchWithSource_when_replacingSource_then_noBuildStorm() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            // set the first list
+            prj.setSourcesList(Collections.singletonList(new BranchSource(new MockSCMSource("firstId", c, "foo", true, false, false))));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("We now have branches",
+                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("We now have the master branch", master, notNullValue());
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            Branch branch = prj.getProjectFactory().getBranch(master);
+            assertThat("The branch source is the configured source", branch.getSourceId(), is("firstId"));
+            prj.setSourcesList(
+                    Collections.singletonList(new BranchSource(new MockSCMSource("secondId", c, "foo", true, false, false))));
+            Branch updated = prj.getProjectFactory().getBranch(master);
+            assertThat("The branch source is new configured source", updated.getSourceId(), is("secondId"));
+            prj.scheduleBuild2(0).getFuture().get();
+            assertThat("The master branch was not rebuilt", master.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    @Issue("JENKINS-41255")
+    public void given_multibranchWithSources_when_replacingSources_then_noBuildStorm() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            Integer id = c.openChangeRequest("foo", "master");
+            c.createRepository("bar");
+            c.createBranch("bar", "fun");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            // set the first list
+            prj.setSourcesList(Arrays.asList(
+                    new BranchSource(new MockSCMSource("firstId", c, "foo", true, false, false)),
+                    new BranchSource(new MockSCMSource("secondId", c, "foo", false, false, true)),
+                    new BranchSource(new MockSCMSource("thirdId", c, "bar", true, false, false))
+            ));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("We now have branches",
+                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("We now have the master branch", master, notNullValue());
+            FreeStyleProject change = prj.getItem("CR-" + id);
+            assertThat("We now have the change request", change, notNullValue());
+            FreeStyleProject fun = prj.getItem("fun");
+            assertThat("We now have the fun branch", fun, notNullValue());
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertThat("The change request was built", change.getLastBuild(), notNullValue());
+            assertThat("The change request was built", change.getLastBuild().getNumber(), is(1));
+            assertThat("The fun branch was built", fun.getLastBuild(), notNullValue());
+            assertThat("The fun branch was built", fun.getLastBuild().getNumber(), is(1));
+            assertThat("The master branch source is the configured source",
+                    prj.getProjectFactory().getBranch(master).getSourceId(), is("firstId"));
+            assertThat("The change request source is the configured source",
+                    prj.getProjectFactory().getBranch(change).getSourceId(), is("secondId"));
+            assertThat("The fun branch source is the configured source",
+                    prj.getProjectFactory().getBranch(fun).getSourceId(), is("thirdId"));
+            prj.setSourcesList(Arrays.asList(
+                    new BranchSource(new MockSCMSource("idFirst", c, "foo", true, false, false)),
+                    new BranchSource(new MockSCMSource("idThird", c, "bar", true, false, false)),
+                    new BranchSource(new MockSCMSource("idSecond", c, "foo", false, false, true))
+            ));
+            Branch updated = prj.getProjectFactory().getBranch(master);
+            assertThat("The master branch source is new configured source",
+                    prj.getProjectFactory().getBranch(master).getSourceId(), is("idFirst"));
+            assertThat("The change request source is new configured source",
+                    prj.getProjectFactory().getBranch(change).getSourceId(), is("idSecond"));
+            assertThat("The fun branch source is new configured source",
+                    prj.getProjectFactory().getBranch(fun).getSourceId(), is("idThird"));
+            prj.scheduleBuild2(0).getFuture().get();
+            assertThat("The master branch was not rebuilt", master.getLastBuild().getNumber(), is(1));
+            assertThat("The change request was not rebuilt", change.getLastBuild().getNumber(), is(1));
+            assertThat("The fun branch was not rebuilt", master.getLastBuild().getNumber(), is(1));
         }
     }
 
