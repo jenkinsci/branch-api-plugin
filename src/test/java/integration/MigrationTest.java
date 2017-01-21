@@ -232,7 +232,7 @@ public class MigrationTest {
         r.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
-                OrganizationFolder foo = (OrganizationFolder) r.j.jenkins.getItem("foo");
+                OrganizationFolder foo = r.j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
                 foo.doReload();
                 assertDataMigrated(foo);
             }
@@ -255,7 +255,7 @@ public class MigrationTest {
         r.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
-                OrganizationFolder foo = (OrganizationFolder) r.j.jenkins.getItem("foo");
+                OrganizationFolder foo = r.j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
                 foo.doReload();
                 assertDataMigrated(foo);
             }

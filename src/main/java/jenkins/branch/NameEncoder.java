@@ -24,9 +24,9 @@
 package jenkins.branch;
 
 /**
- * Encodes names that are not nice so that they are safe to use as url path segments.
+ * Encodes names that are not nice so that they are safe to use as URL path segments.
  * We don't want to do a full url encoding, only replace problematic names with {@code %} escaped variants so
- * that when double encoded by Stapler etc we bypass issues.
+ * that when double encoded by Stapler etc. we bypass issues.
  *
  * @since 2.0.0
  */
@@ -44,7 +44,7 @@ public final class NameEncoder {
             return "%00";
         }
         if (".".equals(name)) {
-            // just enough escaping to bypass the URL segment meaning of ".."
+            // just enough escaping to bypass the URL segment meaning of "."
             return "%2E";
         }
         if ("..".equals(name)) {
@@ -104,7 +104,7 @@ public final class NameEncoder {
                     buf.append("%2F");
                     break;
                 case '?':
-                buf.append("%3F");
+                    buf.append("%3F");
                 break;
                 case '[':
                     buf.append("%5B");
@@ -124,6 +124,9 @@ public final class NameEncoder {
     }
 
     public static String decode(String name) {
+        if (name.indexOf('%') == -1) {
+            return name;
+        }
         if ("%00".equals(name)) {
             return "";
         }
@@ -132,9 +135,6 @@ public final class NameEncoder {
         }
         if ("%2E.".equals(name)) {
             return "..";
-        }
-        if (name.indexOf('%') == -1) {
-            return name;
         }
         StringBuilder buf = new StringBuilder(name.length() + 16);
         int matchIndex = 0;

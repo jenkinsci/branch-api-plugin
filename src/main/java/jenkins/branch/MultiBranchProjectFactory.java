@@ -203,7 +203,7 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          * Defines how to decide whether or not a given repository should host our type of project.
          *
          * @param source a repository
-         * @return criteria for treating its branches as a match
+         * @return criteria for treating its branches as a match or ({@code null} if all branches match)
          */
         @CheckForNull
         protected abstract SCMSourceCriteria getSCMSourceCriteria(@NonNull SCMSource source);
