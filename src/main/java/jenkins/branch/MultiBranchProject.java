@@ -65,8 +65,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -75,7 +73,6 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -364,8 +361,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Offers direct access to set the configurable list of branch sources <strong>while</strong> preserving
      * branch source id associations for sources that are otherwise unmodified
-     * @param sources
-     * @throws IOException
+     *
+     * @param sources the new sources.
+     * @throws IOException if the sources could not be persisted to disk.
      */
     public void setSourcesList(List<BranchSource> sources) throws IOException {
         if (this.sources.isEmpty() || sources.isEmpty()) {
@@ -388,15 +386,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         Set<String> removals = new HashSet<>(oldIds);
         removals.removeAll(newIds);
 
-        // we will be manipulating the sources, so make sure we own the backing list impl
-        sources = new ArrayList<>(sources);
-        for (ListIterator<BranchSource> i = sources.listIterator(); i.hasNext(); ) {
-            BranchSource addition = i.next();
+        for (BranchSource addition : sources) {
             String additionId = addition.getSource().getId();
             if (!additions.contains(additionId)) {
                 continue;
             }
-            for (BranchSource removal: this.sources) {
+            for (BranchSource removal : this.sources) {
                 String removalId = removal.getSource().getId();
                 if (!removals.contains(removalId)) {
                     continue;
@@ -438,64 +433,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         if (!a.getClass().equals(b.getClass())) {
             return false;
         }
-        boolean fallBack = false;
-        Class<?> clazz = a.getClass();
-        REFLECTION:
-        while (clazz != null && SCMSource.class.isAssignableFrom(clazz) && clazz != SCMSource.class) {
-            for (Field field : clazz.getDeclaredFields()) {
-                int modifiers = field.getModifiers();
-                if (Modifier.isStatic(modifiers)) {
-                    continue;
-                }
-                if (Modifier.isTransient(modifiers)) {
-                    continue;
-                }
-                // TODO Will Java 9 modules lock setAccessible permissions? Likely would break XStream too!
-                if (!field.isAccessible()) {
-                    field.setAccessible(true);
-                }
-                if (!field.isAccessible()) {
-                    // err on the side of caution
-                    fallBack = true;
-                    break REFLECTION;
-                }
-                Object aField;
-                Object bField;
-                try {
-                    aField = field.get(a);
-                    bField = field.get(b);
-                } catch (IllegalAccessException e) {
-                    // err on the side of caution
-                    fallBack = true;
-                    break REFLECTION;
-                }
-                if (aField == null && bField == null) {
-                    // next field
-                    continue;
-                }
-                if (aField == null || bField == null) {
-                    // we know they are different
-                    return false;
-                }
-                if (aField.equals(bField)) {
-                    // next field
-                    continue;
-                }
-                if (aField instanceof Boolean || aField instanceof Number || aField instanceof String) {
-                    // no need to compare primatives by XML, we know they are different
-                    return false;
-                }
-                if (SOURCE_ID_OMITTED_XSTREAM.toXML(aField).equals(SOURCE_ID_OMITTED_XSTREAM.toXML(bField))) {
-                    // next field
-                    continue;
-                }
-                // different enough
-                return false;
-            }
-
-            clazz = clazz.getSuperclass();
-        }
-        return !fallBack || SOURCE_ID_OMITTED_XSTREAM.toXML(a).equals(SOURCE_ID_OMITTED_XSTREAM.toXML(b));
+        return SOURCE_ID_OMITTED_XSTREAM.toXML(a).equals(SOURCE_ID_OMITTED_XSTREAM.toXML(b));
     }
 
     private final static XStream2 SOURCE_ID_OMITTED_XSTREAM = new XStream2();
