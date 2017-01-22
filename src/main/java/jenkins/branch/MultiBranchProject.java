@@ -170,8 +170,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         } catch (XStreamException e) {
             srcDigest = null;
         }
+        BranchProjectFactory<P, R> factory = getProjectFactory();
         try {
-            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(getProjectFactory()));
+            facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(factory));
         } catch (XStreamException e) {
             facDigest = null;
         }
@@ -184,7 +185,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             LOGGER.log(Level.WARNING, "Could not read persisted state, will be recovered on next index.", e);
             state.reset();
         }
-        BranchProjectFactory<P, R> factory = getProjectFactory();
         // optimize lookup of sources by building a temporary map that is equivalent to getSCMSource(id) in results
         Map<String,SCMSource> sourceMap = new HashMap<>();
         for (BranchSource source : sources) {
