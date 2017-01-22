@@ -25,24 +25,32 @@
 
 package integration;
 
+import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import hudson.model.Job;
 import hudson.model.TopLevelItem;
+import integration.harness.BasicMultiBranchProjectFactory;
+import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMNavigator;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
+import org.junit.runners.model.Statement;
+import org.jvnet.hudson.test.RestartableJenkinsRule;
 import org.jvnet.hudson.test.recipes.LocalData;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
@@ -51,7 +59,7 @@ public class MigrationTest {
     private static MockSCMController c;
 
     @Rule
-    public JenkinsRule j = new JenkinsRule();
+    public RestartableJenkinsRule r = new RestartableJenkinsRule();
 
     @BeforeClass
     public static void setupSCM() throws IOException {
@@ -78,57 +86,273 @@ public class MigrationTest {
         c = null;
     }
 
+    /**
+     * Checks that data is migrated correctly from 1.x to current version.
+     */
     @Test
     @LocalData
-    public void nameMangling() throws IOException {
-        TopLevelItem foo = j.jenkins.getItem("foo");
+    public void nameMangling() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+    }
+
+    /**
+     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
+     */
+    @Test
+    @LocalData
+    public void nameMangling_2() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+    }
+
+    @Test
+    public void createdFromScratch() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
+                foo.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+                foo.getProjectFactories()
+                        .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+                foo.scheduleBuild2(0).getFuture().get();
+                r.j.waitUntilNoActivity();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+    }
+
+    /**
+     * Checks that data is migrated correctly from 1.x to current version.
+     */
+    @Test
+    @LocalData
+    public void nameMangling_full_reload() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                r.j.jenkins.reload();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+    }
+
+    /**
+     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
+     */
+    @Test
+    @LocalData
+    public void nameMangling_2_full_reload() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                r.j.jenkins.reload();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+    }
+
+    @Test
+    public void createdFromScratch_full_reload() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
+                foo.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+                foo.getProjectFactories()
+                        .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+                foo.scheduleBuild2(0).getFuture().get();
+                r.j.waitUntilNoActivity();
+                r.j.jenkins.reload();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+    }
+
+    /**
+     * Checks that data is migrated correctly from 1.x to current version.
+     */
+    @Test
+    @LocalData
+    public void nameMangling_folder_reload() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                OrganizationFolder foo = r.j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
+                foo.doReload();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+    }
+
+    /**
+     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
+     */
+    @Test
+    @LocalData
+    public void nameMangling_2_folder_reload() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                OrganizationFolder foo = r.j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
+                foo.doReload();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+    }
+
+    @Test
+    public void createdFromScratch_folder_reload() throws Exception {
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
+                foo.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+                foo.getProjectFactories()
+                        .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+                foo.scheduleBuild2(0).getFuture().get();
+                r.j.waitUntilNoActivity();
+                foo.doReload();
+                assertDataMigrated(foo);
+            }
+        });
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
+                assertDataMigrated(foo);
+            }
+        });
+    }
+
+    private void assertDataMigrated(TopLevelItem foo) throws Exception {
         assertThat(foo, instanceOf(OrganizationFolder.class));
         OrganizationFolder prj = (OrganizationFolder) foo;
         Map<String, MultiBranchProject> byName = new HashMap<>();
+        Map<String, MultiBranchProject> byDirName = new HashMap<>();
         Map<String, MultiBranchProject> byDisplayName = new HashMap<>();
         Map<String, Job> jobByName = new HashMap<>();
+        Map<String, Job> jobByDirName = new HashMap<>();
         Map<String, Job> jobByDisplayName = new HashMap<>();
         System.out.println("Jobs");
         System.out.println("====");
         System.out.println();
         // Assume NFC
         String espana = "España";
-        String espanaEncoded = "Espa_f1a.9jabqu";
+        String espanaMangled = "Espa_f1a.9jabqu";
         String ireland = "Éireann";
-        String irelandEncoded = "0_c9ireann.giuvlt";
+        String irelandMangled = "0_c9ireann.giuvlt";
         String korea = "대한민국";
-        String koreaEncoded = "0_b3_00_d5_5c_bb_fc_ad_6d.ufdgbs";
+        String koreaMangled = "0_b3_00_d5_5c_bb_fc_ad_6d.ufdgbs";
         String korea2 = "특색/새로운";
-        String korea2Encoded = "0_d2_b9_c0_c.ps50ht._b8_5c_c6_b4";
+        String korea2Mangled = "0_d2_b9_c0_c.ps50ht._b8_5c_c6_b4";
         for (MultiBranchProject<?, ?> p : prj.getItems()) {
-            System.out.printf("%s ==> %s%n", p.getName(), p.getDisplayName());
-            if (p.getName().equals("Espan_03_03a.eqqe01")) {
+            String dirName = p.getRootDir().getName();
+            System.out.printf("%s ==> %s ==> %s%n", dirName, p.getName(), p.getDisplayName());
+            byName.put(p.getName(), p);
+            if (dirName.equals("Espan_03_03a.eqqe01")) {
                 // NFD
                 espana = "Espa\u006e\u0303a";
-                espanaEncoded = "Espan_03_03a.eqqe01";
+                espanaMangled = "Espan_03_03a.eqqe01";
             }
-            if (p.getName().equals("E_03_01ireann.0qtq11")) {
+            if (dirName.equals("E_03_01ireann.0qtq11")) {
                 // NFD
                 ireland = "E\u0301ireann";
-                irelandEncoded = "E_03_01ireann.0qtq11";
+                irelandMangled = "E_03_01ireann.0qtq11";
             }
-            if (p.getName().equals("0_11_03_1.3gi5g2rs7pg4._6e_11_a8")) {
+            if (dirName.equals("0_11_03_1.3gi5g2rs7pg4._6e_11_a8")) {
                 // NFD
                 korea = "\u1103\u1162\u1112\u1161\u11ab\u1106\u1175\u11ab\u1100\u116e\u11a8";
-                koreaEncoded = "0_11_03_1.3gi5g2rs7pg4._6e_11_a8";
+                koreaMangled = "0_11_03_1.3gi5g2rs7pg4._6e_11_a8";
             }
-            byName.put(p.getName(), p);
+            byDirName.put(dirName, p);
             byDisplayName.put(p.getDisplayName(), p);
             for (Job<?, ?> j : p.getItems()) {
-                System.out.printf("  %s ==> %s%n", j.getName(), j.getDisplayName());
+                String jobDirName = prj.getRootDir().getName() + "/" + p.getRootDir().getName() + "/" + j.getRootDir().getName();
+                System.out.printf("  %s ==> %s ==> %s%n", jobDirName, j.getName(), j.getDisplayName());
                 if (j.getName().equals("0_11_10_1.m479ph0h00p7._6e_11_ab")) {
                     // NFD
                     korea2 = "\u1110\u1173\u11a8\u1109\u1162\u11a8/\u1109\u1162\u1105\u1169\u110b\u116e\u11ab";
-                    korea2Encoded = "0_11_10_1.m479ph0h00p7._6e_11_ab";
+                    korea2Mangled = "0_11_10_1.m479ph0h00p7._6e_11_ab";
                 }
                 jobByName.put(j.getFullName(), j);
+                jobByDirName.put(jobDirName, j);
                 jobByDisplayName.put(j.getFullDisplayName(), j);
+                File nameFile = new File(j.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
+                assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
+                assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile), is(j.getName()));
             }
+            File nameFile = new File(p.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
+            assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
+            assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile), is(p.getName()));
         }
         assertThat("Display Names are repo names", byDisplayName.keySet(), containsInAnyOrder(
                 "test.example.com",
@@ -138,13 +362,21 @@ public class MigrationTest {
                 espana,
                 korea
         ));
-        assertThat("Folder names have been mangled", byName.keySet(), containsInAnyOrder(
+        assertThat("Directory names have been mangled", byDirName.keySet(), containsInAnyOrder(
                 "test-example-com.34nhgh",
-                irelandEncoded,  // Éireann
+                irelandMangled,  // Éireann
                 "0_04_20_04_3.pei3d7._04_38_04_4f", // Россия
                 "0_4e_2d_56_fd.m4k0dn", // 中国
-                espanaEncoded, // España
-                koreaEncoded // 대한민국
+                espanaMangled, // España
+                koreaMangled // 대한민국
+        ));
+        assertThat("Folder names have been minimal url path segment pre-encoded", byName.keySet(), containsInAnyOrder(
+                "test.example.com",
+                ireland,  // Éireann
+                "Россия", // Россия
+                "中国", // 中国
+                espana, // España
+                korea // 대한민국
         ));
 
         assertThat("Display Names are branch names", jobByDisplayName.keySet(), containsInAnyOrder(
@@ -163,21 +395,38 @@ public class MigrationTest {
                 "foo » " + korea + " » master",
                 "foo » " + korea + " » " + korea2
         ));
-        assertThat("Job names have been mangled", jobByName.keySet(), containsInAnyOrder(
+        assertThat("Job directory names have been mangled", jobByDirName.keySet(), containsInAnyOrder(
                 "foo/test-example-com.34nhgh/master",
                 "foo/test-example-com.34nhgh/feature_3a-b.jk8rfi.wsing-part-1",
                 "foo/test-example-com.34nhgh/feature_3a-b.m8lpav.wsing-part-2",
                 "foo/test-example-com.34nhgh/feature_3a-welcome.9dhrtb",
-                "foo/" + irelandEncoded + "/master",
-                "foo/" + irelandEncoded + "/gn_e9-nua.updi5h",
+                "foo/" + irelandMangled + "/master",
+                "foo/" + irelandMangled + "/gn_e9-nua.updi5h",
                 "foo/0_04_20_04_3.pei3d7._04_38_04_4f/master",
                 "foo/0_04_20_04_3.pei3d7._04_38_04_4f/0_04_3e_0.n168ksdsksof._4b_04_39",
                 "foo/0_4e_2d_56_fd.m4k0dn/master",
                 "foo/0_4e_2d_56_fd.m4k0dn/0_72_79_5f_81-_65_b0.nt1m48",
-                "foo/" + espanaEncoded + "/master",
-                "foo/" + espanaEncoded + "/caracter_edstica-nuevo.h5da9f",
-                "foo/" + koreaEncoded + "/master",
-                "foo/" + koreaEncoded + "/" + korea2Encoded
+                "foo/" + espanaMangled + "/master",
+                "foo/" + espanaMangled + "/caracter_edstica-nuevo.h5da9f",
+                "foo/" + koreaMangled + "/master",
+                "foo/" + koreaMangled + "/" + korea2Mangled
+        ));
+
+        assertThat("Job names have been minimal url path segment pre-encoded", jobByName.keySet(), containsInAnyOrder(
+                "foo/test.example.com/master",
+                "foo/test.example.com/feature: browsing%2Fpart 1",
+                "foo/test.example.com/feature: browsing%2Fpart 2",
+                "foo/test.example.com/feature: welcome",
+                "foo/" + ireland + "/master",
+                "foo/" + ireland + "/gné%2Fnua",
+                "foo/Россия/master",
+                "foo/Россия/особенность%2Fновый",
+                "foo/中国/master",
+                "foo/中国/特征%2F新",
+                "foo/" + espana + "/master",
+                "foo/" + espana + "/característica%2Fnuevo",
+                "foo/" + korea + "/master",
+                "foo/" + korea + "/특색%2F새로운"
         ));
 
         assertThat(prj.getItemByProjectName(ireland), notNullValue());

@@ -25,6 +25,7 @@
 
 package integration.harness;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.ItemGroup;
@@ -46,7 +47,7 @@ public class BasicMultiBranchProjectFactory extends MultiBranchProjectFactory.By
         this.criteria = criteria;
     }
 
-    @NonNull
+    @CheckForNull
     @Override
     protected SCMSourceCriteria getSCMSourceCriteria(@NonNull SCMSource source) {
         return criteria;

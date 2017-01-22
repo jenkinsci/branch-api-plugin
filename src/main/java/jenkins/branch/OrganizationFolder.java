@@ -26,6 +26,7 @@ package jenkins.branch;
 
 import antlr.ANTLRException;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
+import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIcon;
 import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
@@ -69,7 +70,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
@@ -92,7 +92,6 @@ import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
-import net.jcip.annotations.GuardedBy;
 import org.acegisecurity.AccessDeniedException;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
@@ -190,33 +189,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         if (!(getIcon() instanceof MetadataActionFolderIcon)) {
             setIcon(newDefaultFolderIcon());
         }
-        // migrate any non-mangled names
-        List<MultiBranchProject<?, ?>> items = new ArrayList<>(getItems());
-        for (MultiBranchProject<?, ?> item : items) {
-            ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
-            if (property != null) {
-                continue;
-            }
-            String itemName = item.getName();
-            String mangledName = NameMangler.apply(itemName);
-            if (!itemName.equals(mangledName)) {
-                if (super.getItem(mangledName) == null) {
-                    LOGGER.log(Level.INFO, "Non-mangled name detected for repository {0}. Renaming {1}/{2} to {1}/{3}",
-                            new Object[]{itemName, getFullName(), itemName, mangledName});
-                    item.renameTo(mangledName);
-                    BulkChange bc = new BulkChange(item);
-                    try {
-                        item.addProperty(new ProjectNameProperty(itemName));
-                        if (item.getDisplayNameOrNull() == null) {
-                            item.setDisplayName(itemName);
-                        }
-                    } finally {
-                        bc.commit();
-                    }
-
-                } // else will be removed by the orphaned item strategy on next scan
-            }
-        }
         if (state == null) {
             state = new State(this);
         }
@@ -248,11 +220,22 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
     @Override
     public MultiBranchProject<?, ?> getItem(String name) throws AccessDeniedException {
-        MultiBranchProject<?, ?> item = super.getItem(name);
-        if (item == null && name != null) {
-            return super.getItem(NameMangler.apply(name));
+        if (name == null) {
+            return null;
         }
-        return item;
+        MultiBranchProject<?, ?> item = super.getItem(name);
+        if (item != null) {
+            return item;
+        }
+        if (name.indexOf('%') != -1) {
+            String decoded = NameEncoder.decode(name);
+            item = super.getItem(decoded);
+            if (item != null) {
+                return item;
+            }
+            // fall through for double decoded call paths // TODO is this necessary
+        }
+        return super.getItem(NameEncoder.encode(name));
     }
 
     /**
@@ -265,21 +248,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      */
     @edu.umd.cs.findbugs.annotations.CheckForNull
     public MultiBranchProject<?,?> getItemByProjectName(@NonNull String projectName) {
-        MultiBranchProject<?, ?> item = getItem(NameMangler.apply(projectName));
-        if (item != null){
-            ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
-            if (property != null && projectName.equals(property.getName())) {
-                return item;
-            }
-        }
-
-        for (MultiBranchProject<?,?> p : getItems()) {
-            ProjectNameProperty property = p.getProperties().get(ProjectNameProperty.class);
-            if (property != null && projectName.equals(property.getName())) {
-                return p;
-            }
-        }
-        return null;
+        return super.getItem(NameEncoder.encode(projectName));
     }
 
 
@@ -771,6 +740,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             return false;
         }
 
+        @Override
+        @NonNull
+        public final ChildNameGenerator<OrganizationFolder, ? extends TopLevelItem> childNameGenerator() {
+            return ChildNameGeneratorImpl.INSTANCE;
+        }
+
         static {
             IconSet.icons.addIcon(
                     new Icon("icon-branch-api-organization-folder icon-sm",
@@ -788,6 +763,57 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     new Icon("icon-branch-api-organization-folder icon-xlg",
                             "plugin/branch-api/images/48x48/organization-folder.png",
                             Icon.ICON_XLARGE_STYLE));
+        }
+    }
+
+    private static class ChildNameGeneratorImpl extends ChildNameGenerator<OrganizationFolder, MultiBranchProject<?,?>> {
+
+        private static final ChildNameGeneratorImpl INSTANCE = new ChildNameGeneratorImpl();
+
+        @Override
+        @CheckForNull
+        public String itemNameFromItem(@NonNull OrganizationFolder parent, @NonNull MultiBranchProject<?, ?> item) {
+            ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
+            if (property != null) {
+                return NameEncoder.encode(property.getName());
+            }
+            String idealName = idealNameFromItem(parent, item);
+            if (idealName != null) {
+                return NameEncoder.encode(idealName);
+            }
+            return null;
+        }
+
+        @Override
+        @CheckForNull
+        public String dirNameFromItem(@NonNull OrganizationFolder parent, @NonNull MultiBranchProject<?, ?> item) {
+            ProjectNameProperty property = item.getProperties().get(ProjectNameProperty.class);
+            if (property != null) {
+                return NameMangler.apply(property.getName());
+            }
+            String idealName = idealNameFromItem(parent, item);
+            if (idealName != null) {
+                return NameMangler.apply(idealName);
+            }
+            return null;
+        }
+
+        @Override
+        @NonNull
+        public String itemNameFromLegacy(@NonNull OrganizationFolder parent, @NonNull String legacyDirName) {
+            return NameEncoder.decode(legacyDirName);
+        }
+
+        @Override
+        @NonNull
+        public String dirNameFromLegacy(@NonNull OrganizationFolder parent, @NonNull String legacyDirName) {
+            return NameMangler.apply(NameEncoder.decode(legacyDirName));
+        }
+
+        @Override
+        public void recordLegacyName(OrganizationFolder parent, MultiBranchProject<?, ?> item, String legacyDirName)
+                throws IOException {
+            item.addProperty(new ProjectNameProperty(legacyDirName));
         }
     }
 
@@ -1121,8 +1147,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         if (factory == null) {
                             return;
                         }
-                        String encodedName = NameMangler.apply(projectName);
-                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(encodedName);
+                        String folderName = NameEncoder.encode(projectName);
+                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(folderName);
                         if (existing != null) {
                             BulkChange bc = new BulkChange(existing);
                             try {
@@ -1141,16 +1167,21 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             existing.scheduleBuild();
                             return;
                         }
-                        if (!observer.mayCreate(encodedName)) {
-                            listener.getLogger().println("Ignoring duplicate child " + projectName);
+                        if (!observer.mayCreate(folderName)) {
+                            listener.getLogger().println("Ignoring duplicate child " + projectName + " named " + folderName);
                             return;
                         }
-                        MultiBranchProject<?, ?> project = factory.createNewProject(
-                                OrganizationFolder.this, encodedName, sources, attributes, listener
-                        );
+                        MultiBranchProject<?, ?> project;
+                        try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
+                                OrganizationFolder.this, folderName, projectName
+                        )) {
+                            project = factory.createNewProject(
+                                    OrganizationFolder.this, folderName, sources, attributes, listener
+                            );
+                        }
                         BulkChange bc = new BulkChange(project);
                         try {
-                            if (!encodedName.equals(projectName)) {
+                            if (!projectName.equals(folderName)) {
                                 project.setDisplayName(projectName);
                             }
                             project.addProperty(new ProjectNameProperty(projectName));

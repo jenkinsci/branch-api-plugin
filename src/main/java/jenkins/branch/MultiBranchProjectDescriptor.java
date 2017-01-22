@@ -23,18 +23,26 @@
  */
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
+import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
+import hudson.Util;
 import hudson.model.Descriptor;
 import hudson.model.Job;
+import hudson.model.Run;
+import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
+import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.WeakHashMap;
+import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
 import org.jvnet.tiger_types.Types;
@@ -206,4 +214,64 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     public boolean isIconConfigurable() {
         return false;
     }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    @NonNull
+    public <I extends TopLevelItem> ChildNameGenerator<AbstractFolder<I>,I> childNameGenerator() {
+        return (ChildNameGenerator<AbstractFolder<I>, I>)ChildNameGeneratorImpl.INSTANCE;
+    }
+
+    public static class ChildNameGeneratorImpl<P extends Job<P, R> & TopLevelItem,
+            R extends Run<P, R>> extends ChildNameGenerator<MultiBranchProject<P,R>,P> {
+
+        /*package*/ static final ChildNameGeneratorImpl INSTANCE = new ChildNameGeneratorImpl();
+
+        @Override
+        @CheckForNull
+        public String itemNameFromItem(@NonNull MultiBranchProject<P,R> parent, @NonNull P item) {
+            BranchProjectFactory<P, R> factory = parent.getProjectFactory();
+            if (factory.isProject(item)) {
+                return NameEncoder.encode(factory.getBranch(item).getName());
+            }
+            String idealName = idealNameFromItem(parent, item);
+            if (idealName != null) {
+                return NameEncoder.encode(idealName);
+            }
+            return null;
+        }
+
+        @Override
+        @CheckForNull
+        public String dirNameFromItem(@NonNull MultiBranchProject<P,R> parent, @NonNull P item) {
+            BranchProjectFactory<P, R> factory = parent.getProjectFactory();
+            if (factory.isProject(item)) {
+                return NameMangler.apply(factory.getBranch(item).getName());
+            }
+            String idealName = idealNameFromItem(parent, item);
+            if (idealName != null) {
+                return NameMangler.apply(idealName);
+            }
+            return null;
+        }
+
+        @Override
+        @NonNull
+        public String itemNameFromLegacy(@NonNull MultiBranchProject<P, R> parent, @NonNull String legacyDirName) {
+            return NameEncoder.decode(legacyDirName);
+        }
+
+        @Override
+        @NonNull
+        public String dirNameFromLegacy(@NonNull MultiBranchProject<P, R> parent, @NonNull String legacyDirName) {
+            return NameMangler.apply(NameEncoder.decode(legacyDirName));
+        }
+
+        @Override
+        public void recordLegacyName(MultiBranchProject<P, R> parent, P item, String legacyDirName) throws IOException {
+            // no-op because we already tracked the name in Branch.getName()
+        }
+
+    }
+
 }
