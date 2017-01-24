@@ -55,6 +55,12 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor i
 
     private static final Logger LOGGER = Logger.getLogger(CustomOrganizationFolderDescriptor.class.getName());
 
+    // JENKINS-41171 disabling generic organization folders in favour of single blend.
+    // Leaving the code path as it is tested and otherwise we would need to write migration tests if we need
+    // multi navigator support in the future. NOTE: Blue Ocean as of Jan 2017 has hard-coded the assumption
+    // that there is one and only one SCMNavigator in an OrganizationFolder
+    static final boolean SHOW_GENERIC = false;
+
     public final SCMNavigatorDescriptor delegate;
 
     CustomOrganizationFolderDescriptor(SCMNavigatorDescriptor delegate) {
@@ -194,6 +200,9 @@ public class CustomOrganizationFolderDescriptor extends TopLevelItemDescriptor i
             LOGGER.log(Level.FINER, "filtering {0}", descriptor.getId());
             if (descriptor instanceof OrganizationFolder.DescriptorImpl
                     && (context instanceof View || context instanceof ViewGroup)) {
+                if (!SHOW_GENERIC) {
+                    return false;
+                }
                 if (ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).isEmpty()) {
                     // if we have no factories, so do not display
                     return false;
