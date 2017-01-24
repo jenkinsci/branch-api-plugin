@@ -251,6 +251,15 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         return super.getItem(NameEncoder.encode(projectName));
     }
 
+    /**
+     * Returns {@code true} if this is a single origin {@link OrganizationFolder}.
+     *
+     * @return {@code true} if this is a single origin {@link OrganizationFolder}.
+     */
+    public boolean isSingleOrigin() {
+        // JENKINS-41171 we expect everything except for rare legacy instances to be single origin.
+        return navigators.size() == 1;
+    }
 
     public DescribableList<SCMNavigator,SCMNavigatorDescriptor> getNavigators() {
         return navigators;

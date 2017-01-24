@@ -49,11 +49,13 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.TestExtension;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeThat;
 
 public class CustomOrganizationFolderDescriptorTest {
 
@@ -134,12 +136,26 @@ public class CustomOrganizationFolderDescriptorTest {
     @SuppressWarnings("deprecation") // ExtensionList.add simulating dynamic installation
     @Test
     public void dynamicLoad2() throws Exception {
+        assumeThat(CustomOrganizationFolderDescriptor.SHOW_GENERIC, is(true));
         assertEquals(Collections.emptyList(), newItemTypes());
         ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorNoFactoryInstalledDescriptor());
         ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
         ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
         assertThat("When there is more than one navigator then the generic organization folder makes sense to show",
                 newItemTypes(), containsInAnyOrder("MockNavigator", "MockNavigator", "Organization Folder"));
+    }
+
+    @Issue("JENKINS-41171")
+    @SuppressWarnings("deprecation") // ExtensionList.add simulating dynamic installation
+    @Test
+    public void dynamicLoad3() throws Exception {
+        assumeThat(CustomOrganizationFolderDescriptor.SHOW_GENERIC, is(false));
+        assertEquals(Collections.emptyList(), newItemTypes());
+        ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorNoFactoryInstalledDescriptor());
+        ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor2());
+        ExtensionList.lookup(SCMNavigatorDescriptor.class).add(new SomeNavigatorSomeFactoryInstalledDescriptor1());
+        assertThat("When there is more than one navigator then the generic organization folder makes sense to show",
+                newItemTypes(), containsInAnyOrder("MockNavigator", "MockNavigator"));
     }
 
     @Issue("JENKINS-31949")
