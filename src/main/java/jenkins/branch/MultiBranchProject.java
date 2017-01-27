@@ -1231,8 +1231,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         listener = new LogTaskListener(LOGGER, Level.FINE);
                     }
                     long start = System.currentTimeMillis();
-                    listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
-                            start, eventType, eventTimestamp);
+                    listener.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
+                            start, eventClass, eventType, eventTimestamp);
                     ChildObserver childObserver = p.createEventsChildObserver();
                     try {
                         for (SCMSource source : p.getSCMSources()) {
@@ -1255,8 +1255,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         e.printStackTrace(listener.error(e.getMessage()));
                     } finally {
                         long end = System.currentTimeMillis();
-                        listener.getLogger().format("[%tc] %s event processed in %s%n",
-                                end, eventType, Util.getTimeSpanString(end - start));
+                        listener.getLogger().format("[%tc] %s %s event processed in %s%n",
+                                end, eventClass, eventType, Util.getTimeSpanString(end - start));
                     }
                 }
             }
@@ -1456,8 +1456,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         listener = new LogTaskListener(LOGGER, Level.FINE);
                     }
                     long start = System.currentTimeMillis();
-                    listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
-                            start, eventType, eventTimestamp);
+                    listener.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
+                            start, eventClass, eventType, eventTimestamp);
                     ChildObserver childObserver = p.createEventsChildObserver();
                     try {
                         for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
@@ -1503,8 +1503,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         e.printStackTrace(listener.error(e.getMessage()));
                     } finally {
                         long end = System.currentTimeMillis();
-                        listener.getLogger().format("[%tc] %s event processed in %s%n",
-                                end, eventType, Util.getTimeSpanString(end - start));
+                        listener.getLogger().format("[%tc] %s %s event processed in %s%n",
+                                end, eventClass, eventType, Util.getTimeSpanString(end - start));
                     }
                 } else {
                     // didn't match an existing branch, maybe the criteria now match against an updated branch
@@ -1533,8 +1533,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             listener = new LogTaskListener(LOGGER, Level.FINE);
                         }
                         long start = System.currentTimeMillis();
-                        listener.getLogger().format("[%tc] Received %s event with timestamp %tc%n",
-                                start, eventType, eventTimestamp);
+                        listener.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
+                                start, eventClass, eventType, eventTimestamp);
                         ChildObserver childObserver = p.createEventsChildObserver();
                         try {
                             for (SCMSource source : p.getSCMSources()) {
@@ -1558,8 +1558,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             e.printStackTrace(listener.error(e.getMessage()));
                         } finally {
                             long end = System.currentTimeMillis();
-                            listener.getLogger().format("[%tc] %s event processed in %s%n",
-                                    end, eventType, Util.getTimeSpanString(end - start));
+                            listener.getLogger().format("[%tc] %s %s event processed in %s%n",
+                                    end, eventClass, eventType, Util.getTimeSpanString(end - start));
                         }
                     }
                 }
