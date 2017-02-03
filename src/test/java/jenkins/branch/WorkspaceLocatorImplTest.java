@@ -28,6 +28,7 @@ import hudson.model.FreeStyleProject;
 import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.WorkspaceList;
+import java.io.File;
 import java.util.Collections;
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
@@ -83,7 +84,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
     }
 
-    @Issue("JENKINS-2111")
+    @Issue({"JENKINS-2111", "JENKINS-41068"})
     @Test
     public void delete() throws Exception {
         MultiBranchImpl p = r.createProject(MultiBranchImpl.class, "p");
@@ -111,6 +112,8 @@ public class WorkspaceLocatorImplTest {
         try (WorkspaceList.Lease lease = slave.toComputer().getWorkspaceList().acquire(slave.getWorkspaceFor(pr1))) {
             assertEquals(3, r.buildAndAssertSuccess(pr1).getNumber());
         }
+        File pr1Root = pr1.getRootDir();
+        assertTrue(pr1Root.isDirectory());
         // Now delete PR-1 and make sure its workspaces are deleted too.
         p.getSourcesList().remove(pr1Source);
         p.scheduleBuild2(0).getFuture().get();
@@ -119,6 +122,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals(Collections.singletonList(master), r.jenkins.getAllItems(FreeStyleProject.class));
         assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), r.jenkins.getRootPath().child("workspace").listDirectories());
         assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), slave.getWorkspaceRoot().listDirectories());
+        assertFalse(pr1Root.isDirectory());
     }
 
 }
