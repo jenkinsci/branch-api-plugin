@@ -760,19 +760,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * {@inheritDoc}
      */
     @Override
-    @NonNull
-    public File getRootDirFor(P child) {
-        File dir = super.getRootDirFor(child);
-        if (!dir.isDirectory() && !dir.mkdirs()) { // TODO is this really necessary?
-            LOGGER.log(Level.WARNING, "Could not create directory {0}", dir);
-        }
-        return dir;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public String getDescription() {
         String description = super.getDescription();
         if (StringUtils.isNotBlank(description)) {
