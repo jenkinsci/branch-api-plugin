@@ -51,7 +51,7 @@ public class WorkspaceLocatorImplTest {
     @WithoutJenkins
     @Test
     public void minimize() {
-        WorkspaceLocatorImpl.setPathMax(80);
+        WorkspaceLocatorImpl.PATH_MAX = 80;
         assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM57BBNSYVIXGXHCE4KAEVPV5KZYQ", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("a_b_c_d-UMWYJ45JQ6FA3WXMSI3YEOLVQ5P6SFYWN26FRECRSFBUGUD27Y5A", WorkspaceLocatorImpl.minimize("a/b/c/d"));
         assertEquals("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
@@ -66,7 +66,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("ahblahblahblahblahblahXYZWV-KLYOGWEJODAVXII3MEM2SLNMRPE7HF6IADTBQ5MP66V3RYCL2LAA", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
         assertEquals("hblahblahblahblahblahXYZWVU-OSF24EPB4C42KAUXYHPP66XDQHOHKWPHGKZLIWREKOGZDZ46T2PQ", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
         
-        WorkspaceLocatorImpl.setPathMax(40);
+        WorkspaceLocatorImpl.PATH_MAX = 40;
         assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("a_b_c_d-UMWYJ45JQ6FA3WXMSI3YEOLVQ", WorkspaceLocatorImpl.minimize("a/b/c/d"));
         assertEquals("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
@@ -81,7 +81,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("hblahblahXYZWV-KLYOGWEJODAVXII3MEM2SLNMR", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
         assertEquals("blahblahXYZWVU-OSF24EPB4C42KAUXYHPP66XDQ", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
         
-        WorkspaceLocatorImpl.setPathMax(20);
+        WorkspaceLocatorImpl.PATH_MAX = 20;
         assertEquals("a_b-NX345YSMOYT4QUL", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("_c_d-UMWYJ45JQ6FA3WX", WorkspaceLocatorImpl.minimize("a/b/c/d"));
         assertEquals("flow-L5GKER67QGVMJ2U", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
@@ -96,7 +96,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("YZWV-KLYOGWEJODAVXII", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
         assertEquals("ZWVU-OSF24EPB4C42KAU", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
         
-        WorkspaceLocatorImpl.setPathMax(1);
+        WorkspaceLocatorImpl.PATH_MAX = 1;
         assertEquals("b-NX345YSMOY", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("d-UMWYJ45JQ6", WorkspaceLocatorImpl.minimize("a/b/c/d"));
         assertEquals("w-L5GKER67QG", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
@@ -112,7 +112,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("U-OSF24EPB4C", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
         
         // Reset back to 80 for other tests that assume it is 80.
-        WorkspaceLocatorImpl.setPathMax(80);
+        WorkspaceLocatorImpl.PATH_MAX = 80;
     }
 
     @Issue("JENKINS-34564")

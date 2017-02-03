@@ -56,7 +56,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
     /** The most characters to allow in a workspace directory name, relative to the root. Zero to disable altogether. */
     // TODO 2.4+ use SystemProperties
-    private static /* not final */ int PATH_MAX = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".PATH_MAX", 80);
+    static /* not final */ int PATH_MAX = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".PATH_MAX", 80);
 
     @Override
     public FilePath locate(TopLevelItem item, Node node) {
@@ -75,10 +75,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         } else { // ?
             return null;
         }
-    }
-
-    static void setPathMax(int pathMax) {
-        PATH_MAX = pathMax;
     }
 
     static String uniqueSuffix(String name) {
@@ -101,6 +97,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             // and the mnemonic to fit inside PATH_MAX.  The mnemonic always gets
             // at least one character.  The suffix always gets 10 characters plus
             // the "-".  The rest of PATH_MAX is split evenly between the two.
+            LOGGER.log(Level.WARNING, "WorkspaceLocatorImpl.PATH_MAX is small enough that workspace path collisions are more likely to occur");
             final int minSuffix = 10 + /* length("-") */ 1;
             maxMnemonic = Math.max((int)((PATH_MAX - minSuffix) / 2), 1);
             maxSuffix = Math.max(PATH_MAX - maxMnemonic, minSuffix);
