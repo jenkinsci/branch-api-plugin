@@ -26,6 +26,7 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Cause;
 import hudson.model.ItemGroup;
 import hudson.model.Run;
@@ -42,6 +43,7 @@ public final class BranchEventCause extends Cause {
     private transient MultiBranchProject<?, ?> multiBranchProject;
 
     private final long timestamp;
+    @NonNull
     private final String origin;
 
     BranchEventCause(SCMEvent<?> event) {
@@ -64,6 +66,7 @@ public final class BranchEventCause extends Cause {
         return new Date(timestamp);
     }
 
+    @NonNull
     public String getOrigin() {
         return origin;
     }
