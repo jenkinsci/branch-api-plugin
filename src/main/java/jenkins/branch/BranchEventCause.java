@@ -42,9 +42,11 @@ public final class BranchEventCause extends Cause {
     private transient MultiBranchProject<?, ?> multiBranchProject;
 
     private final long timestamp;
+    private final String origin;
 
     BranchEventCause(SCMEvent<?> event) {
         timestamp = event.getTimestamp();
+        origin = event.getOrigin();
     }
 
     /**
@@ -60,6 +62,10 @@ public final class BranchEventCause extends Cause {
 
     public Date getTimestamp() {
         return new Date(timestamp);
+    }
+
+    public String getOrigin() {
+        return origin;
     }
 
     /**

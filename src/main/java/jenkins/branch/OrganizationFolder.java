@@ -892,9 +892,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public void onSCMHeadEvent(SCMHeadEvent<?> event) {
             TaskListener global = globalEventsListener();
-            global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
+            global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                    event.getTimestamp());
+                    event.getOrigin(), event.getTimestamp());
             int matchCount = 0;
             if (CREATED == event.getType() || UPDATED == event.getType()) {
                 for (OrganizationFolder p : Jenkins.getActiveInstance().getAllItems(OrganizationFolder.class)) {
@@ -934,24 +934,27 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         }
                         ChildObserver childObserver = p.createEventsChildObserver();
                         long start = System.currentTimeMillis();
-                        listener.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
-                                start, event.getClass().getName(), event.getType().name(), event.getTimestamp());
+                        listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                                start, event.getClass().getName(), event.getType().name(), event.getOrigin(),
+                                event.getTimestamp());
                         try {
                             navigator.visitSources(p.new SCMSourceObserverImpl(listener, childObserver, event), event);
                         } catch (IOException | InterruptedException e) {
                             e.printStackTrace(listener.error(e.getMessage()));
                         } finally {
                             long end = System.currentTimeMillis();
-                            listener.getLogger().format("[%tc] %s %s event processed in %s%n",
+                            listener.getLogger().format(
+                                    "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
                                     end, event.getClass().getName(), event.getType().name(),
+                                    event.getOrigin(), event.getTimestamp(),
                                     Util.getTimeSpanString(end - start));
                         }
                     }
                 }
             }
-            global.getLogger().format("[%tc] Finished processing %s %s event with timestamp %tc. Matched %d.%n",
+            global.getLogger().format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                    event.getTimestamp(), matchCount);
+                    event.getOrigin(), event.getTimestamp(), matchCount);
 
         }
 
@@ -961,9 +964,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public void onSCMNavigatorEvent(SCMNavigatorEvent<?> event) {
             TaskListener global = globalEventsListener();
-            global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
+            global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                    event.getTimestamp());
+                    event.getOrigin(), event.getTimestamp());
             int matchCount = 0;
             if (UPDATED == event.getType()) {
                 Set<SCMNavigator> matches = new HashSet<>();
@@ -1021,9 +1024,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     }
                 }
             }
-            global.getLogger().format("[%tc] Finished processing %s %s event with timestamp %tc. Matched %d.%n",
+            global.getLogger().format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                    event.getTimestamp(), matchCount);
+                    event.getOrigin(), event.getTimestamp(), matchCount);
         }
 
         /**
@@ -1032,9 +1035,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public void onSCMSourceEvent(SCMSourceEvent<?> event) {
             TaskListener global = globalEventsListener();
-            global.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
+            global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                    event.getTimestamp());
+                    event.getOrigin(), event.getTimestamp());
             int matchCount = 0;
             if (CREATED == event.getType()) {
                 for (OrganizationFolder p : Jenkins.getActiveInstance().getAllItems(OrganizationFolder.class)) {
@@ -1056,8 +1059,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         }
                         ChildObserver childObserver = p.createEventsChildObserver();
                         long start = System.currentTimeMillis();
-                        listener.getLogger().format("[%tc] Received %s %s event with timestamp %tc%n",
-                                start, event.getClass().getName(), event.getType().name(), event.getTimestamp());
+                        listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                                start, event.getClass().getName(), event.getType().name(),
+                                event.getOrigin(), event.getTimestamp());
                         try {
                             for (SCMNavigator n : p.getSCMNavigators()) {
                                 if (event.isMatch(n)) {
@@ -1072,17 +1076,19 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             e.printStackTrace(listener.error(e.getMessage()));
                         } finally {
                             long end = System.currentTimeMillis();
-                            listener.getLogger().format("[%tc] %s %s event processed in %s%n",
+                            listener.getLogger().format(
+                                    "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
                                     end, event.getClass().getName(), event.getType().name(),
+                                    event.getOrigin(), event.getTimestamp(),
                                     Util.getTimeSpanString(end - start));
                         }
 
                     }
                 }
             }
-            global.getLogger().format("[%tc] Finished processing %s %s event with timestamp %tc. Matched %d.%n",
+            global.getLogger().format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
                     System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                    event.getTimestamp(), matchCount);
+                    event.getOrigin(), event.getTimestamp(), matchCount);
 
         }
     }
