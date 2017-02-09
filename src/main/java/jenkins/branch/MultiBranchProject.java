@@ -59,10 +59,13 @@ import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.util.LogTaskListener;
 import hudson.util.PersistedList;
+import hudson.util.StreamTaskListener;
 import hudson.util.XStream2;
 import hudson.util.io.ReopenableRotatingFileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
@@ -77,6 +80,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.WeakHashMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -103,8 +109,11 @@ import jenkins.triggers.SCMTriggerItem;
 import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.IconSpec;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -1048,14 +1057,26 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          *
          * @return The {@link TaskListener} for events that we cannot assign to a multi-branch project.
          */
-        public TaskListener globalEventsListener() {
-            File eventsFile =
-                    new File(Jenkins.getActiveInstance().getRootDir(), MultiBranchProject.class.getName() + ".log");
+        @Restricted(NoExternalUse.class)
+        public StreamTaskListener globalEventsListener() {
+            File logsDir = new File(Jenkins.getActiveInstance().getRootDir(), "logs");
+            if (!logsDir.isDirectory() && !logsDir.mkdirs()) {
+                LOGGER.log(Level.WARNING, "Could not create logs directory: {0}", logsDir);
+            }
+            File eventsFile = new File(logsDir, MultiBranchProject.class.getName() + ".log");
+            if (!eventsFile.isFile()) {
+                File oldFile = new File(logsDir.getParent(), eventsFile.getName());
+                if (oldFile.isFile()) {
+                    if (!oldFile.renameTo(eventsFile)) {
+                        FileUtils.deleteQuietly(oldFile);
+                    }
+                }
+            }
             boolean rotate = eventsFile.length() > 30 * 1024;
-            OutputStream os = new ReopenableRotatingFileOutputStream(eventsFile, 5);
+            RewindableRotatingFileOutputStream os = new RewindableRotatingFileOutputStream(eventsFile, true,5);
             if (rotate) {
                 try {
-                    ((ReopenableRotatingFileOutputStream) os).rewind();
+                    os.rewind();
                 } catch (IOException e) {
                     LOGGER.log(Level.WARNING, "Could not rotate " + eventsFile, e);
                 }
@@ -1067,49 +1088,52 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * {@inheritDoc}
          */
         @Override
-        public void onSCMHeadEvent(final SCMHeadEvent<?> event) {
-            TaskListener global = globalEventsListener();
-            String eventClass = event.getClass().getName();
-            String eventType = event.getType().name();
-            String eventOrigin = event.getOrigin();
-            long eventTimestamp = event.getTimestamp();
-            global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                    System.currentTimeMillis(), eventClass, eventType, eventOrigin,
-                    eventTimestamp);
-            LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: onSCMHeadEvent",
-                    new Object[]{
-                            eventClass, eventType, eventTimestamp
-                    }
-            );
-            int matchCount = 0;
-            // not interested in removal of dead items as that needs to be handled by the computation in order
-            // to ensure that other sources do not want to take ownership and also to ensure that the dead branch
-            // strategy is enforced correctly
-            if (SCMEvent.Type.CREATED == event.getType()) {
-                matchCount = processHeadCreate(
-                        event,
-                        global,
-                        eventClass,
-                        eventType,
-                        eventOrigin,
-                        eventTimestamp,
-                        matchCount
+        public synchronized void onSCMHeadEvent(final SCMHeadEvent<?> event) {
+            try (StreamTaskListener global = globalEventsListener()) {
+                String eventClass = event.getClass().getName();
+                String eventType = event.getType().name();
+                String eventOrigin = event.getOrigin();
+                long eventTimestamp = event.getTimestamp();
+                global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                        System.currentTimeMillis(), eventClass, eventType, eventOrigin,
+                        eventTimestamp);
+                LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: onSCMHeadEvent",
+                        new Object[]{
+                                eventClass, eventType, eventTimestamp
+                        }
                 );
-            } else if (SCMEvent.Type.UPDATED == event.getType() || SCMEvent.Type.REMOVED == event.getType()) {
-                matchCount = processHeadUpdate(
-                        event,
-                        global,
-                        eventClass,
-                        eventType,
-                        eventOrigin,
-                        eventTimestamp,
-                        matchCount
-                );
+                int matchCount = 0;
+                // not interested in removal of dead items as that needs to be handled by the computation in order
+                // to ensure that other sources do not want to take ownership and also to ensure that the dead branch
+                // strategy is enforced correctly
+                if (SCMEvent.Type.CREATED == event.getType()) {
+                    matchCount = processHeadCreate(
+                            event,
+                            global,
+                            eventClass,
+                            eventType,
+                            eventOrigin,
+                            eventTimestamp,
+                            matchCount
+                    );
+                } else if (SCMEvent.Type.UPDATED == event.getType() || SCMEvent.Type.REMOVED == event.getType()) {
+                    matchCount = processHeadUpdate(
+                            event,
+                            global,
+                            eventClass,
+                            eventType,
+                            eventOrigin,
+                            eventTimestamp,
+                            matchCount
+                    );
+                }
+                global.getLogger()
+                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
+                                System.currentTimeMillis(), eventClass, eventType, eventOrigin,
+                                eventTimestamp, matchCount);
+            } catch (IOException e) {
+                LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
-            global.getLogger().format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                    System.currentTimeMillis(), eventClass, eventType, eventOrigin,
-                    eventTimestamp, matchCount);
-
         }
 
         private int processHeadCreate(SCMHeadEvent<?> event, TaskListener global, String eventClass, String eventType,
@@ -1580,81 +1604,86 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * {@inheritDoc}
          */
         @Override
-        public void onSCMSourceEvent(SCMSourceEvent<?> event) {
-            TaskListener global = globalEventsListener();
-            global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                    System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                    event.getOrigin(), event.getTimestamp());
-            int matchCount = 0;
-            // not interested in creation as that is an event for org folders
-            // not interested in removal as that is an event for org folders
-            if (SCMEvent.Type.UPDATED == event.getType()) {
-                // we are only interested in updates as they would trigger the actions being updated
-                for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
-                    boolean haveMatch = false;
-                    List<SCMSource> scmSources = p.getSCMSources();
-                    for (SCMSource s : scmSources) {
-                        if (event.isMatch(s)) {
-                            global.getLogger().format("Found match against %s%n", p.getFullName());
-                            haveMatch = true;
-                            break;
+        public synchronized void onSCMSourceEvent(SCMSourceEvent<?> event) {
+            try (StreamTaskListener global = globalEventsListener()) {
+                global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                        System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                        event.getOrigin(), event.getTimestamp());
+                int matchCount = 0;
+                // not interested in creation as that is an event for org folders
+                // not interested in removal as that is an event for org folders
+                if (SCMEvent.Type.UPDATED == event.getType()) {
+                    // we are only interested in updates as they would trigger the actions being updated
+                    for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance()
+                            .getAllItems(MultiBranchProject.class)) {
+                        boolean haveMatch = false;
+                        List<SCMSource> scmSources = p.getSCMSources();
+                        for (SCMSource s : scmSources) {
+                            if (event.isMatch(s)) {
+                                global.getLogger().format("Found match against %s%n", p.getFullName());
+                                haveMatch = true;
+                                break;
+                            }
                         }
-                    }
-                    if (haveMatch) {
-                        TaskListener listener;
-                        try {
-                            listener = p.getComputation().createEventsListener();
-                        } catch (IOException e) {
-                            listener = new LogTaskListener(LOGGER, Level.FINE);
-                        }
+                        if (haveMatch) {
+                            TaskListener listener;
+                            try {
+                                listener = p.getComputation().createEventsListener();
+                            } catch (IOException e) {
+                                listener = new LogTaskListener(LOGGER, Level.FINE);
+                            }
 
-                        try {
-                            Map<String, List<Action>> stateActions = new HashMap<>();
-                            for (SCMSource source : scmSources) {
-                                List<Action> oldActions = p.state.sourceActions.get(source.getId());
-                                List<Action> newActions;
-                                try {
-                                    newActions = source.fetchActions(event, listener);
-                                } catch (IOException e) {
-                                    e.printStackTrace(listener.error("Could not refresh actions for source %s",
-                                            source.getId()
-                                    ));
-                                    // preserve previous actions if we have some transient error fetching now (e.g.
-                                    // API rate limit)
-                                    newActions = oldActions;
-                                }
-                                if (oldActions == null || !oldActions.equals(newActions)) {
-                                    stateActions.put(source.getId(), newActions);
-                                }
-                            }
-                            if (!stateActions.isEmpty()) {
-                                boolean saveProject = false;
-                                for (List<Action> actions : stateActions.values()) {
-                                    for (Action a : actions) {
-                                        // undo any hacks that attached the contributed actions without attribution
-                                        saveProject = p.removeActions(a.getClass()) || saveProject;
+                            try {
+                                Map<String, List<Action>> stateActions = new HashMap<>();
+                                for (SCMSource source : scmSources) {
+                                    List<Action> oldActions = p.state.sourceActions.get(source.getId());
+                                    List<Action> newActions;
+                                    try {
+                                        newActions = source.fetchActions(event, listener);
+                                    } catch (IOException e) {
+                                        e.printStackTrace(listener.error("Could not refresh actions for source %s",
+                                                source.getId()
+                                        ));
+                                        // preserve previous actions if we have some transient error fetching now (e.g.
+                                        // API rate limit)
+                                        newActions = oldActions;
+                                    }
+                                    if (oldActions == null || !oldActions.equals(newActions)) {
+                                        stateActions.put(source.getId(), newActions);
                                     }
                                 }
-                                BulkChange bc = new BulkChange(p.state);
-                                try {
-                                    p.state.sourceActions.putAll(stateActions);
-                                    bc.commit();
-                                    if (saveProject) {
-                                        p.save();
+                                if (!stateActions.isEmpty()) {
+                                    boolean saveProject = false;
+                                    for (List<Action> actions : stateActions.values()) {
+                                        for (Action a : actions) {
+                                            // undo any hacks that attached the contributed actions without attribution
+                                            saveProject = p.removeActions(a.getClass()) || saveProject;
+                                        }
                                     }
-                                } finally {
-                                    bc.abort();
+                                    BulkChange bc = new BulkChange(p.state);
+                                    try {
+                                        p.state.sourceActions.putAll(stateActions);
+                                        bc.commit();
+                                        if (saveProject) {
+                                            p.save();
+                                        }
+                                    } finally {
+                                        bc.abort();
+                                    }
                                 }
+                            } catch (IOException | InterruptedException e) {
+                                e.printStackTrace(listener.error(e.getMessage()));
                             }
-                        } catch (IOException | InterruptedException e) {
-                            e.printStackTrace(listener.error(e.getMessage()));
                         }
                     }
                 }
+                global.getLogger()
+                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
+                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                                event.getOrigin(), event.getTimestamp(), matchCount);
+            } catch (IOException e) {
+                LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
-            global.getLogger().format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                    System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                    event.getOrigin(), event.getTimestamp(), matchCount);
         }
 
     }
