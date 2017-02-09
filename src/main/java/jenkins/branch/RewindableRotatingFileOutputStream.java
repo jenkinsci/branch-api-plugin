@@ -1,5 +1,6 @@
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 
@@ -29,6 +30,7 @@ class RewindableRotatingFileOutputStream extends RewindableFileOutputStream {
     }
 
     @Override
+    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
     public void rewind() throws IOException {
         super.rewind();
         for (int i = size - 1; i >= 0; i--) {
@@ -44,6 +46,7 @@ class RewindableRotatingFileOutputStream extends RewindableFileOutputStream {
     /**
      * Deletes all the log files, including rotated files.
      */
+    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
     public void deleteAll() {
         for (int i = 0; i <= size; i++) {
             getNumberedFileName(i).delete();
