@@ -102,7 +102,6 @@ public class ItemColumn extends ListViewColumn {
                 SecurityContextHolder.setContext(ctx);
             }
         }
-        // TODO determine if an Organization project is dead
         return false;
     }
 
