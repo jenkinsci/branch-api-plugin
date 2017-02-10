@@ -27,6 +27,13 @@ THE SOFTWARE.
          xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
   <td style="${indenter.getCss(job)}">
     <j:choose>
+      <j:when test="${it.isOrphaned(job)}">
+        <s>
+          <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside' title="${it.getTitle(job)}">
+            <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
+          </a>
+        </s>
+      </j:when>
       <j:when test="${it.isPrimary(job)}">
         <strong>
           <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside' title="${it.getTitle(job)}">

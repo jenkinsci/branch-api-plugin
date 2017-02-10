@@ -28,12 +28,20 @@ import hudson.Extension;
 import hudson.model.Actionable;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
+import hudson.model.ItemGroup;
+import hudson.model.Job;
+import hudson.model.TopLevelItem;
+import hudson.remoting.Callable;
+import hudson.security.ACL;
 import hudson.views.JobColumn;
 import hudson.views.ListViewColumn;
 import hudson.views.ListViewColumnDescriptor;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -61,6 +69,40 @@ public class ItemColumn extends ListViewColumn {
     @SuppressWarnings("unused") // used via Jelly EL binding
     public boolean isPrimary(Object job) {
         return job instanceof Actionable && ((Actionable) job).getAction(PrimaryInstanceMetadataAction.class) != null;
+    }
+
+    /**
+     * Determines if the item is orphaned.
+     * @param item the item.
+     * @return {@code true} if and only if the item is orphaned.
+     */
+    public boolean isOrphaned(Object item) {
+        if (item instanceof Job) {
+            Job job = (Job) item;
+            ItemGroup parent = job.getParent();
+            if (parent instanceof MultiBranchProject) {
+                BranchProjectFactory factory = ((MultiBranchProject) parent).getProjectFactory();
+                return factory.isProject(job) && factory.getBranch(job) instanceof Branch.Dead;
+            }
+        }
+        if (item instanceof MultiBranchProject) {
+            MultiBranchProject<?,?> project = (MultiBranchProject<?,?>) item;
+            BranchProjectFactory factory = project.getProjectFactory();
+            SecurityContext ctx = ACL.impersonate(ACL.SYSTEM);
+            try {
+                for (Job c: project.getItems()) {
+                    if (factory.isProject(c) && !(factory.getBranch(c) instanceof Branch.Dead)) {
+                        // if we have at least one not-dead branch then the project is alive
+                        return false;
+                    }
+                }
+                // if we have no child projects or all child projects are dead, then the project is dead
+                return true;
+            } finally {
+                SecurityContextHolder.setContext(ctx);
+            }
+        }
+        return false;
     }
 
     /**
