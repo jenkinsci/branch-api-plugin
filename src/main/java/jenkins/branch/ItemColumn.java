@@ -28,6 +28,9 @@ import hudson.Extension;
 import hudson.model.Actionable;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
+import hudson.model.ItemGroup;
+import hudson.model.Job;
+import hudson.model.TopLevelItem;
 import hudson.views.JobColumn;
 import hudson.views.ListViewColumn;
 import hudson.views.ListViewColumnDescriptor;
@@ -61,6 +64,24 @@ public class ItemColumn extends ListViewColumn {
     @SuppressWarnings("unused") // used via Jelly EL binding
     public boolean isPrimary(Object job) {
         return job instanceof Actionable && ((Actionable) job).getAction(PrimaryInstanceMetadataAction.class) != null;
+    }
+
+    /**
+     * Determines if the item is orphaned.
+     * @param item the item.
+     * @return {@code true} if and only if the item is orphaned.
+     */
+    public boolean isOrphaned(Object item) {
+        if (item instanceof Job) {
+            Job job = (Job) item;
+            ItemGroup parent = job.getParent();
+            if (parent instanceof MultiBranchProject) {
+                BranchProjectFactory factory = ((MultiBranchProject) parent).getProjectFactory();
+                return factory.isProject(job) && factory.getBranch(job) instanceof Branch.Dead;
+            }
+        }
+        // TODO determine if an Organization project is dead
+        return false;
     }
 
     /**
