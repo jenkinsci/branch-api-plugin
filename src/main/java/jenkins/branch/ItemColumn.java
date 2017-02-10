@@ -31,12 +31,17 @@ import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.TopLevelItem;
+import hudson.remoting.Callable;
+import hudson.security.ACL;
 import hudson.views.JobColumn;
 import hudson.views.ListViewColumn;
 import hudson.views.ListViewColumnDescriptor;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -78,6 +83,23 @@ public class ItemColumn extends ListViewColumn {
             if (parent instanceof MultiBranchProject) {
                 BranchProjectFactory factory = ((MultiBranchProject) parent).getProjectFactory();
                 return factory.isProject(job) && factory.getBranch(job) instanceof Branch.Dead;
+            }
+        }
+        if (item instanceof MultiBranchProject) {
+            MultiBranchProject<?,?> project = (MultiBranchProject<?,?>) item;
+            BranchProjectFactory factory = project.getProjectFactory();
+            SecurityContext ctx = ACL.impersonate(ACL.SYSTEM);
+            try {
+                for (Job c: project.getItems()) {
+                    if (factory.isProject(c) && !(factory.getBranch(c) instanceof Branch.Dead)) {
+                        // if we have at least one not-dead branch then the project is alive
+                        return false;
+                    }
+                }
+                // if we have no child projects or all child projects are dead, then the project is dead
+                return true;
+            } finally {
+                SecurityContextHolder.setContext(ctx);
             }
         }
         // TODO determine if an Organization project is dead
