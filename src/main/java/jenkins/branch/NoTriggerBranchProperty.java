@@ -69,7 +69,7 @@ public class NoTriggerBranchProperty extends BranchProperty {
             for (Action action :  actions) {
                 if (action instanceof CauseAction) {
                     for (Cause c : ((CauseAction) action).getCauses()) {
-                        if (c instanceof BranchIndexingCause) {
+                        if (c instanceof BranchIndexingCause || c instanceof BranchEventCause) {
                             if (p instanceof Job) {
                                 Job<?,?> j = (Job) p;
                                 if (j.getParent() instanceof MultiBranchProject) {
