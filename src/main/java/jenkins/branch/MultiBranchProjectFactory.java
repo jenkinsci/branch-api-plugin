@@ -220,7 +220,8 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          */
         @NonNull
         protected abstract MultiBranchProject<?, ?> doCreateProject(@NonNull ItemGroup<?> parent, @NonNull String name,
-                                                                    @NonNull Map<String, Object> attributes);
+                                                                    @NonNull Map<String, Object> attributes)
+                throws IOException, InterruptedException;
 
         /**
          * {@inheritDoc}
