@@ -87,7 +87,7 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
             for (Action action :  actions) {
                 if (action instanceof CauseAction) {
                     for (Cause c : ((CauseAction) action).getCauses()) {
-                        if (c instanceof BranchIndexingCause) {
+                        if (c instanceof BranchIndexingCause || c instanceof BranchEventCause) {
                             if (p instanceof Job) {
                                 Job<?,?> j = (Job) p;
 
