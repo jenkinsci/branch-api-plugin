@@ -794,7 +794,7 @@ public class EventsTest {
             FreeStyleProject master = prj.getItem("master");
             assertThat("We now have the master branch", master, notNullValue());
             FreeStyleProject feature = prj.getItem("feature");
-            assertThat("We now have the feature branch", master, notNullValue());
+            assertThat("We now have the feature branch", feature, notNullValue());
             assertThat("We only have the master and feature branches",
                     prj.getItems(), containsInAnyOrder(master, feature));
             r.waitUntilNoActivity();
@@ -806,7 +806,8 @@ public class EventsTest {
             c.addFile("foo", "master", "Adding README.md", "README.md", "This is the readme".getBytes());
             c.addFile("foo", "feature", "Adding README.adoc", "README.adoc", "This is the readme".getBytes());
             r.waitUntilNoActivity();
-            assertThat("No events means no new builds", master.getLastBuild().getNumber(), is(1));
+            assertThat("No events means no new builds in master branch", master.getLastBuild().getNumber(), is(1));
+            assertThat("No events means no new builds in feature branch", feature.getLastBuild().getNumber(), is(1));
 
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("The master branch was built from event", master.getLastBuild().getNumber(), is(2));
@@ -883,7 +884,8 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("Indexing applies dead branch cleanup",
                     prj.getItems(), containsInAnyOrder(master));
-
+            assertThat("Indexing applies dead branch cleanup",
+                    prj.getItems(), not(containsInAnyOrder(feature)));
         }
     }
 
@@ -1199,7 +1201,6 @@ public class EventsTest {
                     prj.getItems(),
                     Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("master"), notNullValue());
-
         }
     }
 
