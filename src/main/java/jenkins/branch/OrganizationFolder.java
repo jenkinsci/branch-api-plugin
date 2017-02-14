@@ -1194,7 +1194,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 }
 
                 @Override
-                public void complete() throws IllegalStateException, InterruptedException {
+                public void complete() throws IllegalStateException, IOException, InterruptedException {
                     try {
                         MultiBranchProjectFactory factory = null;
                         Map<String, Object> attributes = Collections.<String, Object>emptyMap();
@@ -1257,7 +1257,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         }
                         observer.created(project);
                         project.scheduleBuild();
-                    } catch (InterruptedException x) {
+                    } catch (InterruptedException | IOException x) {
                         throw x;
                     } catch (Exception x) {
                         x.printStackTrace(listener.error("Failed to create or update a subproject " + projectName));
