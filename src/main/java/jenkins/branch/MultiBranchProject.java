@@ -808,6 +808,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public File getRootDirFor(P child) {
+        return super.getRootDirFor(child); // need the bridge method to provide binary compatibility
+    }
+
+    /**
      * Returns the directory that branch indexing is stored in.
      *
      * @return the directory that branch indexing is stored in.
