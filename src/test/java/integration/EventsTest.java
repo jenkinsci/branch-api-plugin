@@ -1204,6 +1204,7 @@ public class EventsTest {
     }
 
     @Test
+    @Issue("JENKINS-42000")
     public void given_orgFolder_when_navigatorIoErrorScanning_then_scanRecordedAsFailure() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
@@ -1257,6 +1258,7 @@ public class EventsTest {
     }
 
     @Test
+    @Issue("JENKINS-42000")
     public void given_orgFolder_when_sourceIoErrorScanning_then_scanRecordedAsFailure() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
