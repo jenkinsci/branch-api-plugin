@@ -883,9 +883,9 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("Indexing applies dead branch cleanup",
-                    prj.getItems(), containsInAnyOrder(master));
-            assertThat("Indexing applies dead branch cleanup",
-                    prj.getItems(), not(containsInAnyOrder(feature)));
+                    prj.getItems(), allOf(
+                    containsInAnyOrder(master),
+                    not(containsInAnyOrder(feature))));
         }
     }
 
