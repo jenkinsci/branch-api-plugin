@@ -1204,6 +1204,113 @@ public class EventsTest {
     }
 
     @Test
+    @Issue("JENKINS-42000")
+    public void given_orgFolder_when_navigatorIoErrorScanning_then_scanRecordedAsFailure() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.createRepository("manchu");
+            c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            c.addFile("bar", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            c.addFile("manchu", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat(prj.getComputation().getResult(), is(Result.SUCCESS));
+            assertThat("A scan picks up a newly qualified repo",
+                    prj.getItems(),
+                    not(is((Collection<MultiBranchProject<?, ?>>) Collections.<MultiBranchProject<?, ?>>emptyList())));
+            BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
+            BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
+            BasicMultiBranchProject manchu = (BasicMultiBranchProject) prj.getItem("manchu");
+            assertThat("We now have the `foo` project", foo, notNullValue());
+            assertThat("We now have the `bar` project", bar, notNullValue());
+            assertThat("We now have the `manchu` project", manchu, notNullValue());
+            assertThat("We now have only the projects expected",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo, bar, manchu));
+            c.addFault(new MockFailure() {
+                @Override
+                public void check(@CheckForNull String repository, @CheckForNull String branchOrCR,
+                                  @CheckForNull String revision,
+                                  boolean actions) throws IOException {
+                    if ("bar".equals(repository) && branchOrCR == null && revision == null && !actions) {
+                        throw new IOException("Boom Boom Boom!!!");
+                    }
+                }
+            });
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat(prj.getComputation().getResult(), is(Result.FAILURE));
+            foo = (BasicMultiBranchProject) prj.getItem("foo");
+            bar = (BasicMultiBranchProject) prj.getItem("bar");
+            manchu = (BasicMultiBranchProject) prj.getItem("manchu");
+            assertThat("We now have the `foo` project", foo, notNullValue());
+            assertThat("We now have the `bar` project", bar, notNullValue());
+            assertThat("We now have the `manchu` project", manchu, notNullValue());
+            assertThat("We now have only the projects expected",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo, bar, manchu));
+        }
+    }
+
+    @Test
+    @Issue("JENKINS-42000")
+    public void given_orgFolder_when_sourceIoErrorScanning_then_scanRecordedAsFailure() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.createRepository("manchu");
+            c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            c.addFile("bar", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            c.addFile("manchu", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("A scan picks up a newly qualified repo",
+                    prj.getItems(),
+                    not(is((Collection<MultiBranchProject<?, ?>>) Collections.<MultiBranchProject<?, ?>>emptyList())));
+            BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
+            BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
+            BasicMultiBranchProject manchu = (BasicMultiBranchProject) prj.getItem("manchu");
+            assertThat("We now have the `foo` project", foo, notNullValue());
+            assertThat("We now have the `bar` project", bar, notNullValue());
+            assertThat("We now have the `manchu` project", manchu, notNullValue());
+            assertThat("We now have only the projects expected",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo, bar, manchu));
+            c.addFault(new MockFailure() {
+                @Override
+                public void check(@CheckForNull String repository, @CheckForNull String branchOrCR,
+                                  @CheckForNull String revision,
+                                  boolean actions) throws IOException {
+                    if ("bar".equals(repository) && branchOrCR != null && revision == null && !actions) {
+                        throw new IOException("Boom Boom Boom!!!");
+                    }
+                }
+            });
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat(prj.getComputation().getResult(), is(Result.FAILURE));
+            foo = (BasicMultiBranchProject) prj.getItem("foo");
+            bar = (BasicMultiBranchProject) prj.getItem("bar");
+            manchu = (BasicMultiBranchProject) prj.getItem("manchu");
+            assertThat("We now have the `foo` project", foo, notNullValue());
+            assertThat("We now have the `bar` project", bar, notNullValue());
+            assertThat("We now have the `manchu` project", manchu, notNullValue());
+            assertThat("We now have only the projects expected",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo, bar, manchu));
+        }
+    }
+
+    @Test
     public void given_orgFolder_when_someReposMatch_then_eventCreatesMatchingProject() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
