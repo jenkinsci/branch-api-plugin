@@ -28,6 +28,7 @@ import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIcon;
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
+import com.cloudbees.hudson.plugins.folder.computed.EventOutputStreams;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.google.common.collect.ImmutableSet;
@@ -57,17 +58,12 @@ import hudson.model.listeners.SaveableListener;
 import hudson.scm.PollingResult;
 import hudson.security.ACL;
 import hudson.security.Permission;
-import hudson.util.LogTaskListener;
 import hudson.util.PersistedList;
 import hudson.util.StreamTaskListener;
 import hudson.util.XStream2;
-import hudson.util.io.ReopenableRotatingFileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -80,9 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.WeakHashMap;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -1060,18 +1054,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @Extension
     public static class SCMEventListenerImpl extends SCMEventListener {
-        /**
-         * The {@link TaskListener} for events that we cannot assign to a multi-branch project.
-         *
-         * @return The {@link TaskListener} for events that we cannot assign to a multi-branch project.
-         */
-        @Restricted(NoExternalUse.class)
-        public StreamTaskListener globalEventsListener() {
+
+        private final EventOutputStreams globalEvents = createGlobalEvents();
+
+        private EventOutputStreams createGlobalEvents() {
             File logsDir = new File(Jenkins.getActiveInstance().getRootDir(), "logs");
             if (!logsDir.isDirectory() && !logsDir.mkdirs()) {
                 LOGGER.log(Level.WARNING, "Could not create logs directory: {0}", logsDir);
             }
-            File eventsFile = new File(logsDir, MultiBranchProject.class.getName() + ".log");
+            final File eventsFile = new File(logsDir, MultiBranchProject.class.getName() + ".log");
             if (!eventsFile.isFile()) {
                 File oldFile = new File(logsDir.getParent(), eventsFile.getName());
                 if (oldFile.isFile()) {
@@ -1080,23 +1071,36 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     }
                 }
             }
-            boolean rotate = eventsFile.length() > 30 * 1024;
-            RewindableRotatingFileOutputStream os = new RewindableRotatingFileOutputStream(eventsFile, true,5);
-            if (rotate) {
-                try {
-                    os.rewind();
-                } catch (IOException e) {
-                    LOGGER.log(Level.WARNING, "Could not rotate " + eventsFile, e);
+            return new EventOutputStreams(new EventOutputStreams.OutputFile() {
+                @NonNull
+                @Override
+                public File get() {
+                    return eventsFile;
                 }
-            }
-            return new StreamBuildListener(os, Charsets.UTF_8);
+            },
+                    250, TimeUnit.MILLISECONDS,
+                    1024,
+                    true,
+                    32 * 1024,
+                    5
+            );
+        }
+
+        /**
+         * The {@link TaskListener} for events that we cannot assign to a multi-branch project.
+         *
+         * @return The {@link TaskListener} for events that we cannot assign to a multi-branch project.
+         */
+        @Restricted(NoExternalUse.class)
+        public StreamTaskListener globalEventsListener() {
+            return new StreamBuildListener(globalEvents.get(), Charsets.UTF_8);
         }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public synchronized void onSCMHeadEvent(final SCMHeadEvent<?> event) {
+        public void onSCMHeadEvent(final SCMHeadEvent<?> event) {
             try (StreamTaskListener global = globalEventsListener()) {
                 String eventClass = event.getClass().getName();
                 String eventType = event.getType().name();
@@ -1114,26 +1118,31 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 // not interested in removal of dead items as that needs to be handled by the computation in order
                 // to ensure that other sources do not want to take ownership and also to ensure that the dead branch
                 // strategy is enforced correctly
-                if (SCMEvent.Type.CREATED == event.getType()) {
-                    matchCount = processHeadCreate(
-                            event,
-                            global,
-                            eventClass,
-                            eventType,
-                            eventOrigin,
-                            eventTimestamp,
-                            matchCount
-                    );
-                } else if (SCMEvent.Type.UPDATED == event.getType() || SCMEvent.Type.REMOVED == event.getType()) {
-                    matchCount = processHeadUpdate(
-                            event,
-                            global,
-                            eventClass,
-                            eventType,
-                            eventOrigin,
-                            eventTimestamp,
-                            matchCount
-                    );
+                try {
+                    if (SCMEvent.Type.CREATED == event.getType()) {
+                        matchCount = processHeadCreate(
+                                event,
+                                global,
+                                eventClass,
+                                eventType,
+                                eventOrigin,
+                                eventTimestamp,
+                                matchCount
+                        );
+                    } else if (SCMEvent.Type.UPDATED == event.getType() || SCMEvent.Type.REMOVED == event.getType()) {
+                        matchCount = processHeadUpdate(
+                                event,
+                                global,
+                                eventClass,
+                                eventType,
+                                eventOrigin,
+                                eventTimestamp,
+                                matchCount
+                        );
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace(global.error("[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
+                            System.currentTimeMillis(), eventClass, eventType, eventOrigin, eventTimestamp));
                 }
                 global.getLogger()
                         .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
@@ -1145,7 +1154,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
 
         private int processHeadCreate(SCMHeadEvent<?> event, TaskListener global, String eventClass, String eventType,
-                                      String eventOrigin, long eventTimestamp, int matchCount) {
+                                      String eventOrigin, long eventTimestamp, int matchCount)
+                throws IOException, InterruptedException {
             Set<String> sourceIds = new HashSet<>();
             for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
                 sourceIds.clear();
@@ -1260,40 +1270,47 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     sourceIds.add(source.getId());
                 }
                 if (haveMatch) {
-                    TaskListener listener;
-                    try {
-                        listener = p.getComputation().createEventsListener();
-                    } catch (IOException e) {
-                        listener = new LogTaskListener(LOGGER, Level.FINE);
-                    }
                     long start = System.currentTimeMillis();
-                    listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                            start, eventClass, eventType, eventOrigin, eventTimestamp);
-                    ChildObserver childObserver = p.createEventsChildObserver();
-                    try {
-                        for (SCMSource source : p.getSCMSources()) {
-                            if (event.isMatch(source)) {
-                                source.fetch(
-                                        p.getSCMSourceCriteria(source),
-                                        p.new SCMHeadObserverImpl(
-                                                source,
-                                                childObserver,
-                                                listener,
-                                                _factory,
-                                                new EventCauseFactory(event),
-                                                event),
-                                        event,
-                                        listener
-                                );
+                    try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
+                        try {
+                            listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                                    start, eventClass, eventType, eventOrigin, eventTimestamp);
+                            ChildObserver childObserver = p.createEventsChildObserver();
+                            for (SCMSource source : p.getSCMSources()) {
+                                if (event.isMatch(source)) {
+                                    source.fetch(
+                                            p.getSCMSourceCriteria(source),
+                                            p.new SCMHeadObserverImpl(
+                                                    source,
+                                                    childObserver,
+                                                    listener,
+                                                    _factory,
+                                                    new EventCauseFactory(event),
+                                                    event),
+                                            event,
+                                            listener
+                                    );
+                                }
                             }
+                        } catch (IOException e) {
+                            e.printStackTrace(listener.error(e.getMessage()));
+                        } catch (InterruptedException e) {
+                            e.printStackTrace(listener.error(e.getMessage()));
+                            throw e;
+                        } finally {
+                            long end = System.currentTimeMillis();
+                            listener.getLogger()
+                                    .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                                            end, eventClass, eventType, eventOrigin, eventTimestamp,
+                                            Util.getTimeSpanString(end - start));
                         }
-                    } catch (IOException | InterruptedException e) {
-                        e.printStackTrace(listener.error(e.getMessage()));
-                    } finally {
-                        long end = System.currentTimeMillis();
-                        listener.getLogger().format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                end, eventClass, eventType, eventOrigin, eventTimestamp,
-                                Util.getTimeSpanString(end - start));
+                    } catch (IOException e) {
+                        e.printStackTrace(global.error("[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
+                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventClass, eventType, eventOrigin, eventTimestamp));
+                    } catch (InterruptedException e) {
+                        e.printStackTrace(global.error("[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
+                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventClass, eventType, eventOrigin, eventTimestamp));
+                        throw e;
                     }
                 }
             }
@@ -1302,7 +1319,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         private int processHeadUpdate(SCMHeadEvent<?> event, TaskListener global, String eventClass, String eventType,
                                       String eventOrigin,
-                                      long eventTimestamp, int matchCount) {
+                                      long eventTimestamp, int matchCount) throws InterruptedException {
             Map<SCMSource, SCMHead> matches = new IdentityHashMap<>();
             Set<String> candidateNames = new HashSet<>();
             Map<SCMSource, Map<SCMHead,SCMRevision>> revisionMaps = new IdentityHashMap<>();
@@ -1487,63 +1504,74 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 if (!matches.isEmpty()) {
                     matchCount++;
                     global.getLogger().format("Found match against %s%n", pFullName);
-                    TaskListener listener;
-                    try {
-                        listener = p.getComputation().createEventsListener();
-                    } catch (IOException e) {
-                        listener = new LogTaskListener(LOGGER, Level.FINE);
-                    }
                     long start = System.currentTimeMillis();
-                    listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                            start, eventClass, eventType, eventOrigin, eventTimestamp);
-                    ChildObserver childObserver = p.createEventsChildObserver();
-                    try {
-                        for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
-                            m.getKey().fetch(
-                                    p.getSCMSourceCriteria(m.getKey()),
-                                    p.new SCMHeadObserverImpl(
-                                            m.getKey(),
-                                            childObserver,
-                                            listener,
-                                            _factory,
-                                            new EventCauseFactory(event),
-                                            event),
-                                    event,
-                                    listener
-                            );
-                        }
-                        // now dis-associate branches that no-longer exist
-                        Set<String> names = childObserver.observed();
-                        for (Job<?, ?> j : jobs) {
-                            if (names.contains(j.getName())) {
-                                // observed, so not dead
-                                continue;
+                    try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
+                        try {
+                            listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                                    start, eventClass, eventType, eventOrigin, eventTimestamp);
+                            ChildObserver childObserver = p.createEventsChildObserver();
+                            for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
+                                m.getKey().fetch(
+                                        p.getSCMSourceCriteria(m.getKey()),
+                                        p.new SCMHeadObserverImpl(
+                                                m.getKey(),
+                                                childObserver,
+                                                listener,
+                                                _factory,
+                                                new EventCauseFactory(event),
+                                                event),
+                                        event,
+                                        listener
+                                );
                             }
-                            Branch branch = _factory.getBranch(j);
-                            String sourceId = branch.getSourceId();
-                            boolean foundSource = false;
-                            for (SCMSource s : matches.keySet()) {
-                                if (sourceId.equals(s.getId())) {
-                                    foundSource = true;
+                            // now dis-associate branches that no-longer exist
+                            Set<String> names = childObserver.observed();
+                            for (Job<?, ?> j : jobs) {
+                                if (names.contains(j.getName())) {
+                                    // observed, so not dead
+                                    continue;
                                 }
+                                Branch branch = _factory.getBranch(j);
+                                String sourceId = branch.getSourceId();
+                                boolean foundSource = false;
+                                for (SCMSource s : matches.keySet()) {
+                                    if (sourceId.equals(s.getId())) {
+                                        foundSource = true;
+                                    }
+                                }
+                                if (!foundSource) {
+                                    // not safe to switch to a dead branch
+                                    continue;
+                                }
+                                _factory.decorate(_factory.setBranch(
+                                        j,
+                                        new Branch.Dead(branch)
+                                ));
+                                j.save();
                             }
-                            if (!foundSource) {
-                                // not safe to switch to a dead branch
-                                continue;
-                            }
-                            _factory.decorate(_factory.setBranch(
-                                    j,
-                                    new Branch.Dead(branch)
-                            ));
-                            j.save();
+                        } catch (IOException e) {
+                            e.printStackTrace(listener.error(e.getMessage()));
+                        } catch (InterruptedException e) {
+                            e.printStackTrace(listener.error(e.getMessage()));
+                            throw e;
+                        } finally {
+                            long end = System.currentTimeMillis();
+                            listener.getLogger()
+                                    .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                                            end, eventClass, eventType, eventOrigin, eventTimestamp,
+                                            Util.getTimeSpanString(end - start));
                         }
-                    } catch (IOException | InterruptedException e) {
-                        e.printStackTrace(listener.error(e.getMessage()));
-                    } finally {
-                        long end = System.currentTimeMillis();
-                        listener.getLogger().format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                end, eventClass, eventType, eventOrigin, eventTimestamp,
-                                Util.getTimeSpanString(end - start));
+                    } catch (IOException e) {
+                        e.printStackTrace(global.error(
+                                "[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
+                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventClass, eventType,
+                                eventOrigin, eventTimestamp));
+                    } catch (InterruptedException e) {
+                        e.printStackTrace(global.error(
+                                "[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
+                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventClass, eventType,
+                                eventOrigin, eventTimestamp));
+                        throw e;
                     }
                 } else {
                     // didn't match an existing branch, maybe the criteria now match against an updated branch
@@ -1566,42 +1594,54 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                     }
                     if (haveMatch) {
-                        TaskListener listener;
-                        try {
-                            listener = p.getComputation().createEventsListener();
-                        } catch (IOException e) {
-                            listener = new LogTaskListener(LOGGER, Level.FINE);
-                        }
                         long start = System.currentTimeMillis();
-                        listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                start, eventClass, eventType, eventOrigin, eventTimestamp);
-                        ChildObserver childObserver = p.createEventsChildObserver();
-                        try {
-                            for (SCMSource source : p.getSCMSources()) {
-                                if (event.isMatch(source)) {
-                                    source.fetch(
-                                            p.getSCMSourceCriteria(source),
-                                            p.new SCMHeadObserverImpl(
-                                                    source,
-                                                    childObserver,
-                                                    listener,
-                                                    _factory,
-                                                    new EventCauseFactory(event),
-                                                    event
-                                            ),
-                                            event,
-                                            listener
-                                    );
+                        try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
+                            listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                                    start, eventClass, eventType, eventOrigin, eventTimestamp);
+                            ChildObserver childObserver = p.createEventsChildObserver();
+                            try {
+                                for (SCMSource source : p.getSCMSources()) {
+                                    if (event.isMatch(source)) {
+                                        source.fetch(
+                                                p.getSCMSourceCriteria(source),
+                                                p.new SCMHeadObserverImpl(
+                                                        source,
+                                                        childObserver,
+                                                        listener,
+                                                        _factory,
+                                                        new EventCauseFactory(event),
+                                                        event
+                                                ),
+                                                event,
+                                                listener
+                                        );
+                                    }
                                 }
+                            } catch (IOException e) {
+                                e.printStackTrace(listener.error(e.getMessage()));
+                            } catch (InterruptedException e) {
+                                e.printStackTrace(listener.error(e.getMessage()));
+                                throw e;
+                            } finally {
+                                long end = System.currentTimeMillis();
+                                listener.getLogger().format(
+                                        "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                                        end, eventClass, eventType, eventOrigin, eventTimestamp,
+                                        Util.getTimeSpanString(end - start));
                             }
-                        } catch (IOException | InterruptedException e) {
-                            e.printStackTrace(listener.error(e.getMessage()));
-                        } finally {
-                            long end = System.currentTimeMillis();
-                            listener.getLogger().format(
-                                    "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                    end, eventClass, eventType, eventOrigin, eventTimestamp,
-                                    Util.getTimeSpanString(end - start));
+                        } catch (IOException e) {
+                            e.printStackTrace(global.error(
+                                    "[%tc] %s encountered an error while processing %s %s event from %s with "
+                                            + "timestamp %tc",
+                                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventClass, eventType,
+                                    eventOrigin, eventTimestamp));
+                        } catch (InterruptedException e) {
+                            e.printStackTrace(global.error(
+                                    "[%tc] %s was interrupted while processing %s %s event from %s with "
+                                            + "timestamp %tc",
+                                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventClass, eventType,
+                                    eventOrigin, eventTimestamp));
+                            throw e;
                         }
                     }
                 }
@@ -1613,7 +1653,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * {@inheritDoc}
          */
         @Override
-        public synchronized void onSCMSourceEvent(SCMSourceEvent<?> event) {
+        public void onSCMSourceEvent(SCMSourceEvent<?> event) {
             try (StreamTaskListener global = globalEventsListener()) {
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                         System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
@@ -1623,68 +1663,92 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 // not interested in removal as that is an event for org folders
                 if (SCMEvent.Type.UPDATED == event.getType()) {
                     // we are only interested in updates as they would trigger the actions being updated
-                    for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance()
-                            .getAllItems(MultiBranchProject.class)) {
-                        boolean haveMatch = false;
-                        List<SCMSource> scmSources = p.getSCMSources();
-                        for (SCMSource s : scmSources) {
-                            if (event.isMatch(s)) {
-                                matchCount++;
-                                global.getLogger().format("Found match against %s%n", p.getFullName());
-                                haveMatch = true;
-                                break;
+                    try {
+                        for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance()
+                                .getAllItems(MultiBranchProject.class)) {
+                            boolean haveMatch = false;
+                            List<SCMSource> scmSources = p.getSCMSources();
+                            for (SCMSource s : scmSources) {
+                                if (event.isMatch(s)) {
+                                    matchCount++;
+                                    global.getLogger().format("Found match against %s%n", p.getFullName());
+                                    haveMatch = true;
+                                    break;
+                                }
                             }
-                        }
-                        if (haveMatch) {
-                            TaskListener listener;
-                            try {
-                                listener = p.getComputation().createEventsListener();
-                            } catch (IOException e) {
-                                listener = new LogTaskListener(LOGGER, Level.FINE);
-                            }
+                            if (haveMatch) {
+                                try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
+                                    try {
+                                        Map<String, List<Action>> stateActions = new HashMap<>();
+                                        for (SCMSource source : scmSources) {
+                                            List<Action> oldActions = p.state.sourceActions.get(source.getId());
+                                            List<Action> newActions;
+                                            try {
+                                                newActions = source.fetchActions(event, listener);
+                                            } catch (IOException e) {
+                                                e.printStackTrace(
+                                                        listener.error("Could not refresh actions for source %s",
+                                                                source.getId()
+                                                        ));
+                                                // preserve previous actions if we have some transient error fetching now (e.g.
 
-                            try {
-                                Map<String, List<Action>> stateActions = new HashMap<>();
-                                for (SCMSource source : scmSources) {
-                                    List<Action> oldActions = p.state.sourceActions.get(source.getId());
-                                    List<Action> newActions;
-                                    try {
-                                        newActions = source.fetchActions(event, listener);
+
+                                                // API rate limit)
+                                                newActions = oldActions;
+                                            }
+                                            if (oldActions == null || !oldActions.equals(newActions)) {
+                                                stateActions.put(source.getId(), newActions);
+                                            }
+                                        }
+                                        if (!stateActions.isEmpty()) {
+                                            boolean saveProject = false;
+                                            for (List<Action> actions : stateActions.values()) {
+                                                for (Action a : actions) {
+                                                    // undo any hacks that attached the contributed actions without
+                                                    // attribution
+                                                    saveProject = p.removeActions(a.getClass()) || saveProject;
+                                                }
+                                            }
+                                            BulkChange bc = new BulkChange(p.state);
+                                            try {
+                                                p.state.sourceActions.putAll(stateActions);
+                                                bc.commit();
+                                                if (saveProject) {
+                                                    p.save();
+                                                }
+                                            } finally {
+                                                bc.abort();
+                                            }
+                                        }
                                     } catch (IOException e) {
-                                        e.printStackTrace(listener.error("Could not refresh actions for source %s",
-                                                source.getId()
-                                        ));
-                                        // preserve previous actions if we have some transient error fetching now (e.g.
-                                        // API rate limit)
-                                        newActions = oldActions;
+                                        e.printStackTrace(listener.error(e.getMessage()));
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace(listener.error(e.getMessage()));
+                                        throw e;
                                     }
-                                    if (oldActions == null || !oldActions.equals(newActions)) {
-                                        stateActions.put(source.getId(), newActions);
-                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace(global.error(
+                                            "[%tc] %s encountered an error while processing %s %s event from %s with "
+                                                    + "timestamp %tc",
+                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                            event.getClass().getName(), event.getType().name(),
+                                            event.getOrigin(), event.getTimestamp()));
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace(global.error(
+                                            "[%tc] %s was interrupted while processing %s %s event from %s with "
+                                                    + "timestamp %tc",
+                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                            event.getClass().getName(), event.getType().name(),
+                                            event.getOrigin(), event.getTimestamp()));
+                                    throw e;
                                 }
-                                if (!stateActions.isEmpty()) {
-                                    boolean saveProject = false;
-                                    for (List<Action> actions : stateActions.values()) {
-                                        for (Action a : actions) {
-                                            // undo any hacks that attached the contributed actions without attribution
-                                            saveProject = p.removeActions(a.getClass()) || saveProject;
-                                        }
-                                    }
-                                    BulkChange bc = new BulkChange(p.state);
-                                    try {
-                                        p.state.sourceActions.putAll(stateActions);
-                                        bc.commit();
-                                        if (saveProject) {
-                                            p.save();
-                                        }
-                                    } finally {
-                                        bc.abort();
-                                    }
-                                }
-                            } catch (IOException | InterruptedException e) {
-                                e.printStackTrace(listener.error(e.getMessage()));
                             }
                         }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace(global.error(
+                                "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
+                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                                event.getOrigin(), event.getTimestamp()));
                     }
                 }
                 global.getLogger()
