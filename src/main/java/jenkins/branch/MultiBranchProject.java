@@ -1558,6 +1558,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 }
                             }
                             if (haveMatch) {
+                                matchCount++;
                                 global.getLogger().format("Found match against %s%n", pFullName);
                                 break;
                             }
@@ -1628,6 +1629,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         List<SCMSource> scmSources = p.getSCMSources();
                         for (SCMSource s : scmSources) {
                             if (event.isMatch(s)) {
+                                matchCount++;
                                 global.getLogger().format("Found match against %s%n", p.getFullName());
                                 haveMatch = true;
                                 break;

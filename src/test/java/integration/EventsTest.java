@@ -34,10 +34,16 @@ import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import jenkins.branch.Branch;
 import jenkins.branch.BranchBuildStrategy;
 import jenkins.branch.BranchBuildStrategyDescriptor;
@@ -53,14 +59,18 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.impl.mock.MockFailure;
+import jenkins.scm.impl.mock.MockLatency;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMSource;
 import jenkins.scm.impl.mock.MockSCMSourceEvent;
+import org.apache.commons.io.FileUtils;
+import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -71,6 +81,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -1107,6 +1118,191 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("The feature-1 branch was built", feature1.getLastBuild(), notNullValue());
             assertThat("The feature-1 branch was built", feature1.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranch_when_eventStorm_then_projectsCreated()
+            throws Exception {
+        List<String> branchNames = Arrays.asList( // top 20 names for boys and girls 2016 in case you are wondering
+                "Sophia", "Jackson", "Emma", "Aiden", "Olivia", "Lucas", "Ava", "Liam", "Mia", "Noah", "Isabella",
+                "Ethan", "Riley", "Mason", "Aria", "Caden", "Zoe", "Oliver", "Charlotte", "Elijah", "Lily", "Grayson",
+                "Layla", "Jacob", "Amelia", "Michael", "Emily", "Benjamin", "Madelyn", "Carter", "Aubrey", "James",
+                "Adalyn", "Jayden", "Madison", "Logan", "Chloe", "Alexander", "Harper", "Caleb"
+        );
+        try (MockSCMController c = MockSCMController.create().withLatency(MockLatency.fixed(5, TimeUnit.MILLISECONDS))) {
+            c.createRepository("foo");
+            for (String n: branchNames) {
+                c.createBranch("foo", n);
+            }
+
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+
+            for (String n : branchNames) {
+                c.addFile("foo", n, "adding marker file", "marker.txt", "This is the marker".getBytes());
+            }
+            // now for the storm
+            long watermark = SCMEvents.getWatermark();
+            for (String n: branchNames) {
+                SCMHeadEvent.fireNow(new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", n, c.getRevision("foo", n)));
+                watermark = Math.max(watermark, SCMEvents.getWatermark());
+            }
+            SCMEvents.awaitAll(watermark);
+            r.waitUntilNoActivity();
+
+            List<FreeStyleProject> expected = new ArrayList<>();
+            for (String n : branchNames) {
+                FreeStyleProject branch = prj.getItem(n);
+                assertThat("We have the " + n + " branch", branch, notNullValue());
+                assertThat("The "+n+" branch was built", branch.getLastBuild(), notNullValue());
+                assertThat("The "+n+" branch was built", branch.getLastBuild().getNumber(), is(1));
+                expected.add(branch);
+            }
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+        }
+    }
+
+    @Test
+    @Ignore("Currently event processing is single threaded")
+    public void given_multibranch_when_eventStorm_then_eventsConcurrent()
+            throws Exception {
+        List<String> branchNames = Arrays.asList( // top 20 names for boys and girls 2016 in case you are wondering
+                "Sophia", "Jackson", "Emma", "Aiden", "Olivia", "Lucas", "Ava", "Liam", "Mia", "Noah", "Isabella",
+                "Ethan", "Riley", "Mason", "Aria", "Caden", "Zoe", "Oliver", "Charlotte", "Elijah", "Lily", "Grayson",
+                "Layla", "Jacob", "Amelia", "Michael", "Emily", "Benjamin", "Madelyn", "Carter", "Aubrey", "James",
+                "Adalyn", "Jayden", "Madison", "Logan", "Chloe", "Alexander", "Harper", "Caleb"
+        );
+        final AtomicInteger concurrentRequests = new AtomicInteger(0);
+        final AtomicInteger maxInflight = new AtomicInteger(0);
+        try (MockSCMController c = MockSCMController.create().withLatency(new MockLatency() {
+            @Override
+            public void apply() throws InterruptedException {
+                int start = concurrentRequests.incrementAndGet();
+                try {
+                    Thread.sleep(1);
+                } finally {
+                    int end = concurrentRequests.getAndDecrement();
+                    int max = Math.max(start, end);
+                    int prevMax;
+                    while (max > (prevMax = maxInflight.get())) {
+                        maxInflight.compareAndSet(prevMax, max);
+                    }
+                }
+            }
+        })) {
+            c.createRepository("foo");
+            for (String n: branchNames) {
+                c.createBranch("foo", n);
+            }
+
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+
+            for (String n : branchNames) {
+                c.addFile("foo", n, "adding marker file", "marker.txt", "This is the marker".getBytes());
+            }
+            // now for the storm
+            long watermark = SCMEvents.getWatermark();
+            for (String n: branchNames) {
+                SCMHeadEvent.fireNow(new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", n, c.getRevision("foo", n)));
+                watermark = Math.max(watermark, SCMEvents.getWatermark());
+            }
+            SCMEvents.awaitAll(watermark);
+            r.waitUntilNoActivity();
+
+            List<FreeStyleProject> expected = new ArrayList<>();
+            for (String n : branchNames) {
+                FreeStyleProject branch = prj.getItem(n);
+                assertThat("We have the " + n + " branch", branch, notNullValue());
+                assertThat("The " + n + " branch was built", branch.getLastBuild(), notNullValue());
+                assertThat("The " + n + " branch was built", branch.getLastBuild().getNumber(), is(1));
+                expected.add(branch);
+            }
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+        }
+        assertThat("More than one event processed concurrently", maxInflight.get(), greaterThan(1));
+    }
+
+    @Test
+    @Ignore("Currently event processing is single threaded")
+    public void given_multibranch_when_oneEventBlocking_then_otherEventsProcessed() throws Exception {
+        List<String> branchNames = Arrays.asList( // top 20 names for boys and girls 2016 in case you are wondering
+                "Sophia", "Jackson", "Emma", "Aiden", "Olivia", "Lucas", "Ava", "Liam", "Mia", "Noah", "Isabella",
+                "Ethan", "Riley", "Mason", "Aria", "Caden", "Zoe", "Oliver", "Charlotte", "Elijah", "Lily", "Grayson",
+                "Layla", "Jacob", "Amelia", "Michael", "Emily", "Benjamin", "Madelyn", "Carter", "Aubrey", "James",
+                "Adalyn", "Jayden", "Madison", "Logan", "Chloe", "Alexander", "Harper", "Caleb"
+        );
+        final CountDownLatch block = new CountDownLatch(1);
+        final CountDownLatch ready = new CountDownLatch(1);
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            for (String n: branchNames) {
+                c.createBranch("foo", n);
+            }
+
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
+            c.addFault(new MockFailure() {
+                @Override
+                public void check(@CheckForNull String repository, @CheckForNull String branchOrCR,
+                                  @CheckForNull String revision,
+                                  boolean actions) throws IOException {
+                    if ("foo".equals(repository) && "master".equals(branchOrCR)) {
+                        try {
+                            ready.countDown();
+                            block.await(10, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            throw new IOException(e);
+                        }
+                    }
+                }
+            });
+            for (String n : branchNames) {
+                c.addFile("foo", n, "adding marker file", "marker.txt", "This is the marker".getBytes());
+            }
+            long watermark = SCMEvents.getWatermark();
+            SCMHeadEvent.fireNow(
+                    new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash")
+            );
+            ready.await(250, TimeUnit.MILLISECONDS);
+
+            // now for the other events
+            for (String n: branchNames) {
+                SCMHeadEvent.fireNow(new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", n, c.getRevision("foo", n)));
+                watermark = Math.max(watermark, SCMEvents.getWatermark());
+            }
+            SCMEvents.awaitAll(watermark, 5000, TimeUnit.MILLISECONDS);
+            r.waitUntilNoActivity();
+            assertThat("We don't have the master branch", prj.getItem("master"), nullValue());
+            List<FreeStyleProject> expected = new ArrayList<>();
+            for (String n : branchNames) {
+                FreeStyleProject branch = prj.getItem(n);
+                assertThat("We have the " + n + " branch", branch, notNullValue());
+                assertThat("The " + n + " branch was built", branch.getLastBuild(), notNullValue());
+                assertThat("The " + n + " branch was built", branch.getLastBuild().getNumber(), is(1));
+                expected.add(branch);
+            }
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+
+            // release the block
+            block.countDown();
+            SCMEvents.awaitAll(watermark);
+            r.waitUntilNoActivity();
+
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("We have the master branch", master, notNullValue());
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+
+            expected.add(master);
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+        } finally {
+            block.countDown(); // release it just in case to ensure any background threads get to terminate promptly
         }
     }
 
