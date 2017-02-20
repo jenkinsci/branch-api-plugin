@@ -217,10 +217,13 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
          * {@link jenkins.scm.api.SCMSourceObserver.ProjectObserver#addAttribute}
          * @return a new uninitialized multibranch project (do not configure its
          * {@link MultiBranchProject#getSourcesList} or call {@link MultiBranchProject#onCreatedFromScratch})
+         * @throws InterruptedException if interrupted.
+         * @throws IOException if there was an IO error.
          */
         @NonNull
         protected abstract MultiBranchProject<?, ?> doCreateProject(@NonNull ItemGroup<?> parent, @NonNull String name,
-                                                                    @NonNull Map<String, Object> attributes);
+                                                                    @NonNull Map<String, Object> attributes)
+                throws IOException, InterruptedException;
 
         /**
          * {@inheritDoc}
