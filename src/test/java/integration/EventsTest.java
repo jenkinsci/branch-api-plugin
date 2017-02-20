@@ -1146,8 +1146,8 @@ public class EventsTest {
             // now for the storm
             long watermark = SCMEvents.getWatermark();
             for (String n: branchNames) {
-                watermark = Math.max(watermark, SCMEvents.getWatermark());
                 SCMHeadEvent.fireNow(new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", n, c.getRevision("foo", n)));
+                watermark = Math.max(watermark, SCMEvents.getWatermark());
             }
             SCMEvents.awaitAll(watermark);
             r.waitUntilNoActivity();
@@ -1207,8 +1207,8 @@ public class EventsTest {
             // now for the storm
             long watermark = SCMEvents.getWatermark();
             for (String n: branchNames) {
-                watermark = Math.max(watermark, SCMEvents.getWatermark());
                 SCMHeadEvent.fireNow(new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", n, c.getRevision("foo", n)));
+                watermark = Math.max(watermark, SCMEvents.getWatermark());
             }
             SCMEvents.awaitAll(watermark);
             r.waitUntilNoActivity();
@@ -1269,14 +1269,14 @@ public class EventsTest {
             SCMHeadEvent.fireNow(
                     new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash")
             );
-            ready.await(100, TimeUnit.MILLISECONDS);
+            ready.await(250, TimeUnit.MILLISECONDS);
 
             // now for the other events
             for (String n: branchNames) {
-                watermark = Math.max(watermark, SCMEvents.getWatermark());
                 SCMHeadEvent.fireNow(new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", n, c.getRevision("foo", n)));
+                watermark = Math.max(watermark, SCMEvents.getWatermark());
             }
-            SCMEvents.awaitAll(watermark, 500, TimeUnit.MILLISECONDS);
+            SCMEvents.awaitAll(watermark, 5000, TimeUnit.MILLISECONDS);
             r.waitUntilNoActivity();
             assertThat("We don't have the master branch", prj.getItem("master"), nullValue());
             List<FreeStyleProject> expected = new ArrayList<>();
