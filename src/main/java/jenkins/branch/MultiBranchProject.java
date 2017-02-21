@@ -1319,11 +1319,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 candidateNames.clear();
                 revisionMaps.clear();
                 for (SCMSource source : p.getSCMSources()) {
-                    Map<SCMHead, SCMRevision> eventHeads = event.heads(source);
-                    if (!eventHeads.isEmpty()) {
-                        revisionMaps.put(source, eventHeads);
-                        for (SCMHead h: eventHeads.keySet()) {
-                            candidateNames.add(h.getName());
+                    if (event.isMatch(source)) {
+                        Map<SCMHead, SCMRevision> eventHeads = event.heads(source);
+                        if (!eventHeads.isEmpty()) {
+                            revisionMaps.put(source, eventHeads);
+                            for (SCMHead h : eventHeads.keySet()) {
+                                candidateNames.add(h.getName());
+                            }
                         }
                     }
                 }
