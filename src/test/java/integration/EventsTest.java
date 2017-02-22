@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import jenkins.branch.Branch;
 import jenkins.branch.BranchBuildStrategy;
@@ -1163,7 +1164,6 @@ public class EventsTest {
     }
 
     @Test
-    @Ignore("Currently event processing is single threaded")
     public void given_multibranch_when_eventStorm_then_eventsConcurrent()
             throws Exception {
         List<String> branchNames = Arrays.asList( // top 20 names for boys and girls 2016 in case you are wondering
@@ -1225,7 +1225,6 @@ public class EventsTest {
     }
 
     @Test
-    @Ignore("Currently event processing is single threaded")
     public void given_multibranch_when_oneEventBlocking_then_otherEventsProcessed() throws Exception {
         List<String> branchNames = Arrays.asList( // top 20 names for boys and girls 2016 in case you are wondering
                 "Sophia", "Jackson", "Emma", "Aiden", "Olivia", "Lucas", "Ava", "Liam", "Mia", "Noah", "Isabella",
@@ -1245,12 +1244,13 @@ public class EventsTest {
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
             c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
+            final AtomicBoolean tripActive = new AtomicBoolean(true);
             c.addFault(new MockFailure() {
                 @Override
                 public void check(@CheckForNull String repository, @CheckForNull String branchOrCR,
                                   @CheckForNull String revision,
                                   boolean actions) throws IOException {
-                    if ("foo".equals(repository) && "master".equals(branchOrCR)) {
+                    if ("foo".equals(repository) && "master".equals(branchOrCR) && tripActive.get()) {
                         try {
                             ready.countDown();
                             block.await(10, TimeUnit.SECONDS);
@@ -1263,18 +1263,19 @@ public class EventsTest {
             for (String n : branchNames) {
                 c.addFile("foo", n, "adding marker file", "marker.txt", "This is the marker".getBytes());
             }
-            long watermark = SCMEvents.getWatermark();
             SCMHeadEvent.fireNow(
                     new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash")
             );
             ready.await(250, TimeUnit.MILLISECONDS);
+            tripActive.set(false);
 
             // now for the other events
             for (String n: branchNames) {
                 SCMHeadEvent.fireNow(new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, c, "foo", n, c.getRevision("foo", n)));
-                watermark = Math.max(watermark, SCMEvents.getWatermark());
             }
-            SCMEvents.awaitAll(watermark, 5000, TimeUnit.MILLISECONDS);
+            while (prj.getItems().size() < branchNames.size()) {
+                Thread.sleep(50);
+            }
             r.waitUntilNoActivity();
             assertThat("We don't have the master branch", prj.getItem("master"), nullValue());
             List<FreeStyleProject> expected = new ArrayList<>();
@@ -1289,7 +1290,7 @@ public class EventsTest {
 
             // release the block
             block.countDown();
-            SCMEvents.awaitAll(watermark);
+            SCMEvents.awaitAll(SCMEvents.getWatermark());
             r.waitUntilNoActivity();
 
             FreeStyleProject master = prj.getItem("master");
