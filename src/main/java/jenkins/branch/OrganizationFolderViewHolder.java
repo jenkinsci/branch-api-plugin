@@ -217,7 +217,7 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
          */
         @Override
         public String getDisplayName() {
-            return category.getDisplayName().toString();
+            return category.getDisplayName().toString() + " (" + getItems().size() + ")";
         }
 
         /**
