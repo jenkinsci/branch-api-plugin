@@ -948,6 +948,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * {@inheritDoc}
          */
         @Override
+        public String getPronoun() {
+            return Messages.MultiBranchProject_BranchIndexing_pronoun();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public String getUrl() {
             return getParent().getUrl() + "indexing/";
         }

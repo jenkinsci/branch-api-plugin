@@ -843,6 +843,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             return Messages.OrganizationFolder_OrganizationScan_displayName(getParent().getPronoun());
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public String getPronoun() {
+            return Messages.OrganizationFolder_OrganizationScan_pronoun();
+        }
+
         @Override
         public void run() {
             long start = System.currentTimeMillis();
