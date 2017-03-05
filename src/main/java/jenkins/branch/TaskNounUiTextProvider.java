@@ -59,8 +59,11 @@ public class TaskNounUiTextProvider extends AlternativeUiTextProvider {
         try {
             Field taskNoun = AbstractItem.class.getDeclaredField("TASK_NOUN");
             message = (Message<AbstractItem>) taskNoun.get(null);
-        } catch (NoSuchFieldException | IllegalAccessException | ClassCastException e) {
+        } catch (NoSuchFieldException e) {
             LOGGER.log(Level.FINE, "This version of Jenkins does not have AbstractItem.TASK_NOUN", e);
+            message = null;
+        } catch (IllegalAccessException | ClassCastException e) {
+            LOGGER.log(Level.WARNING, "Could not access AbstractItem.TASK_NOUN by reflection", e);
             message = null;
         }
         this.taskNoun = message;
