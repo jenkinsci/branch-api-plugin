@@ -65,7 +65,7 @@ public class BasicDummyStepBranchProperty extends BranchProperty {
                 @Override
                 public FreeStyleProject project(@NonNull FreeStyleProject project) {
                     project.getBuildersList().add(
-                            Functions.isWindows() ? new BatchFile("set") : new Shell("set")
+                            Functions.isWindows() ? new BatchFile("set") : new Shell("env")
                     );
                     return super.project(project);
                 }
