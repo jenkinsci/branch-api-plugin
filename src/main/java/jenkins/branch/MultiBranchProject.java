@@ -1271,11 +1271,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
                 if (haveMatch) {
                     long start = System.currentTimeMillis();
-                    try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
+                    try (StreamTaskListener listener = p.getComputation().createEventsListener();
+                         ChildObserver childObserver = p.openEventsChildObserver()) {
                         try {
                             listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                                     start, eventClass, eventType, eventOrigin, eventTimestamp);
-                            ChildObserver childObserver = p.createEventsChildObserver();
                             for (SCMSource source : p.getSCMSources()) {
                                 if (event.isMatch(source)) {
                                     source.fetch(
@@ -1507,11 +1507,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     matchCount++;
                     global.getLogger().format("Found match against %s%n", pFullName);
                     long start = System.currentTimeMillis();
-                    try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
+                    try (StreamTaskListener listener = p.getComputation().createEventsListener();
+                         ChildObserver childObserver = p.openEventsChildObserver()) {
                         try {
                             listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                                     start, eventClass, eventType, eventOrigin, eventTimestamp);
-                            ChildObserver childObserver = p.createEventsChildObserver();
                             for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
                                 m.getKey().fetch(
                                         p.getSCMSourceCriteria(m.getKey()),
@@ -1597,10 +1597,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     }
                     if (haveMatch) {
                         long start = System.currentTimeMillis();
-                        try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
+                        try (StreamTaskListener listener = p.getComputation().createEventsListener();
+                             ChildObserver childObserver = p.openEventsChildObserver()) {
                             listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                                     start, eventClass, eventType, eventOrigin, eventTimestamp);
-                            ChildObserver childObserver = p.createEventsChildObserver();
                             try {
                                 for (SCMSource source : p.getSCMSources()) {
                                     if (event.isMatch(source)) {
@@ -1883,108 +1883,92 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * {@inheritDoc}
          */
         @Override
-        public void observe(@NonNull SCMHead head, @NonNull SCMRevision revision) {
+        public void observe(@NonNull SCMHead head, @NonNull SCMRevision revision) throws IOException, InterruptedException {
             Branch branch = newBranch(source, head);
             String rawName = branch.getName();
             String encodedName = branch.getEncodedName();
             P project = observer.shouldUpdate(encodedName);
-            Branch origBranch;
-            if (project == null) {
-                origBranch = null;
-            } else {
-                if (!_factory.isProject(project)) {
-                    listener.getLogger().println("Detected unsupported subitem "
-                            + ModelHyperlinkNote.encodeTo(project) + ", skipping");
-                    return;
-                }
-                origBranch = _factory.getBranch(project);
-                if (!(origBranch instanceof Branch.Dead)) {
-                    if (!source.getId().equals(origBranch.getSourceId())) {
-                        // check who has priority
-                        int ourPriority = Integer.MAX_VALUE;
-                        int oldPriority = Integer.MAX_VALUE;
-                        int p = 1;
-                        for (BranchSource s : sources) {
-                            String sId = s.getSource().getId();
-                            if (sId.equals(source.getId())) {
-                                ourPriority = p;
+            try {
+                Branch origBranch;
+                if (project == null) {
+                    origBranch = null;
+                } else {
+                    if (!_factory.isProject(project)) {
+                        listener.getLogger().println("Detected unsupported subitem "
+                                + ModelHyperlinkNote.encodeTo(project) + ", skipping");
+                        return;
+                    }
+                    origBranch = _factory.getBranch(project);
+                    if (!(origBranch instanceof Branch.Dead)) {
+                        if (!source.getId().equals(origBranch.getSourceId())) {
+                            // check who has priority
+                            int ourPriority = Integer.MAX_VALUE;
+                            int oldPriority = Integer.MAX_VALUE;
+                            int p = 1;
+                            for (BranchSource s : sources) {
+                                String sId = s.getSource().getId();
+                                if (sId.equals(source.getId())) {
+                                    ourPriority = p;
+                                }
+                                if (sId.equals(origBranch.getSourceId())) {
+                                    oldPriority = p;
+                                }
+                                p++;
                             }
-                            if (sId.equals(origBranch.getSourceId())) {
-                                oldPriority = p;
-                            }
-                            p++;
-                        }
-                        if (oldPriority < ourPriority) {
-                            listener.getLogger().println(
-                                    "Ignoring " + ModelHyperlinkNote.encodeTo(project) + " from source #"
-                                            + ourPriority + " as source #" +
-                                            oldPriority + " owns the branch name");
-                            return;
-                        } else {
-                            if (oldPriority == Integer.MAX_VALUE) {
+                            if (oldPriority < ourPriority) {
                                 listener.getLogger().println(
-                                        "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
-                                                + ourPriority
-                                                + " from source that no longer exists");
+                                        "Ignoring " + ModelHyperlinkNote.encodeTo(project) + " from source #"
+                                                + ourPriority + " as source #" +
+                                                oldPriority + " owns the branch name");
+                                return;
                             } else {
-                                listener.getLogger().println(
-                                        "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
-                                                + ourPriority
-                                                + " from source #" + oldPriority);
+                                if (oldPriority == Integer.MAX_VALUE) {
+                                    listener.getLogger().println(
+                                            "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
+                                                    + ourPriority
+                                                    + " from source that no longer exists");
+                                } else {
+                                    listener.getLogger().println(
+                                            "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
+                                                    + ourPriority
+                                                    + " from source #" + oldPriority);
+                                }
                             }
                         }
                     }
                 }
-            }
-            Action[] revisionActions = new Action[0];
-            boolean headActionsFetched = false;
-            try {
-                branch.setActions(source.fetchActions(head, event, listener));
-                headActionsFetched = true;
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace(listener.error("Could not fetch metadata of branch %s", rawName));
-            }
-            try {
-                List<Action> actions = source.fetchActions(revision, event, listener);
-                revisionActions = actions.toArray(new Action[actions.size()]);
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace(listener.error("Could not fetch metadata for revision %s of branch %s",
-                        revision, rawName));
-            }
-            if (project != null) {
-                boolean rebuild = (origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead))
-                        || !(source.getId().equals(origBranch.getSourceId()));
-                if (!headActionsFetched) {
-                    // we didn't fetch them so replicate previous actions
-                    branch.setActions(origBranch.getActions());
+                Action[] revisionActions = new Action[0];
+                boolean headActionsFetched = false;
+                try {
+                    branch.setActions(source.fetchActions(head, event, listener));
+                    headActionsFetched = true;
+                } catch (IOException | InterruptedException e) {
+                    e.printStackTrace(listener.error("Could not fetch metadata of branch %s", rawName));
                 }
-                boolean needSave = !branch.equals(origBranch) || !branch.getActions().equals(origBranch.getActions());
-                _factory.decorate(_factory.setBranch(project, branch));
-                if (rebuild) {
-                    listener.getLogger().format(
-                            "%s reopened: %s (%s)%n",
-                            StringUtils.defaultIfEmpty(head.getPronoun(), "Branch"),
-                            rawName,
-                            revision
-                    );
-                    needSave = true;
-                    if (isAutomaticBuild(source, head)) {
-                        scheduleBuild(
-                                _factory,
-                                project,
-                                revision,
-                                listener,
-                                rawName,
-                                causeFactory.create(),
-                                revisionActions
-                        );
-                    } else {
-                        listener.getLogger().format("No automatic builds for %s%n", rawName);
+                try {
+                    List<Action> actions = source.fetchActions(revision, event, listener);
+                    revisionActions = actions.toArray(new Action[actions.size()]);
+                } catch (IOException | InterruptedException e) {
+                    e.printStackTrace(listener.error("Could not fetch metadata for revision %s of branch %s",
+                            revision, rawName));
+                }
+                if (project != null) {
+                    boolean rebuild = (origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead))
+                            || !(source.getId().equals(origBranch.getSourceId()));
+                    if (!headActionsFetched) {
+                        // we didn't fetch them so replicate previous actions
+                        branch.setActions(origBranch.getActions());
                     }
-                } else if (revision.isDeterministic()) {
-                    SCMRevision lastBuild = _factory.getRevision(project);
-                    if (!revision.equals(lastBuild)) {
-                        listener.getLogger().format("Changes detected: %s (%s → %s)%n", rawName, lastBuild, revision);
+                    boolean needSave =
+                            !branch.equals(origBranch) || !branch.getActions().equals(origBranch.getActions());
+                    _factory.decorate(_factory.setBranch(project, branch));
+                    if (rebuild) {
+                        listener.getLogger().format(
+                                "%s reopened: %s (%s)%n",
+                                StringUtils.defaultIfEmpty(head.getPronoun(), "Branch"),
+                                rawName,
+                                revision
+                        );
                         needSave = true;
                         if (isAutomaticBuild(source, head)) {
                             scheduleBuild(
@@ -1999,16 +1983,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         } else {
                             listener.getLogger().format("No automatic builds for %s%n", rawName);
                         }
-                    } else {
-                        listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
-                    }
-                } else {
-                    // fall back to polling when we have a non-deterministic revision/hash.
-                    SCMTriggerItem scmProject = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
-                    if (scmProject != null) {
-                        PollingResult pollingResult = scmProject.poll(listener);
-                        if (pollingResult.hasChanges()) {
-                            listener.getLogger().format("Changes detected: %s%n", rawName);
+                    } else if (revision.isDeterministic()) {
+                        SCMRevision lastBuild = _factory.getRevision(project);
+                        if (!revision.equals(lastBuild)) {
+                            listener.getLogger()
+                                    .format("Changes detected: %s (%s → %s)%n", rawName, lastBuild, revision);
                             needSave = true;
                             if (isAutomaticBuild(source, head)) {
                                 scheduleBuild(
@@ -2024,66 +2003,95 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 listener.getLogger().format("No automatic builds for %s%n", rawName);
                             }
                         } else {
-                            listener.getLogger().format("No changes detected: %s%n", rawName);
+                            listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
+                        }
+                    } else {
+                        // fall back to polling when we have a non-deterministic revision/hash.
+                        SCMTriggerItem scmProject = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
+                        if (scmProject != null) {
+                            PollingResult pollingResult = scmProject.poll(listener);
+                            if (pollingResult.hasChanges()) {
+                                listener.getLogger().format("Changes detected: %s%n", rawName);
+                                needSave = true;
+                                if (isAutomaticBuild(source, head)) {
+                                    scheduleBuild(
+                                            _factory,
+                                            project,
+                                            revision,
+                                            listener,
+                                            rawName,
+                                            causeFactory.create(),
+                                            revisionActions
+                                    );
+                                } else {
+                                    listener.getLogger().format("No automatic builds for %s%n", rawName);
+                                }
+                            } else {
+                                listener.getLogger().format("No changes detected: %s%n", rawName);
+                            }
                         }
                     }
-                }
 
+                    try {
+                        if (needSave) {
+                            project.save();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace(listener.error("Could not save changes to " + rawName));
+                    }
+                    return;
+                }
+                if (!observer.mayCreate(encodedName)) {
+                    listener.getLogger().println("Ignoring duplicate branch project " + rawName);
+                    return;
+                }
+                try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
+                        MultiBranchProject.this, encodedName, branch.getName()
+                )) {
+                    if (getItem(encodedName) != null) {
+                        throw new IllegalStateException(
+                                "JENKINS-42511: attempted to redundantly create " + encodedName + " in "
+                                        + MultiBranchProject.this);
+                    }
+                    project = _factory.newInstance(branch);
+                }
+                if (!project.getName().equals(encodedName)) {
+                    throw new IllegalStateException(
+                            "Name of created project " + project + " did not match expected " + encodedName);
+                }
+                // HACK ALERT
+                // ==========
+                // We don't want to trigger a save, so we will do some trickery to ensure that observer.created(project)
+                // performs the save
+                BulkChange bc = new BulkChange(project);
                 try {
-                    if (needSave) {
-                        project.save();
+                    if (project.getDisplayNameOrNull() == null && !rawName.equals(encodedName)) {
+                        project.setDisplayName(rawName);
                     }
                 } catch (IOException e) {
-                    e.printStackTrace(listener.error("Could not save changes to " + rawName));
+                    // ignore even if it does happen we didn't want a save
+                } finally {
+                    bc.abort();
                 }
-                return;
-            }
-            if (!observer.mayCreate(encodedName)) {
-                listener.getLogger().println("Ignoring duplicate branch project " + rawName);
-                return;
-            }
-            try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                    MultiBranchProject.this, encodedName, branch.getName()
-            )){
-                if (getItem(encodedName) != null) {
-                    throw new IllegalStateException("JENKINS-42511: attempted to redundantly create " + encodedName + " in " + MultiBranchProject.this);
+                // decorate contract is to ensure it dowes not trigger a save
+                _factory.decorate(project);
+                // ok it is now up to the observer to ensure it does the actual save.
+                observer.created(project);
+                if (isAutomaticBuild(source, head)) {
+                    scheduleBuild(
+                            _factory,
+                            project,
+                            revision,
+                            listener,
+                            rawName,
+                            causeFactory.create(),
+                            revisionActions
+                    );
+                } else {
+                    listener.getLogger().format("No automatic builds for %s%n", rawName);
                 }
-                project = _factory.newInstance(branch);
-            }
-            if (!project.getName().equals(encodedName)) {
-                throw new IllegalStateException(
-                        "Name of created project " + project + " did not match expected " + encodedName);
-            }
-            // HACK ALERT
-            // ==========
-            // We don't want to trigger a save, so we will do some trickery to ensure that observer.created(project)
-            // performs the save
-            BulkChange bc = new BulkChange(project);
-            try {
-                if (project.getDisplayNameOrNull() == null && !rawName.equals(encodedName)) {
-                    project.setDisplayName(rawName);
-                }
-            } catch (IOException e) {
-                // ignore even if it does happen we didn't want a save
             } finally {
-                bc.abort();
-            }
-            // decorate contract is to ensure it dowes not trigger a save
-            _factory.decorate(project);
-            // ok it is now up to the observer to ensure it does the actual save.
-            observer.created(project);
-            if (isAutomaticBuild(source, head)) {
-                scheduleBuild(
-                        _factory,
-                        project,
-                        revision,
-                        listener,
-                        rawName,
-                        causeFactory.create(),
-                        revisionActions
-                );
-            } else {
-                listener.getLogger().format("No automatic builds for %s%n", rawName);
+                observer.completed(encodedName);
             }
         }
     }

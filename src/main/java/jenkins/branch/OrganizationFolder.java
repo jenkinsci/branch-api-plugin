@@ -951,8 +951,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 global.getLogger()
                                         .format("Project %s does not have a corresponding sub-project%n",
                                                 p.getFullName());
-                                try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
-                                    ChildObserver childObserver = p.createEventsChildObserver();
+                                try (StreamTaskListener listener = p.getComputation().createEventsListener();
+                                     ChildObserver childObserver = p.openEventsChildObserver()) {
                                     long start = System.currentTimeMillis();
                                     listener.getLogger()
                                             .format("[%tc] Received %s %s event from %s with timestamp %tc%n",
@@ -1134,8 +1134,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             }
                             if (haveMatch) {
                                 matchCount++;
-                                try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
-                                    ChildObserver childObserver = p.createEventsChildObserver();
+                                try (StreamTaskListener listener = p.getComputation().createEventsListener();
+                                     ChildObserver childObserver = p.openEventsChildObserver()) {
                                     long start = System.currentTimeMillis();
                                     listener.getLogger()
                                             .format("[%tc] Received %s %s event from %s with timestamp %tc%n",
@@ -1288,57 +1288,64 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         }
                         String folderName = NameEncoder.encode(projectName);
                         MultiBranchProject<?, ?> existing = observer.shouldUpdate(folderName);
-                        if (existing != null) {
-                            BulkChange bc = new BulkChange(existing);
+                        try {
+                            if (existing != null) {
+                                BulkChange bc = new BulkChange(existing);
+                                try {
+                                    existing.setSourcesList(createBranchSources());
+                                    existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                                    factory.updateExistingProject(existing, attributes, listener);
+                                    ProjectNameProperty property =
+                                            existing.getProperties().get(ProjectNameProperty.class);
+                                    if (property == null || !projectName.equals(property.getName())) {
+                                        existing.getProperties().remove(ProjectNameProperty.class);
+                                        existing.addProperty(new ProjectNameProperty(projectName));
+                                    }
+                                } finally {
+                                    bc.commit();
+                                }
+                                existing.scheduleBuild();
+                                return;
+                            }
+                            if (!observer.mayCreate(folderName)) {
+                                listener.getLogger()
+                                        .println("Ignoring duplicate child " + projectName + " named " + folderName);
+                                return;
+                            }
+                            MultiBranchProject<?, ?> project;
+                            try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
+                                    OrganizationFolder.this, folderName, projectName
+                            )) {
+                                if (getItem(folderName) != null) {
+                                    throw new IllegalStateException(
+                                            "JENKINS-42511: attempted to redundantly create " + folderName + " in "
+                                                    + OrganizationFolder.this);
+                                }
+                                project = factory.createNewProject(
+                                        OrganizationFolder.this, folderName, sources, attributes, listener
+                                );
+                            }
+                            BulkChange bc = new BulkChange(project);
                             try {
-                                existing.setSourcesList(createBranchSources());
-                                existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                                factory.updateExistingProject(existing, attributes, listener);
-                                ProjectNameProperty property =
-                                        existing.getProperties().get(ProjectNameProperty.class);
-                                if (property == null || !projectName.equals(property.getName())) {
-                                    existing.getProperties().remove(ProjectNameProperty.class);
-                                    existing.addProperty(new ProjectNameProperty(projectName));
+                                if (!projectName.equals(folderName)) {
+                                    project.setDisplayName(projectName);
+                                }
+                                project.addProperty(new ProjectNameProperty(projectName));
+                                project.setOrphanedItemStrategy(getOrphanedItemStrategy());
+                                project.getSourcesList().addAll(createBranchSources());
+                                try {
+                                    project.addTrigger(new PeriodicFolderTrigger("1d"));
+                                } catch (ANTLRException x) {
+                                    throw new IllegalStateException(x);
                                 }
                             } finally {
                                 bc.commit();
                             }
-                            existing.scheduleBuild();
-                            return;
-                        }
-                        if (!observer.mayCreate(folderName)) {
-                            listener.getLogger().println("Ignoring duplicate child " + projectName + " named " + folderName);
-                            return;
-                        }
-                        MultiBranchProject<?, ?> project;
-                        try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                                OrganizationFolder.this, folderName, projectName
-                        )) {
-                            if (getItem(folderName) != null) {
-                                throw new IllegalStateException("JENKINS-42511: attempted to redundantly create " + folderName + " in " + OrganizationFolder.this);
-                            }
-                            project = factory.createNewProject(
-                                    OrganizationFolder.this, folderName, sources, attributes, listener
-                            );
-                        }
-                        BulkChange bc = new BulkChange(project);
-                        try {
-                            if (!projectName.equals(folderName)) {
-                                project.setDisplayName(projectName);
-                            }
-                            project.addProperty(new ProjectNameProperty(projectName));
-                            project.setOrphanedItemStrategy(getOrphanedItemStrategy());
-                            project.getSourcesList().addAll(createBranchSources());
-                            try {
-                                project.addTrigger(new PeriodicFolderTrigger("1d"));
-                            } catch (ANTLRException x) {
-                                throw new IllegalStateException(x);
-                            }
+                            observer.created(project);
+                            project.scheduleBuild();
                         } finally {
-                            bc.commit();
+                            observer.completed(folderName);
                         }
-                        observer.created(project);
-                        project.scheduleBuild();
                     } catch (InterruptedException | IOException x) {
                         throw x;
                     } catch (Exception x) {
