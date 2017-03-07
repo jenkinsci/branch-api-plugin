@@ -28,14 +28,20 @@ package integration;
 import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.AbortException;
+import hudson.Functions;
+import hudson.model.Computer;
+import hudson.model.Executor;
 import hudson.model.FreeStyleProject;
+import hudson.model.OneOffExecutor;
+import hudson.model.Queue;
 import hudson.model.Result;
 import hudson.model.TopLevelItem;
+import hudson.model.queue.QueueTaskFuture;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
-import java.io.File;
 import java.io.IOException;
+import java.lang.management.ThreadInfo;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -66,18 +72,14 @@ import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMSource;
 import jenkins.scm.impl.mock.MockSCMSourceEvent;
-import org.apache.commons.io.FileUtils;
-import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
-import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
@@ -122,6 +124,18 @@ public class EventsTest {
     public void cleanOutAllItems() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
+        }
+        for (Computer comp : r.jenkins.getComputers()) {
+            for (Executor e : comp.getExecutors()) {
+                if (e.getCauseOfDeath() != null) {
+                    e.doYank();
+                }
+            }
+            for (Executor e : comp.getOneOffExecutors()) {
+                if (e.getCauseOfDeath() != null) {
+                    e.doYank();
+                }
+            }
         }
     }
 
@@ -775,6 +789,125 @@ public class EventsTest {
             assertThat("The master branch was not built", master.getLastBuild().getNumber(), is(1));
             assertThat(prj.getComputation().getEventsFile().lastModified(), is(lastModified));
         }
+    }
+
+    @Test
+    @Issue("JENKINS-42511")
+    public void given_multibranchWithSources_when_createEventWhileIndexing_then_onlyOneBuildCreated() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+
+            // Now we need some latency, this will ensure that the indexing and the event are interleaved during
+            // processing
+            c.withLatency(MockLatency.fixed(100, TimeUnit.MILLISECONDS));
+            // we have not received any events so far, so in fact this should be 0L
+            long lastModified = prj.getComputation().getEventsFile().lastModified();
+
+            QueueTaskFuture<Queue.Executable> future = prj.scheduleBuild2(0).getFuture();
+            SCMHeadEvent.fireNow(new MockSCMHeadEvent(
+                    "given_multibranchWithSources_when_createEventWhileIndexing_then_onlyOneBuildCreated",
+                    SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")
+            ));
+            future.get();
+            FreeStyleProject master = prj.getItem("master");
+            waitUntilNoActivityIgnoringThreadDeathUpTo(10000);
+
+            assertThat(prj.getComputation().getEventsFile().lastModified(), greaterThan(lastModified));
+            assertThat("The master branch was built once only", master.getLastBuild().getNumber(), is(1));
+            assertThat(master.getLastBuild().getResult(), is(Result.SUCCESS));
+            List<Throwable> deaths = new ArrayList<Throwable>();
+            for (Computer comp : r.jenkins.getComputers()) {
+                for (Executor e : comp.getExecutors()) {
+                    if (e.getCauseOfDeath() != null) {
+                        deaths.add(e.getCauseOfDeath());
+                    }
+                }
+                for (Executor e : comp.getOneOffExecutors()) {
+                    if (e.getCauseOfDeath() != null) {
+                        deaths.add(e.getCauseOfDeath());
+                    }
+                }
+            }
+            assertThat("None of the executors have died abnormally", deaths, containsInAnyOrder());
+        }
+    }
+
+    /**
+     * Waits until Hudson finishes building everything, including those in the queue, or fail the test
+     * if the specified timeout milliseconds is
+     */
+    public void waitUntilNoActivityIgnoringThreadDeathUpTo(int timeout) throws Exception {
+        long startTime = System.currentTimeMillis();
+        int streak = 0;
+
+        while (true) {
+            Thread.sleep(10);
+            if (isSomethingHappeningIgnoringThreadDeath())
+                streak = 0;
+            else
+                streak++;
+
+            if (streak > 5)   // the system is quiet for a while
+                return;
+
+            if (System.currentTimeMillis() - startTime > timeout) {
+                List<Queue.Executable> building = new ArrayList<Queue.Executable>();
+                List<Throwable> deaths = new ArrayList<Throwable>();
+                for (Computer c : r.jenkins.getComputers()) {
+                    for (Executor e : c.getExecutors()) {
+                        if (e.isBusy()) {
+                            if (e.getCauseOfDeath() == null) {
+                                building.add(e.getCurrentExecutable());
+                            } else {
+                                deaths.add(e.getCauseOfDeath());
+                            }
+                        }
+                    }
+                    for (Executor e : c.getOneOffExecutors()) {
+                        if (e.isBusy()) {
+                            if (e.getCauseOfDeath() == null) {
+                                building.add(e.getCurrentExecutable());
+                            } else {
+                                deaths.add(e.getCauseOfDeath());
+                            }
+                        }
+                    }
+                }
+                ThreadInfo[] threadInfos = Functions.getThreadInfos();
+                Functions.ThreadGroupMap m = Functions.sortThreadsAndGetGroupMap(threadInfos);
+                for (ThreadInfo ti : threadInfos) {
+                    System.err.println(Functions.dumpThreadInfo(ti, m));
+                }
+                throw new AssertionError(
+                        String.format("Jenkins is still doing something after %dms: queue=%s building=%s deaths=%s",
+                                timeout, Arrays.asList(r.jenkins.getQueue().getItems()), building, deaths));
+            }
+        }
+    }
+
+    /**
+     * Returns true if Hudson is building something or going to build something.
+     */
+    public boolean isSomethingHappeningIgnoringThreadDeath() {
+        if (!r.jenkins.getQueue().isEmpty()) {
+            return true;
+        }
+        for (Computer n : r.jenkins.getComputers()) {
+            for (OneOffExecutor e: n.getOneOffExecutors()) {
+                if (e.getCauseOfDeath() == null && e.isBusy()) {
+                    return true;
+                }
+            }
+            for (Executor e : n.getExecutors()) {
+                if (e.getCauseOfDeath() == null && e.isBusy()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Test
