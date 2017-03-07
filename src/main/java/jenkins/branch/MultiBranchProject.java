@@ -2043,8 +2043,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 return;
             }
             try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                    MultiBranchProject.this, branch.getEncodedName(), branch.getName()
+                    MultiBranchProject.this, encodedName, branch.getName()
             )){
+                if (getItem(encodedName) != null) {
+                    throw new IllegalStateException("JENKINS-42511: attempted to redundantly create " + encodedName + " in " + this);
+                }
                 project = _factory.newInstance(branch);
             }
             if (!project.getName().equals(encodedName)) {
