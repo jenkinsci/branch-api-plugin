@@ -1314,6 +1314,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
                                 OrganizationFolder.this, folderName, projectName
                         )) {
+                            if (getItem(folderName) != null) {
+                                throw new IllegalStateException("JENKINS-42511: attempted to redundantly create " + folderName + " in " + OrganizationFolder.this);
+                            }
                             project = factory.createNewProject(
                                     OrganizationFolder.this, folderName, sources, attributes, listener
                             );
