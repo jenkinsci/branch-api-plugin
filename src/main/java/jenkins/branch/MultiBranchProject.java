@@ -44,6 +44,7 @@ import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
 import hudson.model.Descriptor;
+import hudson.model.Failure;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Items;
@@ -54,6 +55,7 @@ import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
+import hudson.model.listeners.ItemListener;
 import hudson.model.listeners.SaveableListener;
 import hudson.scm.PollingResult;
 import hudson.security.ACL;
@@ -2227,6 +2229,20 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          */
         public final XmlFile getStateFile() {
             return new XmlFile(Items.XSTREAM, new File(owner.getRootDir(), "state.xml"));
+        }
+    }
+
+    /**
+     * Veto attempts to copy branch projects outside of their multibranch container. Only works on Jenkins core
+     * versions with JENKINS-34691 merged.
+     */
+    @Extension
+    public static class CopyItemVeto extends ItemListener {
+        //@Override // TODO once Jenkins core has JENKINS-34691 merged
+        public void onCheckCopy(Item item, ItemGroup parent) throws Failure {
+            if (item.getParent() instanceof MultiBranchProject) {
+                throw new Failure(Messages.MultiBranchProject_CopyItemVeto_reason());
+            }
         }
     }
 }
