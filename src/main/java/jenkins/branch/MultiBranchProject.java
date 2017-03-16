@@ -1776,9 +1776,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * {@link Cause#onAddedTo(Run)}.
          *
          * @return an array of new cause instances.
+         * @param source
          */
         @NonNull
-        abstract Cause[] create();
+        abstract Cause[] create(SCMSource source);
     }
 
     /**
@@ -1787,10 +1788,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     private static class IndexingCauseFactory extends CauseFactory {
         /**
          * {@inheritDoc}
+         * @param source
          */
         @NonNull
         @Override
-        Cause[] create() {
+        Cause[] create(SCMSource source) {
             return new Cause[]{new BranchIndexingCause()};
         }
     }
@@ -1811,13 +1813,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         /**
          * {@inheritDoc}
+         * @param source
          */
         @NonNull
         @Override
-        Cause[] create() {
+        Cause[] create(SCMSource source) {
             Cause[] eventCauses = event.asCauses();
             Cause[] result = new Cause[eventCauses.length + 1];
-            result[0] = new BranchEventCause(event);
+            result[0] = new BranchEventCause(event, event.descriptionFor(source));
             if (eventCauses.length > 0) {
                 System.arraycopy(eventCauses, 0, result, 1, eventCauses.length);
             }
@@ -1979,7 +1982,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     revision,
                                     listener,
                                     rawName,
-                                    causeFactory.create(),
+                                    causeFactory.create(source),
                                     revisionActions
                             );
                         } else {
@@ -1998,7 +2001,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                         revision,
                                         listener,
                                         rawName,
-                                        causeFactory.create(),
+                                        causeFactory.create(source),
                                         revisionActions
                                 );
                             } else {
@@ -2022,7 +2025,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                             revision,
                                             listener,
                                             rawName,
-                                            causeFactory.create(),
+                                            causeFactory.create(source),
                                             revisionActions
                                     );
                                 } else {
@@ -2086,7 +2089,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             revision,
                             listener,
                             rawName,
-                            causeFactory.create(),
+                            causeFactory.create(source),
                             revisionActions
                     );
                 } else {

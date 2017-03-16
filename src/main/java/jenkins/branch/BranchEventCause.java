@@ -32,6 +32,7 @@ import hudson.model.ItemGroup;
 import hudson.model.Run;
 import java.util.Date;
 import jenkins.scm.api.SCMEvent;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 
@@ -46,9 +47,12 @@ public final class BranchEventCause extends Cause {
     @NonNull
     private final String origin;
 
-    BranchEventCause(SCMEvent<?> event) {
+    private final String description;
+
+    BranchEventCause(@NonNull SCMEvent<?> event, @CheckForNull String description) {
         timestamp = event.getTimestamp();
         origin = event.getOrigin();
+        this.description = StringUtils.isBlank(description) ? event.description() : description;
     }
 
     /**
@@ -100,7 +104,7 @@ public final class BranchEventCause extends Cause {
      */
     @Override
     public String getShortDescription() {
-        return "Branch event";
+        return StringUtils.defaultIfBlank(description,"Branch event");
     }
 
 }
