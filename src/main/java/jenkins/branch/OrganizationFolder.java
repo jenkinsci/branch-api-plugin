@@ -916,8 +916,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public void onSCMHeadEvent(SCMHeadEvent<?> event) {
             try (StreamTaskListener global = globalEventsListener()) {
+                String globalEventDescription = StringUtils.defaultIfBlank(event.description(), event.getClass().getName());
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                        System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                        System.currentTimeMillis(),
+                        globalEventDescription,
+                        event.getType().name(),
                         event.getOrigin(), event.getTimestamp());
                 int matchCount = 0;
                 if (CREATED == event.getType() || UPDATED == event.getType()) {
@@ -953,12 +956,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 global.getLogger()
                                         .format("Project %s does not have a corresponding sub-project%n",
                                                 p.getFullName());
+                                String localEventDescription = StringUtils.defaultIfBlank(
+                                        event.descriptionFor(navigator),
+                                        globalEventDescription
+                                );
                                 try (StreamTaskListener listener = p.getComputation().createEventsListener();
                                      ChildObserver childObserver = p.openEventsChildObserver()) {
                                     long start = System.currentTimeMillis();
                                     listener.getLogger()
                                             .format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                                    start, event.getClass().getName(), event.getType().name(),
+                                                    start, localEventDescription, event.getType().name(),
                                                     event.getOrigin(),
                                                     event.getTimestamp());
                                     try {
@@ -974,23 +981,23 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                         long end = System.currentTimeMillis();
                                         listener.getLogger().format(
                                                 "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                                end, event.getClass().getName(), event.getType().name(),
+                                                end, localEventDescription, event.getType().name(),
                                                 event.getOrigin(), event.getTimestamp(),
                                                 Util.getTimeSpanString(end - start));
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace(global.error(
-                                            "[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
-
+                                            "[%tc] %s encountered an error while processing %s %s event from %s with "
+                                                    + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
+                                            globalEventDescription, event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
                                     e.printStackTrace(global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
+                                            globalEventDescription, event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                     throw e;
                                 }
@@ -999,13 +1006,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     } catch (InterruptedException e) {
                         e.printStackTrace(global.error(
                                 "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                                System.currentTimeMillis(), globalEventDescription, event.getType().name(),
                                 event.getOrigin(), event.getTimestamp()));
                     }
                 }
                 global.getLogger()
                         .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                                System.currentTimeMillis(), globalEventDescription, event.getType().name(),
                                 event.getOrigin(), event.getTimestamp(), matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
