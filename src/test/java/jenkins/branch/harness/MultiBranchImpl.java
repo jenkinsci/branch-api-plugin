@@ -49,6 +49,9 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
     private static Lock lastIndexLock = new ReentrantLock();
     private static Condition lastIndexUpdated = lastIndexLock.newCondition();
 
+    /**
+     * Awaits a fresh indexing where the index scheduling happens after the start of this method.
+     */
     public static boolean awaitIndexed(ItemGroup parent, String displayName, long timeout, TimeUnit units)
             throws InterruptedException {
         long nanos = units.toNanos(timeout);

@@ -25,6 +25,7 @@
 package jenkins.branch;
 
 import hudson.model.ItemGroup;
+import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.View;
 import java.util.concurrent.TimeUnit;
@@ -49,7 +50,12 @@ import jenkins.scm.impl.mock.MockSCM;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
+import org.apache.commons.io.FileUtils;
 import org.junit.Test;
+
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.*;
 
 import org.junit.Assert;
@@ -96,8 +102,13 @@ public class OrganizationFolderTest {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
             top.getNavigators().add(new MockSCMNavigator(c, true, true, true));
+            assertThat("Top level has not been scanned", top.getItem("stuff"), nullValue());
             top.scheduleBuild(0);
-            assertTrue(MultiBranchImpl.awaitIndexed(top, "stuff", 15, TimeUnit.SECONDS));
+            r.waitUntilNoActivity();
+            assertThat("Top level has been scanned", top.getItem("stuff"), notNullValue());
+            assertThat("We have run an index on the child item",
+                    top.getItem("stuff").getComputation().getResult(), is(Result.SUCCESS)
+            );
         }
     }
 
