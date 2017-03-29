@@ -28,11 +28,11 @@ THE SOFTWARE.
   <j:set var="url" value="${it.indexingUrl}"/>
   <j:choose>
     <j:when test="${url != null}">
-      <a href="${rootURL}/${url}events" title="${%origin(it.origin)}">${%blurb(it.timestamp)}</a>
+      <a href="${rootURL}/${url}events" title="${%origin(it.origin)}">${%blurb(it.shortDescription, it.timestamp)}</a>
     </j:when>
     <j:otherwise>
       <span title="${%origin(it.origin)}">
-      ${%blurb(it.timestamp)}
+      ${%blurb(it.shortDescription, it.timestamp)}
       </span>
     </j:otherwise>
   </j:choose>

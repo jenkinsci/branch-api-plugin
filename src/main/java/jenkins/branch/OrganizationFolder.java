@@ -45,6 +45,7 @@ import hudson.XmlFile;
 import hudson.console.ModelHyperlinkNote;
 import hudson.init.InitMilestone;
 import hudson.model.Action;
+import hudson.model.Cause;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
@@ -77,6 +78,7 @@ import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.TransientActionFactory;
+import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEventListener;
 import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMNavigator;
@@ -396,7 +398,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 listener.getLogger().format("[%tc] Consulting %s%n", System.currentTimeMillis(),
                         navigator.getDescriptor().getDisplayName());
                 try {
-                    navigator.visitSources(new SCMSourceObserverImpl(listener, observer));
+                    navigator.visitSources(new SCMSourceObserverImpl(listener, observer, navigator, (SCMSourceEvent<?>) null));
                 } catch (IOException | InterruptedException | RuntimeException e) {
                     e.printStackTrace(listener.error("[%tc] Could not fetch sources from navigator %s",
                             System.currentTimeMillis(), navigator));
@@ -914,8 +916,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public void onSCMHeadEvent(SCMHeadEvent<?> event) {
             try (StreamTaskListener global = globalEventsListener()) {
+                String globalEventDescription = StringUtils.defaultIfBlank(event.description(), event.getClass().getName());
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                        System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                        System.currentTimeMillis(),
+                        globalEventDescription,
+                        event.getType().name(),
                         event.getOrigin(), event.getTimestamp());
                 int matchCount = 0;
                 if (CREATED == event.getType() || UPDATED == event.getType()) {
@@ -951,17 +956,21 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 global.getLogger()
                                         .format("Project %s does not have a corresponding sub-project%n",
                                                 p.getFullName());
+                                String localEventDescription = StringUtils.defaultIfBlank(
+                                        event.descriptionFor(navigator),
+                                        globalEventDescription
+                                );
                                 try (StreamTaskListener listener = p.getComputation().createEventsListener();
                                      ChildObserver childObserver = p.openEventsChildObserver()) {
                                     long start = System.currentTimeMillis();
                                     listener.getLogger()
                                             .format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                                    start, event.getClass().getName(), event.getType().name(),
+                                                    start, localEventDescription, event.getType().name(),
                                                     event.getOrigin(),
                                                     event.getTimestamp());
                                     try {
                                         navigator.visitSources(
-                                                p.new SCMSourceObserverImpl(listener, childObserver, event),
+                                                p.new SCMSourceObserverImpl(listener, childObserver, navigator, event),
                                                 event);
                                     } catch (IOException e) {
                                         e.printStackTrace(listener.error(e.getMessage()));
@@ -972,23 +981,23 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                         long end = System.currentTimeMillis();
                                         listener.getLogger().format(
                                                 "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                                end, event.getClass().getName(), event.getType().name(),
+                                                end, localEventDescription, event.getType().name(),
                                                 event.getOrigin(), event.getTimestamp(),
                                                 Util.getTimeSpanString(end - start));
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace(global.error(
-                                            "[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
-
+                                            "[%tc] %s encountered an error while processing %s %s event from %s with "
+                                                    + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
+                                            globalEventDescription, event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
                                     e.printStackTrace(global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
+                                            globalEventDescription, event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                     throw e;
                                 }
@@ -997,13 +1006,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     } catch (InterruptedException e) {
                         e.printStackTrace(global.error(
                                 "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                                System.currentTimeMillis(), globalEventDescription, event.getType().name(),
                                 event.getOrigin(), event.getTimestamp()));
                     }
                 }
                 global.getLogger()
                         .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                                System.currentTimeMillis(), globalEventDescription, event.getType().name(),
                                 event.getOrigin(), event.getTimestamp(), matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
@@ -1145,8 +1154,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                         for (SCMNavigator n : p.getSCMNavigators()) {
                                             if (event.isMatch(n)) {
                                                 try {
-                                                    n.visitSources(p.new SCMSourceObserverImpl(listener, childObserver),
-                                                            event);
+                                                    n.visitSources(
+                                                            p.new SCMSourceObserverImpl(listener, childObserver, n,
+                                                                    event),
+                                                            event
+                                                    );
                                                 } catch (IOException e) {
                                                     e.printStackTrace(listener.error(e.getMessage()));
                                                 }
@@ -1203,18 +1215,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     private class SCMSourceObserverImpl extends SCMSourceObserver {
         private final TaskListener listener;
         private final ChildObserver<MultiBranchProject<?, ?>> observer;
-        private final SCMHeadEvent<?> event;
+        private final SCMEvent<?> event;
+        private final SCMNavigator navigator;
 
-        public SCMSourceObserverImpl(TaskListener listener, ChildObserver<MultiBranchProject<?, ?>> observer) {
+        public SCMSourceObserverImpl(TaskListener listener, ChildObserver<MultiBranchProject<?, ?>> observer,
+                                     SCMNavigator navigator, SCMEvent<?> event) {
             this.listener = listener;
             this.observer = observer;
-            this.event = null;
-        }
-
-        public SCMSourceObserverImpl(TaskListener listener,
-                                     ChildObserver<MultiBranchProject<?, ?>> observer, SCMHeadEvent<?> event) {
-            this.listener = listener;
-            this.observer = observer;
+            this.navigator = navigator;
             this.event = event;
         }
 
@@ -1268,7 +1276,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     projectName,
                                     sources,
                                     attributes,
-                                    event,
+                                    event instanceof SCMHeadEvent ? (SCMHeadEvent<?>) event : null,
                                     listener);
                 }
 
@@ -1304,7 +1312,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 } finally {
                                     bc.commit();
                                 }
-                                existing.scheduleBuild();
+                                existing.scheduleBuild(cause());
                                 return;
                             }
                             if (!observer.mayCreate(folderName)) {
@@ -1342,7 +1350,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 bc.commit();
                             }
                             observer.created(project);
-                            project.scheduleBuild();
+                            project.scheduleBuild(cause());
                         } finally {
                             observer.completed(folderName);
                         }
@@ -1359,6 +1367,22 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         public void addAttribute(@NonNull String key, Object value)
                 throws IllegalArgumentException, ClassCastException {
             throw new IllegalArgumentException();
+        }
+
+        private Cause cause() {
+            if (event instanceof SCMHeadEvent) {
+                return new BranchEventCause(event, ((SCMHeadEvent) event).descriptionFor(navigator));
+            }
+            if (event instanceof SCMSourceEvent) {
+                return new BranchEventCause(event, ((SCMSourceEvent) event).descriptionFor(navigator));
+            }
+            if (event instanceof SCMNavigatorEvent) {
+                return new BranchEventCause(event, ((SCMNavigatorEvent) event).descriptionFor(navigator));
+            }
+            if (event != null){
+                return new BranchEventCause(event, event.description());
+            }
+            return new BranchIndexingCause();
         }
     }
 
