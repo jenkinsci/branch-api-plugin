@@ -67,6 +67,7 @@ import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.impl.mock.MockFailure;
 import jenkins.scm.impl.mock.MockLatency;
+import jenkins.scm.impl.mock.MockRepositoryFlags;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMNavigator;
@@ -92,6 +93,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assume.assumeThat;
 
 public class EventsTest {
 
@@ -362,7 +364,6 @@ public class EventsTest {
     @Test
     public void
     given_multibranchWithSourcesWantingChangeRequestsOnly_when_indexing_then_onlyChangeRequestsAreFoundAndBuilt()
-
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -386,6 +387,92 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("The change request was built", cr.getLastBuild(), notNullValue());
             assertThat("The change request was built", cr.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithMergeableChangeRequests_when_indexing_then_mergableChangeRequestsBuilt()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo", MockRepositoryFlags.MERGEABLE);
+            c.createTag("foo", "master", "master-1.0");
+            Integer crNum = c.openChangeRequest("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", false, false, true)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("We now have projects",
+                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("We have no master branch", master, nullValue());
+            FreeStyleProject tag = prj.getItem("master-1.0");
+            assertThat("We have no master-1.0 tag", tag, nullValue());
+            FreeStyleProject cr = prj.getItem("CR-" + crNum);
+            assertThat("We have no plan CR", cr, nullValue());
+            FreeStyleProject crMerge = prj.getItem("CR-" + crNum+"-merge");
+            assertThat("We now have the merge change request", crMerge, notNullValue());
+            FreeStyleProject crHead = prj.getItem("CR-" + crNum+"-head");
+            assertThat("We now have the head change request", crHead, notNullValue());
+            assertThat("We have change requests but no tags or branches",
+                    prj.getItems(), containsInAnyOrder(crMerge, crHead));
+            r.waitUntilNoActivity();
+            assertThat("The merge change request was built", crMerge.getLastBuild(), notNullValue());
+            assertThat("The merge change request was built", crMerge.getLastBuild().getNumber(), is(1));
+            assertThat("The head change request was built", crHead.getLastBuild(), notNullValue());
+            assertThat("The head change request was built", crHead.getLastBuild().getNumber(), is(1));
+        }
+    }
+
+    @Test
+    public void given_multibranchWithMergeableChangeRequests_when_reindexing_then_mergableChangeRequestsRebuilt()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo", MockRepositoryFlags.MERGEABLE);
+            c.createTag("foo", "master", "master-1.0");
+            Integer crNum = c.openChangeRequest("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", false, false, true)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assumeThat("We now have projects",
+                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+            FreeStyleProject master = prj.getItem("master");
+            assumeThat("We have no master branch", master, nullValue());
+            FreeStyleProject tag = prj.getItem("master-1.0");
+            assumeThat("We have no master-1.0 tag", tag, nullValue());
+            FreeStyleProject cr = prj.getItem("CR-" + crNum);
+            assumeThat("We have no plan CR", cr, nullValue());
+            FreeStyleProject crMerge = prj.getItem("CR-" + crNum+"-merge");
+            assumeThat("We now have the merge change request", crMerge, notNullValue());
+            FreeStyleProject crHead = prj.getItem("CR-" + crNum+"-head");
+            assumeThat("We now have the head change request", crHead, notNullValue());
+            assumeThat("We have change requests but no tags or branches",
+                    prj.getItems(), containsInAnyOrder(crMerge, crHead));
+            r.waitUntilNoActivity();
+            assumeThat("The merge change request was built", crMerge.getLastBuild(), notNullValue());
+            assumeThat("The merge change request was built", crMerge.getLastBuild().getNumber(), is(1));
+            assumeThat("The head change request was built", crHead.getLastBuild(), notNullValue());
+            assumeThat("The head change request was built", crHead.getLastBuild().getNumber(), is(1));
+            c.addFile("foo", "master", "change the target", "file.txt", new byte[]{0});
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            master = prj.getItem("master");
+            assertThat("We still have no master branch", master, nullValue());
+            tag = prj.getItem("master-1.0");
+            assertThat("We still have no master-1.0 tag", tag, nullValue());
+            cr = prj.getItem("CR-" + crNum);
+            assertThat("We still have no plan CR", cr, nullValue());
+            crMerge = prj.getItem("CR-" + crNum + "-merge");
+            assertThat("We still have the merge change request", crMerge, notNullValue());
+            crHead = prj.getItem("CR-" + crNum + "-head");
+            assertThat("We still  have the head change request", crHead, notNullValue());
+            assertThat("We still have change requests but no tags or branches",
+                    prj.getItems(), containsInAnyOrder(crMerge, crHead));
+            r.waitUntilNoActivity();
+            assertThat("The merge change request was rebuilt", crMerge.getLastBuild().getNumber(), is(2));
+            assertThat("The head change request was not rebuilt", crHead.getLastBuild().getNumber(), is(1));
         }
     }
 
