@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.Future;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -121,7 +122,7 @@ public class RateLimitBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, false, false));
+            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
                     new RateLimitBranchProperty(rate, "hour")
             }));
@@ -190,7 +191,7 @@ public class RateLimitBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, false, false));
+            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
             BasicParameterDefinitionBranchProperty p = new BasicParameterDefinitionBranchProperty();
             p.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(new StringParameterDefinition("FOO", "BAR")));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
@@ -279,7 +280,7 @@ public class RateLimitBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, false, false));
+            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
                     new RateLimitBranchProperty(10, "day")
             }));

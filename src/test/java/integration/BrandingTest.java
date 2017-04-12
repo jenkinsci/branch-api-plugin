@@ -49,6 +49,7 @@ import jenkins.scm.api.SCMEvents;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMLink;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMSource;
@@ -100,7 +101,7 @@ public class BrandingTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -115,7 +116,7 @@ public class BrandingTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             fire(new MockSCMSourceEvent(SCMEvent.Type.UPDATED, c, "foo"));
             r.waitUntilNoActivity();
@@ -130,7 +131,7 @@ public class BrandingTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getItem("master").getAction(MockSCMLink.class), hasProperty("id", is("branch")));
@@ -144,7 +145,7 @@ public class BrandingTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -171,7 +172,7 @@ public class BrandingTest {
 
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -235,7 +236,7 @@ public class BrandingTest {
 
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -318,7 +319,7 @@ public class BrandingTest {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
@@ -338,7 +339,7 @@ public class BrandingTest {
             c.createRepository("España");
             c.createRepository("대한민국");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "multicultural");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
@@ -410,7 +411,7 @@ public class BrandingTest {
             c.createRepository("a*");
             c.createRepository("a/b");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "multicultural");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
@@ -453,7 +454,7 @@ public class BrandingTest {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
@@ -468,7 +469,7 @@ public class BrandingTest {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
@@ -484,7 +485,7 @@ public class BrandingTest {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
@@ -502,7 +503,7 @@ public class BrandingTest {
             c.setDescription("foo", "The Foo Project of Manchu");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getDescription(), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -518,7 +519,7 @@ public class BrandingTest {
             c.setDisplayName("foo", "Foo Project");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getDisplayName(), is("foo"));
             assertThat(prj.getDisplayNameOrNull(), nullValue());
             assertThat(prj.getAction(ObjectMetadataAction.class), nullValue());
@@ -537,7 +538,7 @@ public class BrandingTest {
             c.setDescription("foo", "The Foo Project of Manchu");
             c.setUrl("foo", "http://foo.manchu.example.com/");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -561,7 +562,7 @@ public class BrandingTest {
             c.setRepoIconClassName("icon-star");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getIcon().getIconClassName(), not(is("icon-star")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -576,7 +577,7 @@ public class BrandingTest {
             c.createRepository("foo");
             c.setOrgIconClassName("icon-star");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             assertThat(prj.getIcon().getIconClassName(), not(is("icon-star")));
             prj.scheduleBuild2(0).getFuture().get();
@@ -592,7 +593,7 @@ public class BrandingTest {
             c.createRepository("foo");
             c.setDisplayName("Foo Organization");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             assertThat(prj.getDisplayName(), is("foo"));
             prj.scheduleBuild2(0).getFuture().get();
@@ -609,7 +610,7 @@ public class BrandingTest {
             c.setDescription("The Foo of Manchu");
             c.setUrl("http://foo.manchu.example.com/");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();

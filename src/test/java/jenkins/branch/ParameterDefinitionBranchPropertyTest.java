@@ -36,6 +36,7 @@ import integration.harness.BasicMultiBranchProject;
 import java.util.Collections;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -121,7 +122,7 @@ public class ParameterDefinitionBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, false, false));
+            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
             ParameterDefinitionBranchPropertyImpl instance = new ParameterDefinitionBranchPropertyImpl();
             instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
                     new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")
@@ -153,7 +154,7 @@ public class ParameterDefinitionBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, false, false));
+            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
             ParameterDefinitionBranchPropertyImpl instance = new ParameterDefinitionBranchPropertyImpl();
             instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
                     new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")
