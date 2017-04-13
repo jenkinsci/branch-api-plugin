@@ -26,23 +26,28 @@ package jenkins.branch;
 
 import com.google.common.base.Charsets;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.FilePath;
-import hudson.model.Item;
-import hudson.model.Node;
-import hudson.model.Slave;
-import hudson.model.TopLevelItem;
+import hudson.model.*;
 import hudson.model.listeners.ItemListener;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import hudson.util.FormValidation;
+import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import jenkins.slaves.WorkspaceLocator;
+import net.sf.json.JSONObject;
 import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 /**
  * Chooses manageable workspace names for branch projects.
@@ -68,7 +73,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
         String minimized = minimize(item.getFullName());
         if (node instanceof Jenkins) {
-            return ((Jenkins) node).getRootPath().child("workspace/" + minimized);
+            return JenkinsWorkspaceBaseDirConfiguration.get().child(minimized);
         } else if (node instanceof Slave) {
             FilePath root = ((Slave) node).getWorkspaceRoot();
             return root != null ? root.child(minimized) : null;
@@ -119,7 +124,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             if (item.getParent() instanceof MultiBranchProject) {
                 String suffix = uniqueSuffix(item.getFullName());
                 Jenkins jenkins = Jenkins.getActiveInstance();
-                cleanUp(suffix, jenkins.getRootPath().child("workspace"), jenkins);
+                cleanUp(suffix, JenkinsWorkspaceBaseDirConfiguration.get().getFilePath(), jenkins);
                 for (Node node : jenkins.getNodes()) {
                     if (node instanceof Slave) {
                         cleanUp(suffix, ((Slave) node).getWorkspaceRoot(), node);
@@ -144,6 +149,95 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
         }
 
+    }
+
+    /**
+     * Configurable location of where the workspaces should be stored.
+     *
+     * @see "JENKINS-38837"
+     */
+    @Restricted(NoExternalUse.class)
+    @Extension
+    public static class JenkinsWorkspaceBaseDirConfiguration extends GlobalConfiguration {
+        private String path;
+
+        public JenkinsWorkspaceBaseDirConfiguration() {
+            load();
+        }
+
+        public static JenkinsWorkspaceBaseDirConfiguration get() {
+            return ExtensionList.lookup(GlobalConfiguration.class).get(JenkinsWorkspaceBaseDirConfiguration.class);
+        }
+
+        /**
+         * The base path, relative to $JENKINS_HOME or absolute.
+         * @return the path
+         */
+        public String getPath() {
+            if (StringUtils.isEmpty(path)) {
+                path = "workspace/";
+            }
+            return path;
+        }
+
+        /**
+         * The base path, relative to $JENKINS_HOME or absolute.
+         *
+         * @param path the path.
+         */
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public FilePath getFilePath() {
+            return Jenkins.getActiveInstance().getRootPath().child(this.getPath());
+        }
+
+        public FilePath child(String name) {
+            return getFilePath().child(name);
+        }
+
+        @Override
+        public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
+
+            FilePath base = Jenkins.getActiveInstance().getRootPath().child(json.getString("path"));
+            try {
+                if (!base.exists()) {
+                    base.mkdirs(); //Throws IOException if it fails
+                } else {
+                    base.child(".test").touch(System.currentTimeMillis()); //Throws IOException if it fails
+                }
+            } catch (IOException | InterruptedException e) {
+                LOGGER.log(Level.SEVERE, "MultiBranch workspace write test failed.", e);
+                throw new FormException("MultiBranch workspace write test failed: " + e.getMessage(), e, "path");
+            }
+
+            req.bindJSON(this, json);
+            save();
+            return true;
+        }
+
+        public FormValidation doCheckPath(@QueryParameter String value) {
+            FilePath base = Jenkins.getActiveInstance().getRootPath().child(value);
+            try {
+                if (!base.exists()) {
+                    return FormValidation.warning(Messages.JenkinsWorkspaceBaseDirConfiguration_PathDoesNotExist(base.getRemote()));
+                } else {
+                    if (base.absolutize().equals(Jenkins.getActiveInstance().getRootPath())) {
+                        //Quick simple check just in case
+                        return FormValidation.error(Messages.JenkinsWorkspaceBaseDirConfiguration_PathIsJenkinsHome());
+                    }
+                    try {
+                        base.child(".test").touch(System.currentTimeMillis());
+                    } catch (IOException e) {
+                        return FormValidation.error(Messages.JenkinsWorkspaceBaseDirConfiguration_NotWriteable(base.getRemote()));
+                    }
+                }
+            } catch (IOException | InterruptedException e) {
+                return FormValidation.warning(Messages.JenkinsWorkspaceBaseDirConfiguration_PathCheckFailed(e.getMessage()));
+            }
+            return FormValidation.ok();
+        }
     }
 
 }
