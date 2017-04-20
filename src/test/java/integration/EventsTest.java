@@ -402,7 +402,7 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             MockSCMSource source = new MockSCMSource(null, c, "foo", false, false, true);
-            source.setStrategies(EnumSet.of(ChangeRequestCheckoutStrategy.HEAD, ChangeRequestCheckoutStrategy.MERGE, ChangeRequestCheckoutStrategy.REBASE));
+            source.setStrategies(EnumSet.of(ChangeRequestCheckoutStrategy.HEAD, ChangeRequestCheckoutStrategy.MERGE));
             prj.getSourcesList().add(new BranchSource(source));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -416,17 +416,13 @@ public class EventsTest {
             assertThat("We have no plan CR", cr, nullValue());
             FreeStyleProject crMerge = prj.getItem("CR-" + crNum+"-merge");
             assertThat("We now have the merge change request", crMerge, notNullValue());
-            FreeStyleProject crRebase = prj.getItem("CR-" + crNum+"-rebase");
-            assertThat("We now have the rebase change request", crRebase, notNullValue());
             FreeStyleProject crHead = prj.getItem("CR-" + crNum+"-head");
             assertThat("We now have the head change request", crHead, notNullValue());
             assertThat("We have change requests but no tags or branches",
-                    prj.getItems(), containsInAnyOrder(crMerge, crRebase, crHead));
+                    prj.getItems(), containsInAnyOrder(crMerge, crHead));
             r.waitUntilNoActivity();
             assertThat("The merge change request was built", crMerge.getLastBuild(), notNullValue());
             assertThat("The merge change request was built", crMerge.getLastBuild().getNumber(), is(1));
-            assertThat("The rebase change request was built", crRebase.getLastBuild(), notNullValue());
-            assertThat("The rebase change request was built", crRebase.getLastBuild().getNumber(), is(1));
             assertThat("The head change request was built", crHead.getLastBuild(), notNullValue());
             assertThat("The head change request was built", crHead.getLastBuild().getNumber(), is(1));
         }
@@ -442,8 +438,7 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             MockSCMSource source = new MockSCMSource(null, c, "foo", false, false, true);
-            source.setStrategies(EnumSet.of(ChangeRequestCheckoutStrategy.HEAD, ChangeRequestCheckoutStrategy.MERGE,
-                    ChangeRequestCheckoutStrategy.REBASE));
+            source.setStrategies(EnumSet.of(ChangeRequestCheckoutStrategy.HEAD, ChangeRequestCheckoutStrategy.MERGE));
             prj.getSourcesList().add(new BranchSource(source));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -457,8 +452,6 @@ public class EventsTest {
             assumeThat("We have no plan CR", cr, nullValue());
             FreeStyleProject crMerge = prj.getItem("CR-" + crNum+"-merge");
             assumeThat("We now have the merge change request", crMerge, notNullValue());
-            FreeStyleProject crRebase = prj.getItem("CR-" + crNum + "-rebase");
-            assumeThat("We now have the rebase change request", crRebase, notNullValue());
             FreeStyleProject crHead = prj.getItem("CR-" + crNum+"-head");
             assumeThat("We now have the head change request", crHead, notNullValue());
             assumeThat("We have change requests but no tags or branches",
@@ -466,8 +459,6 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assumeThat("The merge change request was built", crMerge.getLastBuild(), notNullValue());
             assumeThat("The merge change request was built", crMerge.getLastBuild().getNumber(), is(1));
-            assumeThat("The rebase change request was built", crRebase.getLastBuild(), notNullValue());
-            assumeThat("The rebase change request was built", crRebase.getLastBuild().getNumber(), is(1));
             assumeThat("The head change request was built", crHead.getLastBuild(), notNullValue());
             assumeThat("The head change request was built", crHead.getLastBuild().getNumber(), is(1));
             c.addFile("foo", "master", "change the target", "file.txt", new byte[]{0});
@@ -481,15 +472,12 @@ public class EventsTest {
             assertThat("We still have no plan CR", cr, nullValue());
             crMerge = prj.getItem("CR-" + crNum + "-merge");
             assertThat("We still have the merge change request", crMerge, notNullValue());
-            crRebase = prj.getItem("CR-" + crNum + "-rebase");
-            assertThat("We still have the rebase change request", crRebase, notNullValue());
             crHead = prj.getItem("CR-" + crNum + "-head");
             assertThat("We still  have the head change request", crHead, notNullValue());
             assertThat("We still have change requests but no tags or branches",
-                    prj.getItems(), containsInAnyOrder(crMerge, crRebase, crHead));
+                    prj.getItems(), containsInAnyOrder(crMerge, crHead));
             r.waitUntilNoActivity();
             assertThat("The merge change request was rebuilt", crMerge.getLastBuild().getNumber(), is(2));
-            assertThat("The rebase change request was rebuilt", crRebase.getLastBuild().getNumber(), is(2));
             assertThat("The head change request was not rebuilt", crHead.getLastBuild().getNumber(), is(1));
         }
     }
