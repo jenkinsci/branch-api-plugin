@@ -75,7 +75,7 @@ public class BranchNameContributor extends EnvironmentContributor {
                     }
                 }
                 else if(head instanceof TagSCMHead) {
-                	envs.put("TAG_NAME", head.getName());
+                    envs.put("TAG_NAME", head.getName());
                 }
             }
         }
