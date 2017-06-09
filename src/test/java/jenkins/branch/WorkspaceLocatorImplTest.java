@@ -168,6 +168,7 @@ public class WorkspaceLocatorImplTest {
         p.scheduleBuild2(0).getFuture().get();
         r.waitUntilNoActivity();
         showComputation(p);
+        WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
         assertEquals(Collections.singletonList(master), r.jenkins.getAllItems(FreeStyleProject.class));
         assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), r.jenkins.getRootPath().child("workspace").listDirectories());
         assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), slave.getWorkspaceRoot().listDirectories());
