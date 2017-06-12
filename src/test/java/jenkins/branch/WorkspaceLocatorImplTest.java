@@ -24,6 +24,9 @@
 
 package jenkins.branch;
 
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import hudson.FilePath;
 import hudson.model.FreeStyleProject;
 import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
@@ -34,13 +37,12 @@ import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.impl.SingleSCMSource;
 import org.junit.Test;
+
+import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
 import org.junit.Rule;
-import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.*;
 
 public class WorkspaceLocatorImplTest {
 
@@ -131,6 +133,83 @@ public class WorkspaceLocatorImplTest {
         assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), slave.getWorkspaceFor(master));
         FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
         assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
+    }
+
+    @Issue("JENKINS-38837")
+    @Test
+    public void locateCustom() throws Exception {
+        TemporaryDirectoryAllocator tmp = new TemporaryDirectoryAllocator();
+        try {
+            File workspaces = tmp.allocate();
+            WorkspaceLocatorImpl.JenkinsWorkspaceBaseDirConfiguration.get().setPath(workspaces.getAbsolutePath());
+            MultiBranchImpl stuff = r.createProject(MultiBranchImpl.class, "stuff");
+            stuff.getSourcesList().add(new BranchSource(new SingleSCMSource(null, "dev/flow", new NullSCM())));
+            stuff.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            showComputation(stuff);
+            FreeStyleProject master = r.jenkins.getItemByFullName("stuff/dev%2Fflow", FreeStyleProject.class);
+            assertNotNull(master);
+            final String expectedName = "stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ";
+            assertEquals(new FilePath(new File(workspaces, expectedName)), r.jenkins.getWorkspaceFor(master));
+
+            FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
+            assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
+        } finally {
+            tmp.dispose();
+        }
+    }
+
+    @Issue("JENKINS-38837")
+    @Test
+    public void locateCustomRelative() throws Exception {
+        WorkspaceLocatorImpl.JenkinsWorkspaceBaseDirConfiguration.get().setPath("multipass");
+        MultiBranchImpl stuff = r.createProject(MultiBranchImpl.class, "stuff");
+        stuff.getSourcesList().add(new BranchSource(new SingleSCMSource(null, "dev/flow", new NullSCM())));
+        stuff.scheduleBuild2(0).getFuture().get();
+        r.waitUntilNoActivity();
+        showComputation(stuff);
+        FreeStyleProject master = r.jenkins.getItemByFullName("stuff/dev%2Fflow", FreeStyleProject.class);
+        assertNotNull(master);
+        assertEquals(r.jenkins.getRootPath().child("multipass/stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), r.jenkins.getWorkspaceFor(master));
+        FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
+        assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
+    }
+
+    @Issue("JENKINS-38837")
+    @Test
+    public void globalConfigRoundtrip() throws Exception {
+        assertFalse("workspace should not be created by default", r.jenkins.getRootPath().child("workspace").exists());
+        r.configRoundtrip();
+        assertEquals(r.jenkins.getRootPath().child("workspace"), WorkspaceLocatorImpl.JenkinsWorkspaceBaseDirConfiguration.get().getFilePath());
+        assertTrue(WorkspaceLocatorImpl.JenkinsWorkspaceBaseDirConfiguration.get().getFilePath().exists());
+
+        WorkspaceLocatorImpl.JenkinsWorkspaceBaseDirConfiguration.get().setPath("multipass");
+        final HtmlPage config = r.createWebClient().goTo("configure");
+        assertThat(config.getBody().asText(), containsString(Messages.JenkinsWorkspaceBaseDirConfiguration_PathDoesNotExist("multipass")));
+
+        r.configRoundtrip();
+        assertEquals(r.jenkins.getRootPath().child("multipass"), WorkspaceLocatorImpl.JenkinsWorkspaceBaseDirConfiguration.get().getFilePath());
+
+        TemporaryDirectoryAllocator tmp = new TemporaryDirectoryAllocator();
+        try {
+            File path = tmp.allocate();
+            WorkspaceLocatorImpl.JenkinsWorkspaceBaseDirConfiguration.get().setPath(path.getAbsolutePath());
+            r.configRoundtrip();
+            assertEquals(new FilePath(path), WorkspaceLocatorImpl.JenkinsWorkspaceBaseDirConfiguration.get().getFilePath());
+            path = tmp.allocate();
+            assertTrue("Could not mark dir readonly", path.setReadOnly());
+            WorkspaceLocatorImpl.JenkinsWorkspaceBaseDirConfiguration.get().setPath(path.getAbsolutePath());
+            try {
+                r.configRoundtrip();
+                fail("The configuration should have failed.");
+            } catch (FailingHttpStatusCodeException e) {
+                assertThat(e.getResponse().getContentAsString(), containsString("MultiBranch workspace write test failed: " + path.getAbsolutePath()));
+            }
+            assertTrue(path.setWritable(true));
+
+        } finally {
+            tmp.dispose();
+        }
     }
 
     @Issue({"JENKINS-2111", "JENKINS-41068"})
