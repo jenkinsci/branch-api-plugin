@@ -35,6 +35,7 @@ import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.impl.SingleSCMSource;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
@@ -49,10 +50,14 @@ public class WorkspaceLocatorImplTest {
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
+    @Before
+    public void defaultPathMax() {
+        WorkspaceLocatorImpl.PATH_MAX = WorkspaceLocatorImpl.PATH_MAX_DEFAULT;
+    }
+
     @WithoutJenkins
     @Test
     public void minimize() {
-        WorkspaceLocatorImpl.PATH_MAX = 80;
         assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM57BBNSYVIXGXHCE4KAEVPV5KZYQ", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("a_b_c_d-UMWYJ45JQ6FA3WXMSI3YEOLVQ5P6SFYWN26FRECRSFBUGUD27Y5A", WorkspaceLocatorImpl.minimize("a/b/c/d"));
         assertEquals("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
@@ -111,9 +116,6 @@ public class WorkspaceLocatorImplTest {
         assertEquals("W-LRVIZHY37B", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZW"));
         assertEquals("V-KLYOGWEJOD", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
         assertEquals("U-OSF24EPB4C", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
-        
-        // Reset back to 80 for other tests that assume it is 80.
-        WorkspaceLocatorImpl.PATH_MAX = 80;
     }
 
     @Issue("JENKINS-34564")
@@ -173,6 +175,23 @@ public class WorkspaceLocatorImplTest {
         assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), r.jenkins.getRootPath().child("workspace").listDirectories());
         assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), slave.getWorkspaceRoot().listDirectories());
         assertFalse(pr1Root.isDirectory());
+        // Also check behavior with customized paths.
+        WorkspaceLocatorImpl.PATH_MAX = 40;
+        p.getSourcesList().add(pr1Source);
+        p.scheduleBuild2(0).getFuture().get();
+        r.waitUntilNoActivity();
+        showComputation(p);
+        pr1 = r.jenkins.getItemByFullName("p/PR-1", FreeStyleProject.class);
+        assertNotNull(pr1);
+        pr1.setAssignedNode(slave);
+        assertEquals(slave.getWorkspaceRoot().child("p_PR-1-4FMSDR3M7ZFZIJ2EAYSJ4FQ5N"), slave.getWorkspaceFor(pr1));
+        assertEquals(2, r.buildAndAssertSuccess(pr1).getNumber());
+        p.getSourcesList().remove(pr1Source);
+        p.scheduleBuild2(0).getFuture().get();
+        r.waitUntilNoActivity();
+        showComputation(p);
+        WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
+        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), slave.getWorkspaceRoot().listDirectories());
     }
 
 }
