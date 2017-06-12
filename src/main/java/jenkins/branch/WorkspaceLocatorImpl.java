@@ -93,7 +93,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     /** copied from {@link Jenkins} */
     static String expandVariablesForDirectory(String base, String itemFullName, String itemRootDir) {
         return Util.replaceMacro(base, ImmutableMap.of(
-                "JENKINS_HOME", Jenkins.getInstance().getRootDir().getPath(),
+                "JENKINS_HOME", Jenkins.getActiveInstance().getRootDir().getPath(),
                 "ITEM_ROOTDIR", itemRootDir,
                 "ITEM_FULLNAME", itemFullName,   // legacy, deprecated
                 "ITEM_FULL_NAME", itemFullName.replace(':','$'))); // safe, see JENKINS-12251
