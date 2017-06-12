@@ -66,7 +66,7 @@
 
   <properties>
     <jenkins.version>1.642.3</jenkins.version>
-    <scm-api.version>2.2.0-SNAPSHOT</scm-api.version>
+    <scm-api.version>2.2.0-20170612.200107-11</scm-api.version>
   </properties>
 
   <repositories>
