@@ -24,14 +24,17 @@
 
 package jenkins.branch;
 
+import hudson.FilePath;
 import hudson.model.FreeStyleProject;
 import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.WorkspaceList;
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.Collections;
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
+import jenkins.model.Jenkins;
 import jenkins.scm.impl.SingleSCMSource;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -118,9 +121,10 @@ public class WorkspaceLocatorImplTest {
         assertEquals("U-OSF24EPB4C", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
     }
 
-    @Issue("JENKINS-34564")
+    @Issue({"JENKINS-34564", "JENKINS-38837"})
     @Test
     public void locate() throws Exception {
+        assertEquals("${JENKINS_HOME}/workspace/${ITEM_FULLNAME}", r.jenkins.getRawWorkspaceDir());
         MultiBranchImpl stuff = r.createProject(MultiBranchImpl.class, "stuff");
         stuff.getSourcesList().add(new BranchSource(new SingleSCMSource(null, "dev/flow", new NullSCM())));
         stuff.scheduleBuild2(0).getFuture().get();
@@ -133,6 +137,15 @@ public class WorkspaceLocatorImplTest {
         assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), slave.getWorkspaceFor(master));
         FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
         assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
+        // Checking other values of workspaceDir.
+        Field workspaceDir = Jenkins.class.getDeclaredField("workspaceDir"); // currently settable only by Jenkins.doConfigSubmit
+        workspaceDir.setAccessible(true);
+        // Poor historical default, and as per JENKINS-21942 even possible after some startup scenarios:
+        workspaceDir.set(r.jenkins, "${ITEM_ROOTDIR}/workspace");
+        assertEquals("JENKINS-34564 inactive in this case", new FilePath(master.getRootDir()).child("workspace"), r.jenkins.getWorkspaceFor(master));
+        // JENKINS-38837: customized root.
+        workspaceDir.set(r.jenkins, "${JENKINS_HOME}/ws/${ITEM_FULLNAME}");
+        assertEquals("ITEM_FULLNAME interpreted a little differently", r.jenkins.getRootPath().child("ws/stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), r.jenkins.getWorkspaceFor(master));
     }
 
     @Issue({"JENKINS-2111", "JENKINS-41068"})

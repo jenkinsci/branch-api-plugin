@@ -26,15 +26,18 @@ package jenkins.branch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Item;
 import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.model.TopLevelItem;
 import hudson.model.listeners.ItemListener;
+import java.io.File;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -74,13 +77,27 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
         String minimized = minimize(item.getFullName());
         if (node instanceof Jenkins) {
-            return ((Jenkins) node).getRootPath().child("workspace/" + minimized);
+            String workspaceDir = ((Jenkins) node).getRawWorkspaceDir();
+            if (!workspaceDir.contains("ITEM_FULL")) {
+                LOGGER.log(Level.WARNING, "JENKINS-34564 path sanitization ineffective when using legacy Workspace Root Directory ‘{0}’; switch to $'{'JENKINS_HOME'}'/workspace/$'{'ITEM_FULLNAME'}' as in JENKINS-8446 / JENKINS-21942", workspaceDir);
+            }
+            return new FilePath(new File(expandVariablesForDirectory(workspaceDir, minimized, item.getRootDir().getPath())));
         } else if (node instanceof Slave) {
             FilePath root = ((Slave) node).getWorkspaceRoot();
             return root != null ? root.child(minimized) : null;
         } else { // ?
             return null;
         }
+    }
+
+    /** copied from {@link Jenkins} */
+    static String expandVariablesForDirectory(String base, String itemFullName, String itemRootDir) {
+        return Util.replaceMacro(base, ImmutableMap.of(
+                "JENKINS_HOME", Jenkins.getInstance().getRootDir().getPath(),
+                "ITEM_ROOTDIR", itemRootDir,
+                "ITEM_FULLNAME", itemFullName,   // legacy, deprecated
+                "ITEM_FULL_NAME", itemFullName.replace(':','$'))); // safe, see JENKINS-12251
+
     }
 
     private static String uniqueSuffix(String name) {
