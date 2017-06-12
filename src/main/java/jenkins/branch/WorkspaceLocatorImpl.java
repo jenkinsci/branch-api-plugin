@@ -24,15 +24,22 @@
 
 package jenkins.branch;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.FilePath;
-import hudson.model.*;
+import hudson.model.Computer;
+import hudson.model.Item;
+import hudson.model.Node;
+import hudson.model.Slave;
+import hudson.model.TopLevelItem;
 import hudson.model.listeners.ItemListener;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -122,31 +129,83 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         @Override
         public void onDeleted(Item item) {
             if (item.getParent() instanceof MultiBranchProject) {
-                String suffix = uniqueSuffix(item.getFullName());
+                final String suffix = uniqueSuffix(item.getFullName());
                 Jenkins jenkins = Jenkins.getActiveInstance();
-                cleanUp(suffix, JenkinsWorkspaceBaseDirConfiguration.get().getFilePath(), jenkins);
+                Computer.threadPoolForRemoting.submit(new CleanupTask(suffix, JenkinsWorkspaceBaseDirConfiguration.get().getFilePath(), "master"));
                 for (Node node : jenkins.getNodes()) {
                     if (node instanceof Slave) {
-                        cleanUp(suffix, ((Slave) node).getWorkspaceRoot(), node);
+                        FilePath root = ((Slave) node).getWorkspaceRoot();
+                        if (root != null) {
+                            Computer.threadPoolForRemoting.submit(new CleanupTask(suffix, root, node.getNodeName()));
+                        }
                     }
                 }
             }
         }
 
-        private void cleanUp(String suffix, FilePath root, Node node) {
-            try {
-                if (root == null || !root.isDirectory()) {
-                    return;
-                }
-                for (FilePath child : root.listDirectories()) {
-                    if (child.getName().contains(suffix)) {
-                        LOGGER.log(Level.INFO, "deleting obsolete workspace {0} on {1}", new Object[] {child, node.getNodeName()});
-                        child.deleteRecursive();
-                    }
-                }
-            } catch (IOException | InterruptedException x) {
-                LOGGER.log(Level.WARNING, "could not clean up workspace directories under " + root + " on " + node.getNodeName(), x);
+        /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
+        private static int runningTasks;
+
+        @VisibleForTesting
+        static synchronized void waitForTasksToFinish() throws InterruptedException {
+            while (runningTasks > 0) {
+                Deleter.class.wait();
             }
+        }
+
+        private static synchronized void taskStarted() {
+            runningTasks++;
+        }
+
+        private static synchronized void taskFinished() {
+            runningTasks--;
+            Deleter.class.notifyAll();
+        }
+
+        private static class CleanupTask implements Runnable {
+
+            /** @see #uniqueSuffix */
+            @NonNull
+            private final String suffix;
+
+            @NonNull
+            private final FilePath root;
+
+            @NonNull
+            private final String nodeName;
+
+            CleanupTask(String suffix, FilePath root, String nodeName) {
+                this.suffix = suffix;
+                this.root = root;
+                this.nodeName = nodeName;
+                taskStarted();
+            }
+
+            @Override
+            public void run() {
+                Thread t = Thread.currentThread();
+                String oldName = t.getName();
+                t.setName(oldName + ": deleting workspace in " + suffix + " on " + nodeName);
+                try {
+                    try (Timeout timeout = Timeout.limit(5, TimeUnit.MINUTES)) {
+                        if (!root.isDirectory()) {
+                            return;
+                        }
+                        for (FilePath child : root.listDirectories()) {
+                            if (child.getName().contains(suffix)) {
+                                LOGGER.log(Level.INFO, "deleting obsolete workspace {0} on {1}", new Object[] {child, nodeName});
+                                child.deleteRecursive();
+                            }
+                        }
+                    } catch (IOException | InterruptedException x) {
+                        LOGGER.log(Level.WARNING, "could not clean up workspace directories under " + root + " on " + nodeName, x);
+                    }
+                } finally {
+                    t.setName(oldName);
+                    taskFinished();
+                }
+            }
+
         }
 
     }
