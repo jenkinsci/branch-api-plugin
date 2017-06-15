@@ -37,6 +37,9 @@ import jenkins.scm.api.SCMHead;
 import jenkins.scm.impl.mock.MockChangeRequestSCMHead;
 import jenkins.scm.impl.mock.MockSCM;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
+import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
+import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMRevision;
@@ -75,7 +78,7 @@ public class ScmApiTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, true, true)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(SCMHead.HeadByItem.findHead(prj.getItem("master")),
@@ -95,7 +98,8 @@ public class ScmApiTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, true, true)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(),
+                    new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(SCMHead.HeadByItem.findHead(prj), nullValue());
@@ -107,7 +111,7 @@ public class ScmApiTest {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
-            prj.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
             prj.getProjectFactories().replaceBy(Collections
                     .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
             prj.scheduleBuild2(0).getFuture().get();

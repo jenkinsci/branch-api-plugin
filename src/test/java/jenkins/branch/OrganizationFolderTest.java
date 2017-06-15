@@ -48,6 +48,9 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMSource;
 import jenkins.scm.impl.mock.MockSCM;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
+import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
+import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.apache.commons.io.FileUtils;
@@ -101,7 +104,7 @@ public class OrganizationFolderTest {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
-            top.getNavigators().add(new MockSCMNavigator(c, true, true, true));
+            top.getNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches(), new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests()));
             assertThat("Top level has not been scanned", top.getItem("stuff"), nullValue());
             top.scheduleBuild(0);
             r.waitUntilNoActivity();

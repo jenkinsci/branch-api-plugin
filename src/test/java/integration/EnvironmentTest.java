@@ -25,6 +25,7 @@
 
 package integration;
 
+import hudson.model.FreeStyleProject;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicBranchProjectFactory;
 import integration.harness.BasicDummyStepBranchProperty;
@@ -33,6 +34,9 @@ import jenkins.branch.BranchProperty;
 import jenkins.branch.BranchSource;
 import jenkins.branch.DefaultBranchPropertyStrategy;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
+import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
+import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMSource;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -42,6 +46,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 public class EnvironmentTest {
@@ -67,7 +72,7 @@ public class EnvironmentTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.setProjectFactory(new BasicBranchProjectFactory());
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, false, false));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             source.setStrategy(
                     new DefaultBranchPropertyStrategy(new BranchProperty[]{new BasicDummyStepBranchProperty()}));
             prj.getSourcesList().add(source);
@@ -85,7 +90,7 @@ public class EnvironmentTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.setProjectFactory(new BasicBranchProjectFactory());
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", false, false, true));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverChangeRequests()));
             source.setStrategy(
                     new DefaultBranchPropertyStrategy(new BranchProperty[]{new BasicDummyStepBranchProperty()}));
             prj.getSourcesList().add(source);
@@ -104,7 +109,7 @@ public class EnvironmentTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.setProjectFactory(new BasicBranchProjectFactory());
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", false, false, true));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverChangeRequests()));
             source.setStrategy(
                     new DefaultBranchPropertyStrategy(new BranchProperty[]{new BasicDummyStepBranchProperty()}));
             prj.getSourcesList().add(source);
@@ -129,6 +134,7 @@ public class EnvironmentTest {
         }
     }
 
+    @Test
     public void given_multibranch_when_buildingATag_then_environmentContainsTagName() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -136,13 +142,16 @@ public class EnvironmentTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.setProjectFactory(new BasicBranchProjectFactory());
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, true, false));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverTags()));
             source.setStrategy(
                     new DefaultBranchPropertyStrategy(new BranchProperty[]{new BasicDummyStepBranchProperty()}));
             prj.getSourcesList().add(source);
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
-            assertThat(r.getLog(prj.getItem("release").getBuildByNumber(1)), containsString("TAG_NAME=release"));
+            FreeStyleProject job = prj.getItem("release");
+            assertThat(job.getLastBuild(), nullValue());
+            r.buildAndAssertSuccess(job);
+            assertThat(r.getLog(job.getBuildByNumber(1)), containsString("TAG_NAME=release"));
         }
     }
 
