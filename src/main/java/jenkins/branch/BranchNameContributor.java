@@ -31,11 +31,12 @@ import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.TaskListener;
 import java.io.IOException;
-import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.actions.ChangeRequestAction;
 import jenkins.scm.api.metadata.ContributorMetadataAction;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
+import jenkins.scm.api.mixin.ChangeRequestSCMHead;
+import jenkins.scm.api.mixin.TagSCMHead;
 
 /**
  * Defines the environment variable {@code BRANCH_NAME} for multibranch builds.
@@ -72,6 +73,9 @@ public class BranchNameContributor extends EnvironmentContributor {
                         envs.putIfNotNull("CHANGE_AUTHOR_DISPLAY_NAME", cma.getContributorDisplayName());
                         envs.putIfNotNull("CHANGE_AUTHOR_EMAIL", cma.getContributorEmail());
                     }
+                }
+                if (head instanceof TagSCMHead) {
+                    envs.put("TAG_NAME", head.getName());
                 }
             }
         }
