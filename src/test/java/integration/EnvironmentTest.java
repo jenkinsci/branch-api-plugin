@@ -128,5 +128,22 @@ public class EnvironmentTest {
                     ));
         }
     }
+    
+    public void given_multibranch_when_buildingATag_then_environmentContainsTagName() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createTag("foo", "master", "release");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.setProjectFactory(new BasicBranchProjectFactory());
+            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", true, true, false));
+            source.setStrategy(
+                    new DefaultBranchPropertyStrategy(new BranchProperty[]{new BasicDummyStepBranchProperty()}));
+            prj.getSourcesList().add(source);
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat(r.getLog(prj.getItem("release").getBuildByNumber(1)), containsString("TAG_NAME=release"));
+        }
+    }
 
 }
