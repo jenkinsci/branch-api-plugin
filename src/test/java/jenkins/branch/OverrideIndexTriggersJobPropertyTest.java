@@ -27,22 +27,20 @@ package jenkins.branch;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.queue.QueueTaskFuture;
+import java.util.Collections;
+import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
+import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMNavigator;
-import org.jenkinsci.plugins.workflow.steps.scm.GitSampleRepoRule;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
-
-import java.util.Collections;
-
-import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
 public class OverrideIndexTriggersJobPropertyTest {
 
