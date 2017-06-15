@@ -33,11 +33,10 @@ import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.Date;
 import jenkins.scm.api.SCMHeadOrigin;
-import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.api.SCMHead;
-import jenkins.scm.api.actions.ChangeRequestAction;
 import jenkins.scm.api.metadata.ContributorMetadataAction;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
+import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead2;
 import jenkins.scm.api.mixin.TagSCMHead;
 
@@ -85,6 +84,7 @@ public class BranchNameContributor extends EnvironmentContributor {
                     }
                 }
                 if (head instanceof TagSCMHead) {
+                    envs.put("TAG_NAME", head.getName());
                     envs.putIfNotNull("TAG_TIMESTAMP", Long.toString(((TagSCMHead) head).getTimestamp()));
                     envs.putIfNotNull("TAG_UNIXTIME", Long.toString(((TagSCMHead) head).getTimestamp()/1000L));
                     envs.putIfNotNull("TAG_DATE", new Date(((TagSCMHead) head).getTimestamp()).toString());

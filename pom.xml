@@ -67,6 +67,7 @@
   <properties>
     <jenkins.version>1.642.3</jenkins.version>
     <scm-api.version>2.2.0-20170615.114844-13</scm-api.version>
+    <git-plugin.version>3.3.0</git-plugin.version>
   </properties>
 
   <repositories>
@@ -130,7 +131,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>git</artifactId>
-      <version>2.4.4</version>
+      <version>${git-plugin.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -145,6 +146,13 @@
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>git</artifactId>
+      <version>${git-plugin.version}</version>
+      <classifier>tests</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>junit</artifactId>
       <version>1.6</version>
       <scope>test</scope>
@@ -153,13 +161,6 @@
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>subversion</artifactId>
       <version>2.5</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency> <!-- TODO for GitSampleRepoRule; should this be pushed up into scm-api, or git, or jenkins-test-harness? -->
-      <groupId>org.jenkins-ci.plugins.workflow</groupId>
-      <artifactId>workflow-scm-step</artifactId>
-      <version>2.0</version>
-      <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
   </dependencies>

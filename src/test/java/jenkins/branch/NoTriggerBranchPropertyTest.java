@@ -32,7 +32,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.queue.QueueTaskFuture;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
-import org.jenkinsci.plugins.workflow.steps.scm.GitSampleRepoRule;
+import jenkins.plugins.git.GitSampleRepoRule;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Rule;

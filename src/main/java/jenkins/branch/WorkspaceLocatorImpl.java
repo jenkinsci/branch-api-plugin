@@ -26,18 +26,22 @@ package jenkins.branch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Item;
 import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.model.TopLevelItem;
 import hudson.model.listeners.ItemListener;
+import java.io.File;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -58,9 +62,10 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
     private static final Logger LOGGER = Logger.getLogger(WorkspaceLocatorImpl.class.getName());
 
+    static final int PATH_MAX_DEFAULT = 80;
     /** The most characters to allow in a workspace directory name, relative to the root. Zero to disable altogether. */
     // TODO 2.4+ use SystemProperties
-    static /* not final */ int PATH_MAX = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".PATH_MAX", 80);
+    static /* not final */ int PATH_MAX = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".PATH_MAX", PATH_MAX_DEFAULT);
 
     @Override
     public FilePath locate(TopLevelItem item, Node node) {
@@ -72,7 +77,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
         String minimized = minimize(item.getFullName());
         if (node instanceof Jenkins) {
-            return ((Jenkins) node).getRootPath().child("workspace/" + minimized);
+            String workspaceDir = ((Jenkins) node).getRawWorkspaceDir();
+            if (!workspaceDir.contains("ITEM_FULL")) {
+                LOGGER.log(Level.WARNING, "JENKINS-34564 path sanitization ineffective when using legacy Workspace Root Directory ‘{0}’; switch to $'{'JENKINS_HOME'}'/workspace/$'{'ITEM_FULLNAME'}' as in JENKINS-8446 / JENKINS-21942", workspaceDir);
+            }
+            return new FilePath(new File(expandVariablesForDirectory(workspaceDir, minimized, item.getRootDir().getPath())));
         } else if (node instanceof Slave) {
             FilePath root = ((Slave) node).getWorkspaceRoot();
             return root != null ? root.child(minimized) : null;
@@ -81,7 +90,17 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
     }
 
-    static String uniqueSuffix(String name) {
+    /** copied from {@link Jenkins} */
+    static String expandVariablesForDirectory(String base, String itemFullName, String itemRootDir) {
+        return Util.replaceMacro(base, ImmutableMap.of(
+                "JENKINS_HOME", Jenkins.getActiveInstance().getRootDir().getPath(),
+                "ITEM_ROOTDIR", itemRootDir,
+                "ITEM_FULLNAME", itemFullName,   // legacy, deprecated
+                "ITEM_FULL_NAME", itemFullName.replace(':','$'))); // safe, see JENKINS-12251
+
+    }
+
+    private static String uniqueSuffix(String name) {
         // TODO still in beta: byte[] sha256 = Hashing.sha256().hashString(name).asBytes();
         byte[] sha256;
         try {
@@ -120,16 +139,18 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         @Override
         public void onDeleted(Item item) {
-            if (item.getParent() instanceof MultiBranchProject) {
-                final String suffix = uniqueSuffix(item.getFullName());
-                Jenkins jenkins = Jenkins.getActiveInstance();
-                Computer.threadPoolForRemoting.submit(new CleanupTask(suffix, jenkins.getRootPath().child("workspace"), "master"));
+            if (!(item instanceof TopLevelItem)) {
+                return;
+            }
+            TopLevelItem tli = (TopLevelItem) item;
+            Jenkins jenkins = Jenkins.getActiveInstance();
+            FilePath masterLoc = new WorkspaceLocatorImpl().locate(tli, jenkins);
+            if (masterLoc != null) {
+                Computer.threadPoolForRemoting.submit(new CleanupTask(masterLoc, "master"));
                 for (Node node : jenkins.getNodes()) {
-                    if (node instanceof Slave) {
-                        FilePath root = ((Slave) node).getWorkspaceRoot();
-                        if (root != null) {
-                            Computer.threadPoolForRemoting.submit(new CleanupTask(suffix, root, node.getNodeName()));
-                        }
+                    FilePath slaveLoc = new WorkspaceLocatorImpl().locate(tli, node);
+                    if (slaveLoc != null) {
+                        Computer.threadPoolForRemoting.submit(new CleanupTask(slaveLoc, node.getNodeName()));
                     }
                 }
             }
@@ -156,41 +177,42 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         private static class CleanupTask implements Runnable {
 
-            /** @see #uniqueSuffix */
             @NonNull
-            private final String suffix;
-
-            @NonNull
-            private final FilePath root;
+            private final FilePath loc;
 
             @NonNull
             private final String nodeName;
 
-            CleanupTask(String suffix, FilePath root, String nodeName) {
-                this.suffix = suffix;
-                this.root = root;
+            CleanupTask(FilePath loc, String nodeName) {
+                this.loc = loc;
                 this.nodeName = nodeName;
                 taskStarted();
             }
 
             @Override
             public void run() {
+                String base = loc.getName();
+                FilePath parent = loc.getParent();
+                if (parent == null) { // unlikely but just in case
+                    return;
+                }
                 Thread t = Thread.currentThread();
                 String oldName = t.getName();
-                t.setName(oldName + ": deleting workspace in " + suffix + " on " + nodeName);
+                t.setName(oldName + ": deleting workspace in " + loc + " on " + nodeName);
                 try {
                     try (Timeout timeout = Timeout.limit(5, TimeUnit.MINUTES)) {
-                        if (!root.isDirectory()) {
+                        List<FilePath> dirs = parent.listDirectories();
+                        if (dirs == null) { // impossible as of https://github.com/jenkinsci/jenkins/pull/2914
                             return;
                         }
-                        for (FilePath child : root.listDirectories()) {
-                            if (child.getName().contains(suffix)) {
+                        for (FilePath child : dirs) {
+                            if (child.getName().startsWith(base)) {
                                 LOGGER.log(Level.INFO, "deleting obsolete workspace {0} on {1}", new Object[] {child, nodeName});
                                 child.deleteRecursive();
                             }
                         }
                     } catch (IOException | InterruptedException x) {
-                        LOGGER.log(Level.WARNING, "could not clean up workspace directories under " + root + " on " + nodeName, x);
+                        LOGGER.log(Level.WARNING, "could not clean up workspace directory " + loc + " on " + nodeName, x);
                     }
                 } finally {
                     t.setName(oldName);
