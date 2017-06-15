@@ -165,11 +165,13 @@ public class BranchNameContributorTest {
             instance.buildEnvironmentFor(tag, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
                     is("BRANCH_NAME"),
+                    is("TAG_NAME"),
                     is("TAG_TIMESTAMP"),
                     is("TAG_UNIXTIME"),
                     is("TAG_DATE")
             ));
             assertThat(env.get("BRANCH_NAME"), is("v1.0"));
+            assertThat(env.get("TAG_NAME"), is("v1.0"));
             assertThat(env.get("TAG_TIMESTAMP"), not(is("")));
             assertThat(env.get("TAG_UNIXTIME"), not(is("")));
             assertThat(env.get("TAG_DATE"), not(is("")));
