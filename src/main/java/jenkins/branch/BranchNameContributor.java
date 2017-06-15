@@ -31,16 +31,18 @@ import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.TaskListener;
 import java.io.IOException;
+import java.util.Date;
+import jenkins.scm.api.SCMHeadOrigin;
 import jenkins.scm.api.SCMHead;
-import jenkins.scm.api.actions.ChangeRequestAction;
 import jenkins.scm.api.metadata.ContributorMetadataAction;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
+import jenkins.scm.api.mixin.ChangeRequestSCMHead2;
 import jenkins.scm.api.mixin.TagSCMHead;
 
 /**
  * Defines the environment variable {@code BRANCH_NAME} for multibranch builds.
- * Also defines {@code CHANGE_*} variables when {@link ChangeRequestAction} is present.
+ * Also defines {@code CHANGE_*} variables for {@link ChangeRequestSCMHead} is present.
  */
 @Extension
 public class BranchNameContributor extends EnvironmentContributor {
@@ -61,7 +63,14 @@ public class BranchNameContributor extends EnvironmentContributor {
                 if (head instanceof ChangeRequestSCMHead) {
                     envs.putIfNotNull("CHANGE_ID", ((ChangeRequestSCMHead) head).getId());
                     SCMHead target = ((ChangeRequestSCMHead) head).getTarget();
-                    envs.put("CHANGE_TARGET", target.getName());
+                    envs.putIfNotNull("CHANGE_TARGET", target.getName());
+                    if (head instanceof ChangeRequestSCMHead2) {
+                        envs.putIfNotNull("CHANGE_BRANCH", ((ChangeRequestSCMHead2) head).getOriginName());
+                    }
+                    SCMHeadOrigin origin = head.getOrigin();
+                    if (origin instanceof SCMHeadOrigin.Fork) {
+                        envs.putIfNotNull("CHANGE_FORK", ((SCMHeadOrigin.Fork) origin).getName());
+                    }
                     ObjectMetadataAction oma = branch.getAction(ObjectMetadataAction.class);
                     if (oma != null) {
                         envs.putIfNotNull("CHANGE_URL", oma.getObjectUrl());
@@ -76,6 +85,9 @@ public class BranchNameContributor extends EnvironmentContributor {
                 }
                 if (head instanceof TagSCMHead) {
                     envs.put("TAG_NAME", head.getName());
+                    envs.putIfNotNull("TAG_TIMESTAMP", Long.toString(((TagSCMHead) head).getTimestamp()));
+                    envs.putIfNotNull("TAG_UNIXTIME", Long.toString(((TagSCMHead) head).getTimestamp()/1000L));
+                    envs.putIfNotNull("TAG_DATE", new Date(((TagSCMHead) head).getTimestamp()).toString());
                 }
             }
         }

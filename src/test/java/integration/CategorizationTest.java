@@ -35,6 +35,9 @@ import jenkins.scm.impl.ChangeRequestSCMHeadCategory;
 import jenkins.scm.impl.TagSCMHeadCategory;
 import jenkins.scm.impl.UncategorizedSCMHeadCategory;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
+import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
+import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMSource;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -85,7 +88,7 @@ public class CategorizationTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat("We have no items", prj.getItems(), empty());
             assertThat("We have the empty view when no items", prj.getViews(),
                     contains(instanceOf(MultiBranchProjectEmptyView.class)));
@@ -100,7 +103,7 @@ public class CategorizationTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),
@@ -127,7 +130,7 @@ public class CategorizationTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, false, true)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverChangeRequests())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),
@@ -161,7 +164,7 @@ public class CategorizationTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, true, false)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverTags())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),
@@ -195,7 +198,7 @@ public class CategorizationTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", false, true, true)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),
@@ -241,7 +244,7 @@ public class CategorizationTest {
             c.addFile("foo", "change-request/" + crNum2, "propose change", "CHANGE", "proposed".getBytes());
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", true, true, true)));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getItems(),

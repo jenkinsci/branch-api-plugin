@@ -37,6 +37,7 @@ import java.util.Map;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -136,7 +137,7 @@ public class MigrationTest {
             @Override
             public void evaluate() throws Throwable {
                 OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
-                foo.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+                foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
                 foo.getProjectFactories()
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
@@ -205,7 +206,7 @@ public class MigrationTest {
             @Override
             public void evaluate() throws Throwable {
                 OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
-                foo.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+                foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
                 foo.getProjectFactories()
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
@@ -275,7 +276,7 @@ public class MigrationTest {
             @Override
             public void evaluate() throws Throwable {
                 OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
-                foo.getSCMNavigators().add(new MockSCMNavigator(c, true, false, false));
+                foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
                 foo.getProjectFactories()
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
