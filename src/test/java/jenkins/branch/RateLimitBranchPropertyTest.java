@@ -122,7 +122,7 @@ public class RateLimitBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
                     new RateLimitBranchProperty(rate, "hour")
             }));
@@ -191,7 +191,7 @@ public class RateLimitBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             BasicParameterDefinitionBranchProperty p = new BasicParameterDefinitionBranchProperty();
             p.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(new StringParameterDefinition("FOO", "BAR")));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
@@ -280,7 +280,7 @@ public class RateLimitBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
                     new RateLimitBranchProperty(10, "day")
             }));

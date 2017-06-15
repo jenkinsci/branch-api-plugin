@@ -197,7 +197,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             r.waitUntilNoActivity();
             assertThat("Adding sources doesn't trigger indexing",
                     prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
@@ -210,7 +210,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have branches",
@@ -231,7 +231,7 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             // set the first list
-            prj.setSourcesList(Collections.singletonList(new BranchSource(new MockSCMSource("firstId", c, "foo", new MockSCMDiscoverBranches()))));
+            prj.setSourcesList(Collections.singletonList(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()).withId("firstId"))));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have branches",
@@ -244,7 +244,7 @@ public class EventsTest {
             Branch branch = prj.getProjectFactory().getBranch(master);
             assertThat("The branch source is the configured source", branch.getSourceId(), is("firstId"));
             prj.setSourcesList(
-                    Collections.singletonList(new BranchSource(new MockSCMSource("secondId", c, "foo", new MockSCMDiscoverBranches()))));
+                    Collections.singletonList(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()).withId("secondId"))));
             Branch updated = prj.getProjectFactory().getBranch(master);
             assertThat("The branch source is new configured source", updated.getSourceId(), is("secondId"));
             prj.scheduleBuild2(0).getFuture().get();
@@ -264,9 +264,9 @@ public class EventsTest {
             prj.setCriteria(null);
             // set the first list
             prj.setSourcesList(Arrays.asList(
-                    new BranchSource(new MockSCMSource("firstId", c, "foo", new MockSCMDiscoverBranches())),
-                    new BranchSource(new MockSCMSource("secondId", c, "foo", new MockSCMDiscoverChangeRequests())),
-                    new BranchSource(new MockSCMSource("thirdId", c, "bar", new MockSCMDiscoverBranches()))
+                    new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()).withId("firstId")),
+                    new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverChangeRequests()).withId("secondId")),
+                    new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches()).withId("thirdId"))
             ));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -292,9 +292,9 @@ public class EventsTest {
             assertThat("The fun branch source is the configured source",
                     prj.getProjectFactory().getBranch(fun).getSourceId(), is("thirdId"));
             prj.setSourcesList(Arrays.asList(
-                    new BranchSource(new MockSCMSource("idFirst", c, "foo", new MockSCMDiscoverBranches())),
-                    new BranchSource(new MockSCMSource("idThird", c, "bar", new MockSCMDiscoverBranches())),
-                    new BranchSource(new MockSCMSource("idSecond", c, "foo", new MockSCMDiscoverChangeRequests()))
+                    new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()).withId("idFirst")),
+                    new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches()).withId("idThird")),
+                    new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverChangeRequests()).withId("idSecond"))
             ));
             Branch updated = prj.getProjectFactory().getBranch(master);
             assertThat("The master branch source is new configured source",
@@ -319,7 +319,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
@@ -347,7 +347,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverTags())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverTags())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
@@ -375,7 +375,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverChangeRequests())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverChangeRequests())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
@@ -403,7 +403,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            MockSCMSource source = new MockSCMSource(null, c, "foo",
+            MockSCMSource source = new MockSCMSource(c, "foo",
                     new MockSCMDiscoverChangeRequests(
                             ChangeRequestCheckoutStrategy.HEAD,
                             ChangeRequestCheckoutStrategy.MERGE
@@ -443,7 +443,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            MockSCMSource source = new MockSCMSource(null, c, "foo", new MockSCMDiscoverChangeRequests(
+            MockSCMSource source = new MockSCMSource(c, "foo", new MockSCMDiscoverChangeRequests(
                     ChangeRequestCheckoutStrategy.HEAD, ChangeRequestCheckoutStrategy.MERGE));
             prj.getSourcesList().add(new BranchSource(source));
             prj.scheduleBuild2(0).getFuture().get();
@@ -497,7 +497,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverTags())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverTags())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
@@ -526,7 +526,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -563,7 +563,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches(),
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(),
                     new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -608,7 +608,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches(),
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(),
                     new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests()));
             source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new BuildEverythingStrategyImpl()));
             prj.getSourcesList().add(source);
@@ -656,7 +656,7 @@ public class EventsTest {
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches(),
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(),
                     new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests()));
             source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new BuildChangeRequestsStrategyImpl()));
             prj.getSourcesList().add(source);
@@ -687,7 +687,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("We now have branches",
                     prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
@@ -707,7 +707,7 @@ public class EventsTest {
             c.deleteBranch("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", SLASHY_BRANCH_NAME, "junkHash"));
             assertThat("We now have branches",
                     prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
@@ -729,7 +729,7 @@ public class EventsTest {
             c.deleteBranch("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", I18N_BRANCH_NAME, "junkHash"));
             assertThat("We now have branches",
                     prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
@@ -749,7 +749,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             FreeStyleProject master = prj.getItem("master");
             r.waitUntilNoActivity();
@@ -770,7 +770,7 @@ public class EventsTest {
             c.deleteBranch("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, c.getRevision("foo",
                     SLASHY_BRANCH_NAME)));
             FreeStyleProject branch = prj.getItem(SLASHY_JOB_NAME);
@@ -793,7 +793,7 @@ public class EventsTest {
             c.deleteBranch("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, c.getRevision("foo",
                     I18N_BRANCH_NAME)));
             FreeStyleProject branch = prj.getItem(I18N_JOB_NAME);
@@ -814,7 +814,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             FreeStyleProject master = prj.getItem("master");
             r.waitUntilNoActivity();
@@ -835,7 +835,7 @@ public class EventsTest {
             c.deleteBranch("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, c.getRevision("foo", SLASHY_BRANCH_NAME)));
             FreeStyleProject master = prj.getItem(SLASHY_JOB_NAME);
             r.waitUntilNoActivity();
@@ -856,7 +856,7 @@ public class EventsTest {
             c.deleteBranch("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, c.getRevision("foo", I18N_BRANCH_NAME)));
             FreeStyleProject master = prj.getItem(I18N_JOB_NAME);
             r.waitUntilNoActivity();
@@ -875,7 +875,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             FreeStyleProject master = prj.getItem("master");
             r.waitUntilNoActivity();
@@ -900,7 +900,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
             // Now we need some latency, this will ensure that the indexing and the event are interleaved during
             // processing
@@ -1018,7 +1018,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat("Adding sources doesn't trigger indexing",
                     prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "fork", "junkHash"));
@@ -1034,7 +1034,7 @@ public class EventsTest {
             c.createBranch("foo", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have branches",
@@ -1074,7 +1074,7 @@ public class EventsTest {
             c.createBranch("foo", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -1115,7 +1115,7 @@ public class EventsTest {
             c.createBranch("foo", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -1144,7 +1144,7 @@ public class EventsTest {
             c.createBranch("foo", "feature-1");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.setOrphanedItemStrategy(new DefaultOrphanedItemStrategy(true, null, "1"));
             prj.scheduleBuild2(0).getFuture().get();
             // eed to force the build time stamps
@@ -1209,7 +1209,7 @@ public class EventsTest {
             c.createBranch("foo", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -1237,7 +1237,7 @@ public class EventsTest {
             c.createBranch("foo", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -1267,7 +1267,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
 
@@ -1284,7 +1284,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("Events only validate the rumoured change",
@@ -1305,7 +1305,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
             c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
@@ -1326,7 +1326,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
             c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
@@ -1372,7 +1372,7 @@ public class EventsTest {
 
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
             for (String n : branchNames) {
                 c.addFile("foo", n, "adding marker file", "marker.txt", "This is the marker".getBytes());
@@ -1432,7 +1432,7 @@ public class EventsTest {
 
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
             for (String n : branchNames) {
                 c.addFile("foo", n, "adding marker file", "marker.txt", "This is the marker".getBytes());
@@ -1477,7 +1477,7 @@ public class EventsTest {
 
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
             final AtomicBoolean tripActive = new AtomicBoolean(true);
             c.addFault(new MockFailure() {
@@ -1547,7 +1547,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
             c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
             c.cloneBranch("foo", "master", "feature-1");
@@ -2032,7 +2032,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches(),
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(),
                     new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests())));
             assertThat(prj.getItems(),
                     empty()
@@ -2055,7 +2055,7 @@ public class EventsTest {
             c.createBranch("foo", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -2090,7 +2090,7 @@ public class EventsTest {
             c.cloneBranch("foo", "master", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -2122,8 +2122,10 @@ public class EventsTest {
             c.cloneBranch("bar", "master", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", new MockSCMDiscoverBranches())));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())
+                    .withId("foo:id")));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches())
+                    .withId("bar:id")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -2159,8 +2161,10 @@ public class EventsTest {
             c.cloneBranch("foo", "master", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", new MockSCMDiscoverBranches())));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())
+                    .withId("foo:id")));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches())
+                    .withId("bar:id")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -2197,8 +2201,10 @@ public class EventsTest {
             c.cloneBranch("bar", "master", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", new MockSCMDiscoverBranches())));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())
+                    .withId("foo:id")));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches())
+                    .withId("bar:id")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -2241,8 +2247,10 @@ public class EventsTest {
             c.cloneBranch("bar", "master","feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", new MockSCMDiscoverBranches())));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())
+                    .withId("foo:id")));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches())
+                    .withId("bar:id")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -2273,8 +2281,10 @@ public class EventsTest {
             c.cloneBranch("bar", "master", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", new MockSCMDiscoverBranches())));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())
+                    .withId("foo:id")));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches())
+                    .withId("bar:id")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -2304,8 +2314,10 @@ public class EventsTest {
             c.cloneBranch("bar", "master", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", new MockSCMDiscoverBranches())));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())
+                    .withId("foo:id")));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches())
+                    .withId("bar:id")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -2344,8 +2356,10 @@ public class EventsTest {
             c.cloneBranch("bar", "master", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", new MockSCMDiscoverBranches())));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())
+                    .withId("foo:id")));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches())
+                    .withId("bar:id")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");
@@ -2384,8 +2398,10 @@ public class EventsTest {
             c.cloneBranch("bar", "master", "feature");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("foo:id", c, "foo", new MockSCMDiscoverBranches())));
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource("bar:id", c, "bar", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())
+                    .withId("foo:id")));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "bar", new MockSCMDiscoverBranches())
+                    .withId("bar:id")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             FreeStyleProject master = prj.getItem("master");

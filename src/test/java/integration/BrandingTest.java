@@ -101,7 +101,7 @@ public class BrandingTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -116,7 +116,7 @@ public class BrandingTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             fire(new MockSCMSourceEvent(SCMEvent.Type.UPDATED, c, "foo"));
             r.waitUntilNoActivity();
@@ -131,7 +131,7 @@ public class BrandingTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(prj.getItem("master").getAction(MockSCMLink.class), hasProperty("id", is("branch")));
@@ -145,7 +145,7 @@ public class BrandingTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -172,7 +172,7 @@ public class BrandingTest {
 
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -236,7 +236,7 @@ public class BrandingTest {
 
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -503,7 +503,7 @@ public class BrandingTest {
             c.setDescription("foo", "The Foo Project of Manchu");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getDescription(), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -519,7 +519,7 @@ public class BrandingTest {
             c.setDisplayName("foo", "Foo Project");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getDisplayName(), is("foo"));
             assertThat(prj.getDisplayNameOrNull(), nullValue());
             assertThat(prj.getAction(ObjectMetadataAction.class), nullValue());
@@ -562,7 +562,7 @@ public class BrandingTest {
             c.setRepoIconClassName("icon-star");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches())));
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getIcon().getIconClassName(), not(is("icon-star")));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();

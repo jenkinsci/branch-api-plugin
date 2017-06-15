@@ -122,7 +122,7 @@ public class ParameterDefinitionBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             ParameterDefinitionBranchPropertyImpl instance = new ParameterDefinitionBranchPropertyImpl();
             instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
                     new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")
@@ -154,7 +154,7 @@ public class ParameterDefinitionBranchPropertyTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             ParameterDefinitionBranchPropertyImpl instance = new ParameterDefinitionBranchPropertyImpl();
             instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
                     new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")

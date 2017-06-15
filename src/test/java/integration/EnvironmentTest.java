@@ -69,7 +69,7 @@ public class EnvironmentTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.setProjectFactory(new BasicBranchProjectFactory());
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverBranches()));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             source.setStrategy(
                     new DefaultBranchPropertyStrategy(new BranchProperty[]{new BasicDummyStepBranchProperty()}));
             prj.getSourcesList().add(source);
@@ -87,7 +87,7 @@ public class EnvironmentTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.setProjectFactory(new BasicBranchProjectFactory());
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverChangeRequests()));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverChangeRequests()));
             source.setStrategy(
                     new DefaultBranchPropertyStrategy(new BranchProperty[]{new BasicDummyStepBranchProperty()}));
             prj.getSourcesList().add(source);
@@ -106,7 +106,7 @@ public class EnvironmentTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.setProjectFactory(new BasicBranchProjectFactory());
-            BranchSource source = new BranchSource(new MockSCMSource(null, c, "foo", new MockSCMDiscoverChangeRequests()));
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverChangeRequests()));
             source.setStrategy(
                     new DefaultBranchPropertyStrategy(new BranchProperty[]{new BasicDummyStepBranchProperty()}));
             prj.getSourcesList().add(source);
