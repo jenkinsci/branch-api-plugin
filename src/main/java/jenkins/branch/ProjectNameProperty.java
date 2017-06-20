@@ -28,6 +28,7 @@ package jenkins.branch;
 import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import jenkins.scm.api.SCMNavigator;
@@ -48,7 +49,7 @@ import org.kohsuke.stapler.StaplerRequest;
  *
  * @since 2.0.0
  */
-public class ProjectNameProperty extends AbstractFolderProperty<MultiBranchProject<?,?>> {
+public class ProjectNameProperty extends AbstractFolderProperty<MultiBranchProject<?, ?>> {
 
     private final String name;
 
@@ -67,6 +68,12 @@ public class ProjectNameProperty extends AbstractFolderProperty<MultiBranchProje
 
     @Extension
     public static class DescriptorImpl extends AbstractFolderPropertyDescriptor {
+        @NonNull
+        @Override
+        public String getDisplayName() {
+            return "Project name";
+        }
+
         @Override
         public boolean isApplicable(Class<? extends AbstractFolder> containerType) {
             return MultiBranchProject.class.isAssignableFrom(containerType);
