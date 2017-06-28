@@ -351,7 +351,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 try {
                     actions = navigator.fetchActions(this, null, listener);
                 } catch (IOException e) {
-                    e.printStackTrace(listener.error("[%tc] Could not refresh actions for navigator %s",
+                    MultiBranchProject.printStackTrace(e, listener.error("[%tc] Could not refresh actions for navigator %s",
                             System.currentTimeMillis(), navigator));
                     // preserve previous actions if we have some transient error fetching now (e.g. API rate limit)
                     actions = Util.fixNull(state.getActions().get(navigator));
@@ -373,7 +373,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     try {
                         bc.commit();
                     } catch (IOException | RuntimeException e) {
-                        e.printStackTrace(listener.error("[%tc] Could not persist folder level actions",
+                        MultiBranchProject.printStackTrace(e, listener.error("[%tc] Could not persist folder level actions",
                                 System.currentTimeMillis()));
                         throw e;
                     }
@@ -381,7 +381,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         try {
                             save();
                         } catch (IOException | RuntimeException e) {
-                            e.printStackTrace(listener.error(
+                            MultiBranchProject.printStackTrace(e, listener.error(
                                     "[%tc] Could not persist folder level configuration changes",
                                     System.currentTimeMillis()));
                             throw e;
@@ -400,7 +400,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 try {
                     navigator.visitSources(new SCMSourceObserverImpl(listener, observer, navigator, (SCMSourceEvent<?>) null));
                 } catch (IOException | InterruptedException | RuntimeException e) {
-                    e.printStackTrace(listener.error("[%tc] Could not fetch sources from navigator %s",
+                    MultiBranchProject.printStackTrace(e, listener.error("[%tc] Could not fetch sources from navigator %s",
                             System.currentTimeMillis(), navigator));
                     throw e;
                 }
@@ -973,9 +973,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                                 p.new SCMSourceObserverImpl(listener, childObserver, navigator, event),
                                                 event);
                                     } catch (IOException e) {
-                                        e.printStackTrace(listener.error(e.getMessage()));
+                                        MultiBranchProject.printStackTrace(e, listener.error(e.getMessage()));
                                     } catch (InterruptedException e) {
-                                        e.printStackTrace(listener.error(e.getMessage()));
+                                        MultiBranchProject.printStackTrace(e, listener.error(e.getMessage()));
                                         throw e;
                                     } finally {
                                         long end = System.currentTimeMillis();
@@ -986,14 +986,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                                 Util.getTimeSpanString(end - start));
                                     }
                                 } catch (IOException e) {
-                                    e.printStackTrace(global.error(
+                                    MultiBranchProject.printStackTrace(e, global.error(
                                             "[%tc] %s encountered an error while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
                                             globalEventDescription, event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
-                                    e.printStackTrace(global.error(
+                                    MultiBranchProject.printStackTrace(e, global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
@@ -1004,7 +1004,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             }
                         }
                     } catch (InterruptedException e) {
-                        e.printStackTrace(global.error(
+                        MultiBranchProject.printStackTrace(e, global.error(
                                 "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), globalEventDescription, event.getType().name(),
                                 event.getOrigin(), event.getTimestamp()));
@@ -1052,10 +1052,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                                 navigatorActions.put(navigator, newActions);
                                             }
                                         } catch (IOException e) {
-                                            e.printStackTrace(
+                                            MultiBranchProject.printStackTrace(e,
                                                     listener.error("Could not fetch metadata from %s", navigator));
                                         } catch (InterruptedException e) {
-                                            e.printStackTrace(listener.error(e.getMessage()));
+                                            MultiBranchProject.printStackTrace(e, listener.error(e.getMessage()));
                                             throw e;
                                         }
                                     }
@@ -1080,13 +1080,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                                 p.save();
                                             }
                                         } catch (IOException e) {
-                                            e.printStackTrace(listener.error("Could not persist updated metadata"));
+                                            MultiBranchProject.printStackTrace(e, listener.error("Could not persist updated metadata"));
                                         } finally {
                                             bc.abort();
                                         }
                                     }
                                 } catch (IOException e) {
-                                    e.printStackTrace(global.error(
+                                    MultiBranchProject.printStackTrace(e, global.error(
                                             "[%tc] %s encountered an error while processing %s %s event from %s with "
                                                     + "timestamp %tc",
 
@@ -1094,7 +1094,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                             event.getClass().getName(), event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
-                                    e.printStackTrace(global.error(
+                                    MultiBranchProject.printStackTrace(e, global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
@@ -1105,7 +1105,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             }
                         }
                     } catch (InterruptedException e) {
-                        e.printStackTrace(global.error(
+                        MultiBranchProject.printStackTrace(e, global.error(
                                 "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
                                 event.getOrigin(), event.getTimestamp()));
@@ -1160,12 +1160,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                                             event
                                                     );
                                                 } catch (IOException e) {
-                                                    e.printStackTrace(listener.error(e.getMessage()));
+                                                    MultiBranchProject.printStackTrace(e, listener.error(e.getMessage()));
                                                 }
                                             }
                                         }
                                     } catch (InterruptedException e) {
-                                        e.printStackTrace(listener.error(e.getMessage()));
+                                        MultiBranchProject.printStackTrace(e, listener.error(e.getMessage()));
                                         throw e;
                                     } finally {
                                         long end = System.currentTimeMillis();
@@ -1176,7 +1176,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                                 Util.getTimeSpanString(end - start));
                                     }
                                 } catch (IOException e) {
-                                    e.printStackTrace(global.error(
+                                    MultiBranchProject.printStackTrace(e, global.error(
                                             "[%tc] %s encountered an error while processing %s %s event from %s with "
                                                     + "timestamp %tc",
 
@@ -1184,7 +1184,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                             event.getClass().getName(), event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
-                                    e.printStackTrace(global.error(
+                                    MultiBranchProject.printStackTrace(e, global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
@@ -1195,7 +1195,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             }
                         }
                     } catch (InterruptedException e) {
-                        e.printStackTrace(global.error(
+                        MultiBranchProject.printStackTrace(e, global.error(
                                 "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
                                 event.getOrigin(), event.getTimestamp()));
