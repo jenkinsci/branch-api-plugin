@@ -1965,8 +1965,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         // we didn't fetch them so replicate previous actions
                         branch.setActions(origBranch.getActions());
                     }
-                    boolean needSave =
-                            !branch.equals(origBranch) || !branch.getActions().equals(origBranch.getActions());
+                    boolean needSave = !branch.equals(origBranch)
+                            || !branch.getActions().equals(origBranch.getActions())
+                            || !Util.getDigestOf(Items.XSTREAM2.toXML(branch.getScm()))
+                            .equals(Util.getDigestOf(Items.XSTREAM2.toXML(origBranch.getScm())));
                     _factory.decorate(_factory.setBranch(project, branch));
                     if (rebuild) {
                         listener.getLogger().format(
