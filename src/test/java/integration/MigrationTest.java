@@ -320,7 +320,7 @@ public class MigrationTest {
         String korea2Mangled = "0_d2_b9_c0_c.ps50ht._b8_5c_c6_b4";
         for (MultiBranchProject<?, ?> p : prj.getItems()) {
             String dirName = p.getRootDir().getName();
-            System.out.printf("%s ==> %s ==> %s%n", dirName, p.getName(), p.getDisplayName());
+            System.out.printf("%s ==> %s ==> %s == \"%s\"%n", dirName, p.getName(), p.getDisplayName(), asJavaString(p.getDisplayName()));
             byName.put(p.getName(), p);
             if (dirName.equals("Espan_03_03a.eqqe01")) {
                 // NFD
@@ -356,16 +356,8 @@ public class MigrationTest {
             byDisplayName.put(p.getDisplayName(), p);
             for (Job<?, ?> j : p.getItems()) {
                 String jobDirName = prj.getRootDir().getName() + "/" + p.getRootDir().getName() + "/" + j.getRootDir().getName();
-                System.out.printf("  %s ==> %s ==> %s%n", jobDirName, j.getName(), j.getDisplayName());
-                StringBuilder b = new StringBuilder();
-                for (char c: j.getDisplayName().toCharArray()) {
-                    if (c >=32 && c < 128) {
-                        b.append(c);
-                    } else {
-                        b.append("\\u").append(StringUtils.leftPad(Integer.toHexString(c&0xffff), 4, '0'));
-                    }
-                }
-                System.out.printf("      %s%n", b);
+                System.out.printf("  %s ==> %s ==> %s == \"%s\" %n", jobDirName, j.getName(), j.getDisplayName(),
+                        asJavaString(j.getDisplayName()));
                 if (j.getName().equals("0_11_10_1.m479ph0h00p7._6e_11_ab")) {
                     // NFD
                     korea2 = "\u1110\u1173\u11a8\u1109\u1162\u11a8/\u1109\u1162\u1105\u1169\u110b\u116e\u11ab";
@@ -464,5 +456,17 @@ public class MigrationTest {
 
         assertThat(prj.getItemByProjectName(ireland), notNullValue());
         assertThat(prj.getItemByProjectName(ireland).getItemByBranchName("gné/nua"), notNullValue());
+    }
+
+    private CharSequence asJavaString(String rawString) {
+        StringBuilder b = new StringBuilder();
+        for (char c: rawString.toCharArray()) {
+            if (c >=32 && c < 128) {
+                b.append(c);
+            } else {
+                b.append("\\u").append(StringUtils.leftPad(Integer.toHexString(c&0xffff), 4, '0'));
+            }
+        }
+        return b;
     }
 }
