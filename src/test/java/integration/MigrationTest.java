@@ -31,6 +31,7 @@ import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProjectFactory;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -349,11 +350,11 @@ public class MigrationTest {
                 jobByDisplayName.put(j.getFullDisplayName(), j);
                 File nameFile = new File(j.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
                 assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
-                assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile), is(j.getName()));
+                assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile, StandardCharsets.UTF_8), is(j.getName()));
             }
             File nameFile = new File(p.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
             assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
-            assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile), is(p.getName()));
+            assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile, StandardCharsets.UTF_8), is(p.getName()));
         }
         assertThat("Display Names are repo names", byDisplayName.keySet(), containsInAnyOrder(
                 "test.example.com",
