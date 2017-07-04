@@ -42,6 +42,8 @@ import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -325,25 +327,54 @@ public class MigrationTest {
                 espana = "Espa\u006e\u0303a";
                 espanaMangled = "Espan_03_03a.eqqe01";
             }
+            if (dirName.equals("Espan_cc_01_92a.po41g5")) {
+                // Windows-1252
+                espana = "EspanÌƒa";
+                espanaMangled = "Espan_cc_01_92a.po41g5";
+            }
             if (dirName.equals("E_03_01ireann.0qtq11")) {
                 // NFD
                 ireland = "E\u0301ireann";
                 irelandMangled = "E_03_01ireann.0qtq11";
+            }
+            if (dirName.equals("E_cc_ff_fdireann.k4nq8h")) {
+                // Windows-1252
+                ireland = "EÌ\ufffdireann";
+                irelandMangled = "E_cc_ff_fdireann.k4nq8h";
             }
             if (dirName.equals("0_11_03_1.3gi5g2rs7pg4._6e_11_a8")) {
                 // NFD
                 korea = "\u1103\u1162\u1112\u1161\u11ab\u1106\u1175\u11ab\u1100\u116e\u11a8";
                 koreaMangled = "0_11_03_1.3gi5g2rs7pg4._6e_11_a8";
             }
+            if (dirName.equals("0_e1_20_1.78185nsomvje._20_20_a8")) {
+                // Windows-1252
+                korea = "á„ƒá…¢á„’á…¡á†«á„†á…µá†«á„€á…®á†¨";
+                koreaMangled = "0_e1_20_1.78185nsomvje._20_20_a8";
+            }
             byDirName.put(dirName, p);
             byDisplayName.put(p.getDisplayName(), p);
             for (Job<?, ?> j : p.getItems()) {
                 String jobDirName = prj.getRootDir().getName() + "/" + p.getRootDir().getName() + "/" + j.getRootDir().getName();
                 System.out.printf("  %s ==> %s ==> %s%n", jobDirName, j.getName(), j.getDisplayName());
+                StringBuilder b = new StringBuilder();
+                for (char c: j.getDisplayName().toCharArray()) {
+                    if (c >=32 && c < 128) {
+                        b.append(c);
+                    } else {
+                        b.append("\\u").append(StringUtils.leftPad(Integer.toHexString(c&0xffff), 4, '0'));
+                    }
+                }
+                System.out.printf("      %s%n", b);
                 if (j.getName().equals("0_11_10_1.m479ph0h00p7._6e_11_ab")) {
                     // NFD
                     korea2 = "\u1110\u1173\u11a8\u1109\u1162\u11a8/\u1109\u1162\u1105\u1169\u110b\u116e\u11ab";
                     korea2Mangled = "0_11_10_1.m479ph0h00p7._6e_11_ab";
+                }
+                if (j.getName().equals("0_d2_b9_c0_c.ps50ht._b8_5c_c6_b4")) {
+                    // Windows-1252
+                    korea2 = "\u1110\u1173\u11a8\u1109\u1162\u11a8/\u1109\u1162\u1105\u1169\u110b\u116e\u11ab";
+                    korea2Mangled = "0_d2_b9_c0_c.ps50ht._b8_5c_c6_b4";
                 }
                 jobByName.put(j.getFullName(), j);
                 jobByDirName.put(jobDirName, j);
