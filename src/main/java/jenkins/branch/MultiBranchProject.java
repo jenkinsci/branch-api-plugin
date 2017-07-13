@@ -548,7 +548,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * {@inheritDoc}
      */
     public void onSCMSourceUpdated(@NonNull SCMSource source) {
-        scheduleBuild(0, new BranchIndexingCause());
+        if (isBuildable()) {
+            scheduleBuild(0, new BranchIndexingCause());
+        }
     }
 
     /**
@@ -644,6 +646,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     private void scheduleBuild(BranchProjectFactory<P, R> factory, final P item, SCMRevision revision,
                                TaskListener listener, String name, Cause[] cause, Action... actions) {
+        if (!isBuildable()) {
+            listener.getLogger().printf("Did not schedule build for branch: %s (%s is disabled)%n",
+                    name, getDisplayName());
+            return;
+        }
         Action[] _actions = new Action[actions.length + 1];
         _actions[0] = new CauseAction(cause);
         System.arraycopy(actions, 0, _actions, 1, actions.length);
@@ -982,11 +989,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * {@inheritDoc}
      */
     @Override
+    protected boolean supportsMakeDisabled() {
+        if (sources == null || sources.isEmpty()) {
+            return false;
+        }
+        return super.supportsMakeDisabled();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean isBuildable() {
         if (sources == null) {
             return false; // still loading
         }
-        return !sources.isEmpty();
+        return super.isBuildable() && !sources.isEmpty();
     }
 
     /**
@@ -1160,8 +1178,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 throws IOException, InterruptedException {
             Set<String> sourceIds = new HashSet<>();
             for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
-                sourceIds.clear();
                 String pFullName = p.getFullName();
+                if (!p.isBuildable()) {
+                    LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
+                            new Object[]{
+                                    eventDescription, eventType, eventTimestamp, pFullName
+                            }
+                    );
+                    continue;
+                }
+                sourceIds.clear();
                 LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Checking {3} for a match",
                         new Object[]{
                                 eventDescription, eventType, eventTimestamp, pFullName
@@ -1328,6 +1354,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             Set<Job<?, ?>> jobs = new HashSet<>();
             for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
+                if (!p.isBuildable()) {
+                    LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
+                            new Object[]{
+                                    eventDescription, eventType, eventTimestamp, pFullName
+                            }
+                    );
+                    continue;
+                }
                 LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Checking {3} for a match",
                         new Object[]{
                                 eventDescription, eventType, eventTimestamp, pFullName
@@ -1671,6 +1705,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     try {
                         for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance()
                                 .getAllItems(MultiBranchProject.class)) {
+                            if (!p.isBuildable()) {
+                                LOGGER.log(Level.FINER,
+                                        "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
+                                        new Object[]{
+                                                eventDescription, event.getType().name(), event.getTimestamp(),
+                                                p.getFullName()
+                                        }
+                                );
+                                continue;
+                            }
                             boolean haveMatch = false;
                             List<SCMSource> scmSources = p.getSCMSources();
                             for (SCMSource s : scmSources) {

@@ -320,9 +320,28 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         return new OrganizationScan(OrganizationFolder.this, previous);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isHasEvents() {
         return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean supportsMakeDisabled() {
+        return !navigators.isEmpty() && !projectFactories.isEmpty();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isBuildable() {
+        return super.isBuildable() && !navigators.isEmpty() && !projectFactories.isEmpty();
     }
 
     /**
@@ -926,6 +945,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 if (CREATED == event.getType() || UPDATED == event.getType()) {
                     try {
                         for (OrganizationFolder p : Jenkins.getActiveInstance().getAllItems(OrganizationFolder.class)) {
+                            if (!p.isBuildable()) {
+                                LOGGER.log(Level.FINER,
+                                        "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
+                                        new Object[]{
+                                                globalEventDescription,
+                                                event.getType().name(), event.getTimestamp(), p.getFullName()
+                                        }
+                                );
+                                continue;
+                            }
                             // we want to catch when a branch is created / updated and consequently becomes eligible
                             // against the criteria. First check if the event matches one of the navigators
                             SCMNavigator navigator = null;
@@ -1312,7 +1341,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 } finally {
                                     bc.commit();
                                 }
-                                existing.scheduleBuild(cause());
+                                if (isBuildable()) {
+                                    existing.scheduleBuild(cause());
+                                }
                                 return;
                             }
                             if (!observer.mayCreate(folderName)) {
@@ -1350,7 +1381,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 bc.commit();
                             }
                             observer.created(project);
-                            project.scheduleBuild(cause());
+                            if (isBuildable()) {
+                                project.scheduleBuild(cause());
+                            }
                         } finally {
                             observer.completed(folderName);
                         }
