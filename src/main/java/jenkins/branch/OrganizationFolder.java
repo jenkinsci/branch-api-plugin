@@ -946,13 +946,15 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     try {
                         for (OrganizationFolder p : Jenkins.getActiveInstance().getAllItems(OrganizationFolder.class)) {
                             if (!p.isBuildable()) {
-                                LOGGER.log(Level.FINER,
-                                        "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
-                                        new Object[]{
-                                                globalEventDescription,
-                                                event.getType().name(), event.getTimestamp(), p.getFullName()
-                                        }
-                                );
+                                if (LOGGER.isLoggable(Level.FINER)) {
+                                    LOGGER.log(Level.FINER,
+                                            "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
+                                            new Object[]{
+                                                    globalEventDescription,
+                                                    event.getType().name(), event.getTimestamp(), p.getFullName()
+                                            }
+                                    );
+                                }
                                 continue;
                             }
                             // we want to catch when a branch is created / updated and consequently becomes eligible
