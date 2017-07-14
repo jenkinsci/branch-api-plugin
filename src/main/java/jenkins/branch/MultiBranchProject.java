@@ -1706,13 +1706,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance()
                                 .getAllItems(MultiBranchProject.class)) {
                             if (!p.isBuildable()) {
-                                LOGGER.log(Level.FINER,
-                                        "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
-                                        new Object[]{
-                                                eventDescription, event.getType().name(), event.getTimestamp(),
-                                                p.getFullName()
-                                        }
-                                );
+                                if (LOGGER.isLoggable(Level.FINER)) {
+                                    LOGGER.log(Level.FINER,
+                                            "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
+                                            new Object[]{
+                                                    eventDescription, event.getType().name(), event.getTimestamp(),
+                                                    p.getFullName()
+                                            }
+                                    );
+                                }
                                 continue;
                             }
                             boolean haveMatch = false;
