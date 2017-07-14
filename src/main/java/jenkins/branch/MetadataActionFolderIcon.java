@@ -70,6 +70,9 @@ public class MetadataActionFolderIcon extends FolderIcon {
     @Override
     public String getIconClassName() {
         if (owner != null) {
+            if (owner.isDisabled()) {
+                return "icon-folder-disabled";
+            }
             AvatarMetadataAction action = owner.getAction(AvatarMetadataAction.class);
             if (action != null) {
                 String result = action.getAvatarIconClassName();
