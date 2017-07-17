@@ -332,14 +332,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * {@inheritDoc}
      */
     @Override
-    protected boolean supportsMakeDisabled() {
-        return !navigators.isEmpty() && !projectFactories.isEmpty();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public boolean isBuildable() {
         return super.isBuildable() && !navigators.isEmpty() && !projectFactories.isEmpty();
     }
