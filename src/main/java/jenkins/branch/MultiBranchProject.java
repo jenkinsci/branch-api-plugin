@@ -991,17 +991,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * {@inheritDoc}
      */
     @Override
-    protected boolean supportsMakeDisabled() {
-        if (sources == null || sources.isEmpty()) {
-            return false;
-        }
-        return super.supportsMakeDisabled();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public boolean isBuildable() {
         if (sources == null) {
             return false; // still loading
