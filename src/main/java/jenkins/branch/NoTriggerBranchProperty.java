@@ -37,7 +37,9 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
- * Suppresses builds due to {@link BranchIndexingCause}.
+ * Suppresses builds due to either {@link BranchIndexingCause} or {@link BranchEventCause}.
+ * The purpose of this property is to prevent triggering builds resulting from the <em>detection</em>
+ * of changes in the underlying SCM.
  */
 @Restricted(NoExternalUse.class)
 public class NoTriggerBranchProperty extends BranchProperty {
