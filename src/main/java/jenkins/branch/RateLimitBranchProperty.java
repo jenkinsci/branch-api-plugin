@@ -320,7 +320,7 @@ public class RateLimitBranchProperty extends BranchProperty {
          * @return the minimum time between builds required to enforce the throttle.
          */
         public long getMillisecondsBetweenBuilds() {
-            return getCount() == 0 ? 0 : getDuration() / (Math.max(1, getCount()));
+            return getCount() == 0 ? 0 : getDuration() * (Math.max(1, getCount()));
         }
 
         /**
