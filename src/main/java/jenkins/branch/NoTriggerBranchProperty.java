@@ -76,20 +76,21 @@ public class NoTriggerBranchProperty extends BranchProperty {
                                 Job<?,?> j = (Job) p;
                                 if (j.getParent() instanceof MultiBranchProject) {
 
-                                    OverrideIndexTriggersJobProperty overrideProp;
                                     if (c instanceof BranchIndexingCause) {
-                                        overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
+                                        OverrideIndexTriggersJobProperty overrideIndexProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
+                                        if (overrideIndexProp != null ){
+                                            return overrideIndexProp.getEnableTriggers();
+                                        }
                                     } else if(c instanceof BranchEventCause) {
-                                        overrideProp = j.getProperty(OverrideEventTriggersJobProperty.class);
+                                        OverrideEventTriggersJobProperty overrideEventProp = j.getProperty(OverrideEventTriggersJobProperty.class);
+                                        if (overrideEventProp != null ){
+                                            return overrideEventProp.getEnableTriggers();
+                                        }                                    
                                     }
-                                    
-                                    if (overrideProp != null) {
-                                        return overrideProp.getEnableTriggers();
-                                    } else {
-                                        for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
-                                            if (prop instanceof NoTriggerBranchProperty) {
-                                                return false;
-                                            }
+
+                                    for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
+                                        if (prop instanceof NoTriggerBranchProperty) {
+                                            return false;
                                         }
                                     }
                                 }
