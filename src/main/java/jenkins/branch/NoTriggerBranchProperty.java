@@ -76,14 +76,13 @@ public class NoTriggerBranchProperty extends BranchProperty {
                                 Job<?,?> j = (Job) p;
                                 if (j.getParent() instanceof MultiBranchProject) {
 
-                                    OverrideIndexTriggersJobProperty overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
-                                    if (overrideProp != null) {
-                                        return overrideProp.getEnableTriggers();
-                                    } else {
-                                        for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
-                                            if (prop instanceof NoTriggerBranchProperty) {
-                                                return false;
-                                            }
+                                    if(OverrideTriggerProperty.isRelevant(j, action)){
+                                        return OverrideTriggerProperty.shouldSchedule(j, action);
+                                    }
+                                    
+                                    for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
+                                        if (prop instanceof NoTriggerBranchProperty) {
+                                            return false;
                                         }
                                     }
                                 }
