@@ -43,7 +43,7 @@ import java.util.List;
  * Allows overriding indexing triggers for an individual job - either by enabling when the multibranch or org is set to
  * suppress them, or disabling if they're otherwise enabled.
  */
-public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
+public class OverrideIndexTriggersJobProperty extends OverrideTriggerProperty<Job<?,?>> {
     private final boolean enableTriggers;
 
     @DataBoundConstructor
@@ -53,6 +53,17 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
 
     public boolean getEnableTriggers() {
         return enableTriggers;
+    }
+
+    public Boolean shouldScheduleProperty( Action a ){
+        if (a instanceof CauseAction) {
+            for (Cause c : ((CauseAction) a).getCauses()) {
+                if (c instanceof BranchIndexingCause || c instanceof BranchEventCause) {
+                    return this.getEnableTriggers();
+                }
+            }
+        }
+        return null;
     }
 
     @Extension
@@ -98,8 +109,6 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
             }
             return true;
         }
-
     }
-
 
 }

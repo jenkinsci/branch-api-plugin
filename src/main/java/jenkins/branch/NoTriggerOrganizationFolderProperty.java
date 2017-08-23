@@ -92,16 +92,10 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
                                 Job<?,?> j = (Job) p;
 
                                 if (j.getParent() instanceof MultiBranchProject) {
-                                    if (c instanceof BranchIndexingCause) {
-                                        OverrideIndexTriggersJobProperty overrideIndexProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
-                                        if (overrideIndexProp != null ){
-                                            return overrideIndexProp.getEnableTriggers();
-                                        }
-                                    } else if(c instanceof BranchEventCause) {
-                                        OverrideEventTriggersJobProperty overrideEventProp = j.getProperty(OverrideEventTriggersJobProperty.class);
-                                        if (overrideEventProp != null ){
-                                            return overrideEventProp.getEnableTriggers();
-                                        }                                    
+                                    
+                                    Boolean isOverrided = OverrideTriggerProperty.shouldSchedule(j, action);
+                                    if( isOverrided != null) {
+                                        return isOverrided;
                                     }
 
                                     MultiBranchProject mbp = (MultiBranchProject) j.getParent();
