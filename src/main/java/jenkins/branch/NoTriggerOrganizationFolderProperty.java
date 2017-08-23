@@ -92,19 +92,20 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
                                 Job<?,?> j = (Job) p;
 
                                 if (j.getParent() instanceof MultiBranchProject) {
-                                    OverrideIndexTriggersJobProperty overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
-                                    if (overrideProp != null) {
-                                        return overrideProp.getEnableTriggers();
-                                    } else {
-                                        MultiBranchProject mbp = (MultiBranchProject) j.getParent();
-                                        if (mbp.getParent() instanceof OrganizationFolder) {
-                                            NoTriggerOrganizationFolderProperty prop = ((OrganizationFolder) mbp.getParent()).getProperties().get(NoTriggerOrganizationFolderProperty.class);
-                                            if (prop != null) {
-                                                // Not necessarily the same as j.getName(), which may be encoded:
-                                                String name = mbp.getProjectFactory().getBranch(j).getName();
-                                                if (!name.matches(prop.getBranches())) {
-                                                    return false;
-                                                }
+                                    
+                                    Boolean isOverrided = OverrideTriggerProperty.shouldSchedule(j, action);
+                                    if( isOverrided != null) {
+                                        return isOverrided;
+                                    }
+
+                                    MultiBranchProject mbp = (MultiBranchProject) j.getParent();
+                                    if (mbp.getParent() instanceof OrganizationFolder) {
+                                        NoTriggerOrganizationFolderProperty prop = ((OrganizationFolder) mbp.getParent()).getProperties().get(NoTriggerOrganizationFolderProperty.class);
+                                        if (prop != null) {
+                                            // Not necessarily the same as j.getName(), which may be encoded:
+                                            String name = mbp.getProjectFactory().getBranch(j).getName();
+                                            if (!name.matches(prop.getBranches())) {
+                                                return false;
                                             }
                                         }
                                     }
