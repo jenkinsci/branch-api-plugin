@@ -26,9 +26,13 @@ package jenkins.branch;
 import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 
 /**
+ * An extension point that allows controlling whether a specific {@link SCMHead} should be automatically built when
+ * discovered.
+ *
  * @since 2.0.0
  */
 public abstract class BranchBuildStrategy extends AbstractDescribableImpl<BranchBuildStrategy>
@@ -43,6 +47,20 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      * / modified.
      */
     public abstract boolean isAutomaticBuild(SCMSource source, SCMHead head);
+
+    /**
+     * Should the specified {@link SCMRevision} of the {@link SCMHead} for the specified {@link SCMSource} be triggered
+     * when the {@link SCMHead} has been detected as created / modified?
+     *
+     * @param source the {@link SCMSource}
+     * @param head   the {@link SCMHead}
+     * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
+     * {@link SCMHead} has been detected as created / modified.
+     * @since 2.0.12
+     */
+    public boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision revision) {
+        return isAutomaticBuild(source, head);
+    }
 
     /**
      * {@inheritDoc}
