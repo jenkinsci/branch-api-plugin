@@ -43,8 +43,10 @@
   </j:if>
   <j:set var="descriptors" value="${descriptor.buildStrategiesDescriptors(it,sourceDescriptor)}"/>
   <j:if test="${!descriptors.isEmpty()}">
+    <f:entry title="${%Build strategies}">
     <f:hetero-list name="${buildStrategies}" items="${instance.buildStrategies}"
                    descriptors="${descriptors}"
                    hasHeader="true" honorOrder="true"/>
+    </f:entry>
   </j:if>
 </j:jelly>
