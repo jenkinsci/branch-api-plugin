@@ -130,6 +130,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * Our project factories.
      */
     private final DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor> projectFactories = new DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor>(this);
+    /**
+     * The rules for automatic building of branches.
+     *
+     * @since 2.0.12
+     */
+    private final DescribableList<BranchBuildStrategy, BranchBuildStrategyDescriptor> buildStrategies = new DescribableList<>(this);
 
     /**
      * The persisted state maintained outside of the config file.
@@ -151,6 +157,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * @since 2.0
      */
     private transient String facDigest;
+
+    /**
+     * The {@link #buildStrategies} digest used to detect if we need to trigger a rescan on save.
+     *
+     * @since 2.0.12
+     */
+    private transient String bbsDigest;
 
     /**
      * {@inheritDoc}
@@ -218,6 +231,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             } catch (XStreamException e) {
                 facDigest = null;
             }
+            try {
+                bbsDigest = Util.getDigestOf(Items.XSTREAM2.toXML(buildStrategies));
+            } catch (XStreamException e) {
+                bbsDigest = null;
+            }
         }
     }
 
@@ -282,6 +300,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
+     * The {@link BranchBuildStrategy}s to apply.
+     *
+     * @return The {@link BranchBuildStrategy}s to apply.
+     * @since 2.0.12
+     */
+    public DescribableList<BranchBuildStrategy, BranchBuildStrategyDescriptor> getBuildStrategies() {
+        return buildStrategies;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -289,6 +317,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         super.submit(req, rsp);
         navigators.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(SCMNavigatorDescriptor.class), "navigators");
         projectFactories.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
+        buildStrategies.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(BranchBuildStrategyDescriptor.class), "buildStrategies");
         for (SCMNavigator n : navigators) {
             n.afterSave(this);
         }
@@ -304,10 +333,18 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         } catch (XStreamException e) {
             facDigest = null;
         }
+        String bbsDigest;
+        try {
+            bbsDigest = Util.getDigestOf(Items.XSTREAM2.toXML(buildStrategies));
+        } catch (XStreamException e) {
+            bbsDigest = null;
+        }
         recalculateAfterSubmitted(!StringUtils.equals(navDigest, this.navDigest));
         recalculateAfterSubmitted(!StringUtils.equals(facDigest, this.facDigest));
+        recalculateAfterSubmitted(!StringUtils.equals(bbsDigest, this.bbsDigest));
         this.navDigest = navDigest;
         this.facDigest = facDigest;
+        this.bbsDigest = bbsDigest;
     }
 
     /**
@@ -351,6 +388,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             facDigest = Util.getDigestOf(Items.XSTREAM2.toXML(projectFactories));
         } catch (XStreamException e) {
             facDigest = null;
+        }
+        try {
+            bbsDigest = Util.getDigestOf(Items.XSTREAM2.toXML(buildStrategies));
+        } catch (XStreamException e) {
+            bbsDigest = null;
         }
         long start = System.currentTimeMillis();
         listener.getLogger().format("[%tc] Starting organization scan...%n", start);
@@ -1279,8 +1321,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     }
                     List<BranchSource> branchSources = new ArrayList<BranchSource>();
                     for (SCMSource source : sources) {
+                        BranchSource branchSource = new BranchSource(source);
+                        branchSource.setBuildStrategies(buildStrategies);
                         // TODO do we want/need a more general BranchPropertyStrategyFactory?
-                        branchSources.add(new BranchSource(source));
+                        branchSources.add(branchSource);
                     }
                     sources = null; // make sure complete gets called just once
                     return branchSources;

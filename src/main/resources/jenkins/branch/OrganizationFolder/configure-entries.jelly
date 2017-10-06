@@ -48,5 +48,13 @@
     <f:entry field="projectFactories" title="${%Project Recognizers}">
       <f:repeatableHeteroProperty field="projectFactories" hasHeader="true" />
     </f:entry>
+    <j:set var="descriptors" value="${descriptor.getPropertyType(instance,'buildStrategies').applicableItemDescriptors}"/>
+    <j:if test="${!descriptors.isEmpty()}">
+      <f:entry title="${%Build strategies}" help="${descriptor.getHelpFile('buildStrategies')}">
+          <f:hetero-list name="${buildStrategies}" items="${instance.buildStrategies}"
+                         descriptors="${descriptors}"
+                         hasHeader="true" honorOrder="true"/>
+      </f:entry>
+    </j:if>
   </f:section>
 </j:jelly>
