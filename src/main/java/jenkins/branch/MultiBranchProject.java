@@ -2015,7 +2015,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 revision
                         );
                         needSave = true;
-                        if (isAutomaticBuild(source, head)) {
+                        if (isAutomaticBuild(source, head, revision)) {
                             scheduleBuild(
                                     _factory,
                                     project,
@@ -2034,7 +2034,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             listener.getLogger()
                                     .format("Changes detected: %s (%s → %s)%n", rawName, lastBuild, revision);
                             needSave = true;
-                            if (isAutomaticBuild(source, head)) {
+                            if (isAutomaticBuild(source, head, revision)) {
                                 scheduleBuild(
                                         _factory,
                                         project,
@@ -2058,7 +2058,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             if (pollingResult.hasChanges()) {
                                 listener.getLogger().format("Changes detected: %s%n", rawName);
                                 needSave = true;
-                                if (isAutomaticBuild(source, head)) {
+                                if (isAutomaticBuild(source, head, revision)) {
                                     scheduleBuild(
                                             _factory,
                                             project,
@@ -2122,7 +2122,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 _factory.decorate(project);
                 // ok it is now up to the observer to ensure it does the actual save.
                 observer.created(project);
-                if (isAutomaticBuild(source, head)) {
+                if (isAutomaticBuild(source, head, revision)) {
                     scheduleBuild(
                             _factory,
                             project,
@@ -2145,9 +2145,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * Tests if the specified {@link SCMHead} should be automatically built when discovered / modified.
      * @param source the source.
      * @param head the head.
+     * @param revision the revision.
      * @return {@code true} if the head should be automatically built when discovered / modified.
      */
-    private boolean isAutomaticBuild(SCMSource source, SCMHead head) {
+    private boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision revision) {
         BranchSource branchSource = null;
         for (BranchSource s: sources) {
             if (s.getSource().getId().equals(source.getId())) {
@@ -2165,7 +2166,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return !(head instanceof TagSCMHead);
         } else {
             for (BranchBuildStrategy s: buildStrategies) {
-                if (s.isAutomaticBuild(source, head)) {
+                if (s.isAutomaticBuild(source, head, revision)) {
                     return true;
                 }
             }

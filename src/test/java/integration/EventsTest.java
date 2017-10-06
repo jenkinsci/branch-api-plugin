@@ -46,7 +46,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -62,6 +64,7 @@ import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEvents;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadEvent;
+import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy;
@@ -72,8 +75,10 @@ import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
+import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMNavigator;
+import jenkins.scm.impl.mock.MockSCMRevision;
 import jenkins.scm.impl.mock.MockSCMSource;
 import jenkins.scm.impl.mock.MockSCMSourceEvent;
 import jenkins.scm.impl.trait.WildcardSCMSourceFilterTrait;
@@ -934,6 +939,77 @@ public class EventsTest {
                 }
             }
             assertThat("None of the executors have died abnormally", deaths, containsInAnyOrder());
+        }
+    }
+
+    public static class BuildRevisionStrategyImpl extends BranchBuildStrategy {
+        private final Set<String> approved;
+
+        public BuildRevisionStrategyImpl(String... approved) {
+            this.approved = new HashSet<>(Arrays.asList(approved));
+        }
+
+        @Override
+        public boolean isAutomaticBuild(SCMSource source, SCMHead head) {
+            return true;
+        }
+
+        @Override
+        public boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision revision) {
+            return revision instanceof MockSCMRevision
+                    && approved.contains(((MockSCMRevision) revision).getHash())
+                    && super.isAutomaticBuild(source, head, revision);
+        }
+
+        @TestExtension(
+                "given_multibranchWithRevisionSpecificStrategy_when_indexing_then_everythingIsFoundButMagicRevisionOnlyBuilt")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
+
+        }
+    }
+
+    @Test
+    @Issue("JENKINS-47308")
+    public void
+    given_multibranchWithRevisionSpecificStrategy_when_indexing_then_everythingIsFoundButMagicRevisionOnlyBuilt()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.createTag("foo", "master", "master-1.0");
+            c.cloneBranch("foo", "master","stable");
+            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes("UTF-8"));
+            c.cloneBranch("foo", "master", "development");
+            Integer crNum = c.openChangeRequest("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(),
+                    new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests()));
+            source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new BuildRevisionStrategyImpl(c.getRevision("foo", "master"))));
+            prj.getSourcesList().add(source);
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("We now have projects",
+                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("We have master branch", master, notNullValue());
+            FreeStyleProject stable = prj.getItem("stable");
+            assertThat("We have stable branch", stable, notNullValue());
+            FreeStyleProject development = prj.getItem("development");
+            assertThat("We have development branch", development, notNullValue());
+            FreeStyleProject tag = prj.getItem("master-1.0");
+            assertThat("We have master-1.0 tag", tag, notNullValue());
+            FreeStyleProject cr = prj.getItem("CR-" + crNum);
+            assertThat("We now have the change request", cr, notNullValue());
+            assertThat("We have only the expected items",
+                    prj.getItems(), containsInAnyOrder(cr, master, stable, development, tag));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertThat("The development branch was built", development.getLastBuild(), notNullValue());
+            assertThat("The development branch was built", development.getLastBuild().getNumber(), is(1));
+            assertThat("The stable branch was not built", stable.getLastBuild(), nullValue());
+            assertThat("The tag was not built", tag.getLastBuild(), nullValue());
+            assertThat("The change request was not built", cr.getLastBuild(), nullValue());
         }
     }
 
