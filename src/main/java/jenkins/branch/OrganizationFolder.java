@@ -135,7 +135,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      *
      * @since 2.0.12
      */
-    private final DescribableList<BranchBuildStrategy, BranchBuildStrategyDescriptor> buildStrategies = new DescribableList<>(this);
+    private DescribableList<BranchBuildStrategy, BranchBuildStrategyDescriptor> buildStrategies = new DescribableList<>(this);
 
     /**
      * The persisted state maintained outside of the config file.
@@ -199,6 +199,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         super.onLoad(parent, name);
         navigators.setOwner(this);
         projectFactories.setOwner(this);
+        if (buildStrategies == null) {
+            buildStrategies = new DescribableList<>(this);
+        } else {
+            buildStrategies.setOwner(this);
+        }
         if (!(getFolderViews() instanceof OrganizationFolderViewHolder)) {
             resetFolderViews();
         }
