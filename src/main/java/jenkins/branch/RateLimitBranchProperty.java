@@ -25,6 +25,7 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.Cause;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -91,6 +92,12 @@ public class RateLimitBranchProperty extends BranchProperty {
      * The maximum builds within the duration.
      */
     private final int count;
+    /**
+     * If {@code true} then user cause builds will be allowed to exceed the throttle.
+     *
+     * @since TODO
+     */
+    private final boolean userBoost;
 
     /**
      * Constructor for stapler.
@@ -98,11 +105,24 @@ public class RateLimitBranchProperty extends BranchProperty {
      * @param count        the maximum builds within the duration.
      * @param durationName the name of the duration.
      */
+    @Deprecated
+    public RateLimitBranchProperty(int count, String durationName) {
+        this(count, durationName, false);
+    }
+
+    /**
+     * Constructor for stapler.
+     *
+     * @param count        the maximum builds within the duration.
+     * @param durationName the name of the duration.
+     * @param userBoost    {@code true} to allow user submitted jobs to ignore the rate limits.
+     */
     @DataBoundConstructor
     @SuppressWarnings("unused") // instantiated by stapler
-    public RateLimitBranchProperty(int count, String durationName) {
+    public RateLimitBranchProperty(int count, String durationName, boolean userBoost) {
         this.count = Math.min(Math.max(1, count), 1000);
         this.durationName = durationName == null || !DURATIONS.containsKey(durationName) ? "hour" : durationName;
+        this.userBoost = userBoost;
     }
 
     /**
@@ -126,6 +146,15 @@ public class RateLimitBranchProperty extends BranchProperty {
     }
 
     /**
+     * Gets the user boost setting.
+     *
+     * @return the user boost setting.
+     */
+    public boolean isUserBoost() {
+        return userBoost;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -140,7 +169,7 @@ public class RateLimitBranchProperty extends BranchProperty {
             public List<JobProperty<? super P>> jobProperties(
                     @NonNull List<JobProperty<? super P>> properties) {
                 List<JobProperty<? super P>> result = asArrayList(properties);
-                result.add(new JobPropertyImpl(count == 0 ? null : new Throttle(count, durationName)));
+                result.add(new JobPropertyImpl(count == 0 ? null : new Throttle(count, durationName, userBoost)));
                 return result;
             }
         };
@@ -199,17 +228,25 @@ public class RateLimitBranchProperty extends BranchProperty {
          * The maximum builds within the duration.
          */
         private final int count;
+        /**
+         * If {@code true} then user cause builds will be allowed to exceed the throttle.
+         *
+         * @since TODO
+         */
+        private final boolean userBoost;
 
         /**
          * Constructor for stapler.
          *
          * @param count        the maximum builds within the duration.
          * @param durationName the name of the duration.
+         * @param userBoost    if {@code true} then user submitted builds will skip the queue.
          */
         @DataBoundConstructor
-        public Throttle(int count, String durationName) {
+        public Throttle(int count, String durationName, boolean userBoost) {
             this.count = Math.min(Math.max(0, count), 1000);
             this.durationName = durationName == null || !DURATIONS.containsKey(durationName) ? "hour" : durationName;
+            this.userBoost = userBoost;
         }
 
         /**
@@ -230,6 +267,14 @@ public class RateLimitBranchProperty extends BranchProperty {
             return durationName;
         }
 
+        /**
+         * Gets the user boost setting.
+         *
+         * @return the user boost setting.
+         */
+        public boolean isUserBoost() {
+            return userBoost;
+        }
     }
 
     public static class JobPropertyImpl extends JobProperty<Job<?, ?>> {
@@ -243,6 +288,12 @@ public class RateLimitBranchProperty extends BranchProperty {
          * The maximum builds within the duration.
          */
         private final int count;
+        /**
+         * If {@code true} then user cause builds will be allowed to exceed the throttle.
+         *
+         * @since TODO
+         */
+        private final boolean userBoost;
 
         /**
          * The milliseconds of the duration.
@@ -264,6 +315,7 @@ public class RateLimitBranchProperty extends BranchProperty {
             this.throttle = throttle;
             this.count = throttle == null ? 0 : Math.min(Math.max(0, throttle.getCount()), 1000);
             this.durationName = throttle == null ? "hour" : throttle.getDurationName();
+            this.userBoost = throttle == null ? true : throttle.isUserBoost();
         }
 
         /**
@@ -282,6 +334,15 @@ public class RateLimitBranchProperty extends BranchProperty {
          */
         public String getDurationName() {
             return durationName;
+        }
+
+        /**
+         * Gets the user boost setting.
+         *
+         * @return the user boost setting.
+         */
+        public boolean isUserBoost() {
+            return userBoost;
         }
 
         /**
@@ -309,7 +370,7 @@ public class RateLimitBranchProperty extends BranchProperty {
                 return null;
             }
             if (throttle == null) {
-                throttle = new Throttle(count, durationName);
+                throttle = new Throttle(count, durationName, userBoost);
             }
             return throttle;
         }
@@ -418,6 +479,21 @@ public class RateLimitBranchProperty extends BranchProperty {
                 Job<?, ?> job = (Job) item.task;
                 JobPropertyImpl property = job.getProperty(JobPropertyImpl.class);
                 if (property != null) {
+                    if (property.isUserBoost()) {
+                        for (Cause cause : item.getCauses()) {
+                            if (cause instanceof Cause.UserIdCause || cause instanceof Cause.UserCause) {
+                                LOGGER.log(Level.FINER, "{0} has a rate limit of {1} builds per {2} "
+                                                + "but user submitted and boost enabled",
+                                        new Object[]{
+                                                job.getFullName(),
+                                                property.getCount(),
+                                                property.getDurationName()
+                                        }
+                                );
+                                return null;
+                            }
+                        }
+                    }
                     LOGGER.log(Level.FINER, "{0} has a rate limit of {1} builds per {2}",
                             new Object[]{
                                     job.getFullName(),

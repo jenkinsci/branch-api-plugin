@@ -44,6 +44,7 @@ import integration.harness.BasicMultiBranchProject;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
@@ -83,24 +84,24 @@ public class RateLimitBranchPropertyTest {
     @Test
     public void getCount() throws Exception {
         for (int i = 1; i < 1001; i++) {
-            assertThat(new RateLimitBranchProperty(i, "hour").getCount(), is(i));
+            assertThat(new RateLimitBranchProperty(i, "hour", false).getCount(), is(i));
         }
     }
 
     @Test
     public void getCount_lowerBound() throws Exception {
-        assertThat(new RateLimitBranchProperty(0, "hour").getCount(), is(1));
+        assertThat(new RateLimitBranchProperty(0, "hour", false).getCount(), is(1));
     }
 
     @Test
     public void getCount_upperBound() throws Exception {
-        assertThat(new RateLimitBranchProperty(1001, "hour").getCount(), is(1000));
+        assertThat(new RateLimitBranchProperty(1001, "hour", false).getCount(), is(1000));
     }
 
     @Test
     public void getDurationName() throws Exception {
-        assertThat(new RateLimitBranchProperty(10, "hour").getDurationName(), is("hour"));
-        assertThat(new RateLimitBranchProperty(10, "year").getDurationName(), is("year"));
+        assertThat(new RateLimitBranchProperty(10, "hour", false).getDurationName(), is("hour"));
+        assertThat(new RateLimitBranchProperty(10, "year", false).getDurationName(), is("year"));
 
     }
 
@@ -124,7 +125,7 @@ public class RateLimitBranchPropertyTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
-                    new RateLimitBranchProperty(rate, "hour")
+                    new RateLimitBranchProperty(rate, "hour", false)
             }));
             prj.getSourcesList().add(source);
             prj.scheduleBuild2(0).getFuture().get();
@@ -138,7 +139,8 @@ public class RateLimitBranchPropertyTest {
                             allOf(
                                     instanceOf(RateLimitBranchProperty.JobPropertyImpl.class),
                                     hasProperty("count", is(rate)),
-                                    hasProperty("durationName", is("hour"))
+                                    hasProperty("durationName", is("hour")),
+                                    hasProperty("userBoost", is(false))
                             )
                     )
             );
@@ -181,7 +183,6 @@ public class RateLimitBranchPropertyTest {
             );
             future.get();
         }
-
     }
 
     @Test
@@ -195,7 +196,7 @@ public class RateLimitBranchPropertyTest {
             BasicParameterDefinitionBranchProperty p = new BasicParameterDefinitionBranchProperty();
             p.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(new StringParameterDefinition("FOO", "BAR")));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
-                    new RateLimitBranchProperty(rate, "hour"),
+                    new RateLimitBranchProperty(rate, "hour", false),
                     new ConcurrentBuildBranchProperty(),
                     p
             }));
@@ -275,6 +276,99 @@ public class RateLimitBranchPropertyTest {
     }
 
     @Test
+    public void rateLimitsUserBoost() throws Exception {
+        try (final MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
+            BasicParameterDefinitionBranchProperty p = new BasicParameterDefinitionBranchProperty();
+            p.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(new StringParameterDefinition("FOO", "BAR")));
+            source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
+                    new RateLimitBranchProperty(1, "hour", true),
+                    p
+            }));
+            prj.getSourcesList().add(source);
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+
+            FreeStyleProject master = prj.getItem("master");
+            master.setQuietPeriod(0);
+            assertThat(master.getProperties(),
+                    hasEntry(
+                            instanceOf(RateLimitBranchProperty.JobPropertyImpl.DescriptorImpl.class),
+                            allOf(
+                                    instanceOf(RateLimitBranchProperty.JobPropertyImpl.class),
+                                    hasProperty("count", is(1)),
+                                    hasProperty("durationName", is("hour"))
+                            )
+                    )
+            );
+            assertThat(master.isInQueue(), is(false));
+            assertThat(master.getQueueItem(), nullValue());
+
+            // trigger first build... this should start as it is the first build
+            QueueTaskFuture<FreeStyleBuild> future = master.scheduleBuild2(0);
+            // let the item get added to the queue
+            while (!master.isInQueue()) {
+                Thread.yield();
+            }
+            long startTime = System.currentTimeMillis();
+            assertThat(master.isInQueue(), is(true));
+
+            // while it is in the queue, until queue maintenance takes place, it will not be flagged as blocked
+            // since we cannot know when queue maintenance happens from the periodic task
+            // we cannot assert any value of isBlocked() on this side of maintenance
+            Queue.getInstance().maintain();
+            assertThat(master.getQueueItem().isBlocked(), is(true));
+            assertThat(master.getQueueItem().getCauseOfBlockage().getShortDescription().toLowerCase(),
+                    containsString("throttle"));
+
+            // now we wait for the start... invoking queue maintain every 100ms so that the queue
+            // will pick up more responsively than the default 5s
+            Future<FreeStyleBuild> startCondition = future.getStartCondition();
+            long midTime = startTime + TimeUnit.SECONDS.toMillis(10);
+            while (!startCondition.isDone() && System.currentTimeMillis() < midTime) {
+                Queue.getInstance().maintain();
+                Thread.sleep(100);
+            }
+            assertThat(startCondition.isDone(), is(false));
+            assertThat(master.isInQueue(), is(true));
+
+            // trigger second build, this should be blocked as it is not user caused
+            future = master.scheduleBuild2(0);
+            // now we wait for the start... invoking queue maintain every 100ms so that the queue
+            // will pick up more responsively than the default 5s
+            startCondition = future.getStartCondition();
+            long endTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
+            while (!startCondition.isDone() && System.currentTimeMillis() < endTime) {
+                Queue.getInstance().maintain();
+                Thread.sleep(100);
+            }
+            assertThat(startCondition.isDone(), is(false));
+            assertThat(master.isInQueue(), is(true));
+
+            // now we trigger a user build... it should skip the queue
+            QueueTaskFuture<FreeStyleBuild> future2 = master.scheduleBuild2(0, new Cause.UserIdCause(),
+                    (Action) new ParametersAction(
+                            Collections.<ParameterValue>singletonList(new StringParameterValue("FOO", "MANCHU"))));
+            // now we wait for the start... invoking queue maintain every 100ms so that the queue
+            // will pick up more responsively than the default 5s
+            startCondition = future2.getStartCondition();
+            endTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
+            while (!startCondition.isDone() && System.currentTimeMillis() < endTime) {
+                Queue.getInstance().maintain();
+                Thread.sleep(100);
+            }
+            assertThat("Non user triggered build still blocked", future.isDone(), is(false));
+            assertThat("User triggerd build successful", future2.isDone(), is(true));
+            assertThat(master.isInQueue(), is(true));
+            future.cancel(true);
+        }
+
+    }
+
+    @Test
     public void configRoundtrip() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -282,7 +376,7 @@ public class RateLimitBranchPropertyTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
-                    new RateLimitBranchProperty(10, "day")
+                    new RateLimitBranchProperty(10, "day", true)
             }));
             prj.getSourcesList().add(source);
             r.configRoundtrip(prj);
@@ -293,6 +387,7 @@ public class RateLimitBranchPropertyTest {
             RateLimitBranchProperty property = (RateLimitBranchProperty)strategy.getProps().get(0);
             assertThat(property.getCount(), is(10));
             assertThat(property.getDurationName(), is("day"));
+            assertThat(property.isUserBoost(), is(true));
         }
     }
 
