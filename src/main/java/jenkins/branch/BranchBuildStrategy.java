@@ -54,6 +54,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      *
      * @param source the {@link SCMSource}
      * @param head   the {@link SCMHead}
+     * @param revision the {@link SCMRevision}
      * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
      * {@link SCMHead} has been detected as created / modified.
      * @since 2.0.12
