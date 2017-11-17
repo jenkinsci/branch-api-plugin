@@ -647,16 +647,27 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     private void scheduleBuild(BranchProjectFactory<P, R> factory, final P item, SCMRevision revision,
-                               TaskListener listener, String name, Cause[] cause, Action... actions) {
+                               TaskListener listener, String name, Cause[] causes, Action... actions) {
         if (!isBuildable()) {
             listener.getLogger().printf("Did not schedule build for branch: %s (%s is disabled)%n",
                     name, getDisplayName());
             return;
         }
-        Action[] _actions = new Action[actions.length + 1];
-        _actions[0] = new CauseAction(cause);
-        System.arraycopy(actions, 0, _actions, 1, actions.length);
-        if (ParameterizedJobMixIn.scheduleBuild2(item, 0, _actions) != null) {
+
+        // collect Causes from CauseActions and create filtered list without CauseActions
+        List<Cause> summaryCauses = new ArrayList<>();
+        List<Action> filteredActions = new ArrayList<>(actions.length); // <= size
+        for (Action action : actions) {
+            if (action instanceof CauseAction) {
+                summaryCauses.addAll(((CauseAction) action).getCauses());
+            } else {
+                filteredActions.add(action);
+            }
+        }
+        Collections.addAll(summaryCauses, causes);
+
+        filteredActions.add(new CauseAction(summaryCauses));
+        if (ParameterizedJobMixIn.scheduleBuild2(item, 0, filteredActions.toArray(new Action[filteredActions.size()])) != null) {
             listener.getLogger().println("Scheduled build for branch: " + name);
             try {
                 factory.setRevisionHash(item, revision);
