@@ -29,4 +29,7 @@
   <f:entry title="${%Time period}" field="durationName">
     <f:select/>
   </f:entry>
+  <f:entry field="userBoost">
+    <f:checkbox title="${%Allow user triggered builds to skip the rate limit}"/>
+  </f:entry>
 </j:jelly>
