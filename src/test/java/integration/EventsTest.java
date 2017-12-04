@@ -62,6 +62,7 @@ import jenkins.branch.NameEncoder;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEvents;
+import jenkins.scm.api.SCMFile;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMRevision;
@@ -1961,6 +1962,53 @@ public class EventsTest {
                     prj.getItems(),
                     Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("master"), notNullValue());
+        }
+    }
+
+    @Test
+    @Issue("JENKINS-48214")
+    public void given_orgFolderWithOnlyDeactivatedChildren_when_eventUpdatesABranchToRestoreAMatch_then_projectIsRestored() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            prj.setOrphanedItemStrategy(new DefaultOrphanedItemStrategy(true, "1", "2"));
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            c.addFile("bar", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
+            BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
+            assertThat("We now have the two projects matching", foo, notNullValue());
+            assertThat("We now have the two projects matching", bar, notNullValue());
+            assertThat("we now have two enabled projects", foo.isBuildable(), is(true));
+            assertThat("we now have two enabled projects", bar.isBuildable(), is(true));
+            assertThat("The matching branch exists", foo.getItem("master"), notNullValue());
+            assertThat("The matching branch was built", foo.getItem("master").getNextBuildNumber(), is(2));
+
+            assertThat(c.stat("foo", "master", "marker.txt"), is(SCMFile.Type.REGULAR_FILE));
+            c.rmFile("foo", "master", "removing marker", "marker.txt");
+            assertThat(c.stat("foo", "master", "marker.txt"), is(SCMFile.Type.NONEXISTENT));
+            c.rmFile("bar", "master", "removing marker", "marker.txt");
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            foo = (BasicMultiBranchProject) prj.getItem("foo");
+            bar = (BasicMultiBranchProject) prj.getItem("bar");
+            assertThat("We now have the two projects matching", foo, notNullValue());
+            assertThat("We now have the two projects matching", bar, notNullValue());
+            assertThat("we now have two disabled projects", foo.isBuildable(), is(false));
+            assertThat("we now have two disabled projects", bar.isBuildable(), is(false));
+
+            c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+
+            assertThat("we now have one enabled project", foo.isBuildable(), is(true));
+            assertThat("we now have one disabled project", bar.isBuildable(), is(false));
+            assertThat("The matching branch exists", foo.getItem("master"), notNullValue());
+            assertThat("The matching branch was restored", foo.getItem("master").getNextBuildNumber(), is(3));
         }
     }
 
