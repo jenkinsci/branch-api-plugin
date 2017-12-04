@@ -68,6 +68,15 @@ import static org.junit.Assert.assertThat;
 
 public class RateLimitBranchPropertyTest {
     /**
+     * How long to wait for a build that we expect will start. (Shouldn't affect test execution time)
+     */
+    private static final long BUILT_TO_START_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
+    /**
+     * How long to wait for a build that should not start in order to test that it didn't. (Will directly affect test
+     * execution time)
+     */
+    private static final long BUILD_TO_NOT_START_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(10);
+    /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
@@ -327,7 +336,7 @@ public class RateLimitBranchPropertyTest {
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s
             Future<FreeStyleBuild> startCondition = future.getStartCondition();
-            long midTime = startTime + TimeUnit.SECONDS.toMillis(10);
+            long midTime = startTime + BUILT_TO_START_DELAY_MILLIS;
             while (!startCondition.isDone() && System.currentTimeMillis() < midTime) {
                 Queue.getInstance().maintain();
                 Thread.sleep(100);
@@ -340,7 +349,9 @@ public class RateLimitBranchPropertyTest {
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s
             startCondition = future.getStartCondition();
-            long endTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
+            // it's ok that the end time is short, we will re-verify the not-started at the end after waiting
+            // for a request submitted after to have been built.
+            long endTime = System.currentTimeMillis() + BUILD_TO_NOT_START_DELAY_MILLIS;
             while (!startCondition.isDone() && System.currentTimeMillis() < endTime) {
                 Queue.getInstance().maintain();
                 Thread.sleep(100);
@@ -355,7 +366,7 @@ public class RateLimitBranchPropertyTest {
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s
             startCondition = future2.getStartCondition();
-            endTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(10);
+            endTime = System.currentTimeMillis() + BUILT_TO_START_DELAY_MILLIS;
             while (!startCondition.isDone() && System.currentTimeMillis() < endTime) {
                 Queue.getInstance().maintain();
                 Thread.sleep(100);
