@@ -531,10 +531,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      */
     @Override
     public List<SCMSource> getSCMSources() {
-        // Probably unused unless onSCMSourceUpdated implemented, but just in case:
         Set<SCMSource> result = new HashSet<SCMSource>();
         for (MultiBranchProject<?,?> child : getItems()) {
-            result.addAll(child.getSCMSources());
+            if (child.isBuildable()) {
+                result.addAll(child.getSCMSources());
+            }
         }
         return new ArrayList<SCMSource>(result);
     }
