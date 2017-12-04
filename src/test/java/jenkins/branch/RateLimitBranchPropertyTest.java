@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
@@ -82,6 +83,10 @@ public class RateLimitBranchPropertyTest {
      */
     @ClassRule
     public static JenkinsRule r = new JenkinsRule();
+    /**
+     * Our logger.
+     */
+    private static Logger LOGGER = Logger.getLogger(RateLimitBranchPropertyTest.class.getName());
 
     @Before
     public void cleanOutAllItems() throws Exception {
@@ -335,6 +340,7 @@ public class RateLimitBranchPropertyTest {
 
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s
+            LOGGER.info("Waiting for first build");
             Future<FreeStyleBuild> startCondition = future.getStartCondition();
             long midTime = startTime + BUILT_TO_START_DELAY_MILLIS;
             while (!startCondition.isDone() && System.currentTimeMillis() < midTime) {
@@ -345,6 +351,7 @@ public class RateLimitBranchPropertyTest {
             assertThat(master.isInQueue(), is(true));
 
             // trigger second build, this should be blocked as it is not user caused
+            LOGGER.info("Checking second build blocked");
             future = master.scheduleBuild2(0);
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s
@@ -365,14 +372,15 @@ public class RateLimitBranchPropertyTest {
                             Collections.<ParameterValue>singletonList(new StringParameterValue("FOO", "MANCHU"))));
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s
+            LOGGER.info("Checking user submitted build skips");
             startCondition = future2.getStartCondition();
             endTime = System.currentTimeMillis() + BUILT_TO_START_DELAY_MILLIS;
             while (!startCondition.isDone() && System.currentTimeMillis() < endTime) {
                 Queue.getInstance().maintain();
                 Thread.sleep(100);
             }
-            assertThat("Non user triggered build still blocked", future.isDone(), is(false));
-            assertThat("User triggerd build successful", future2.isDone(), is(true));
+            assertThat("Non user triggered build still blocked", future.getStartCondition().isDone(), is(false));
+            assertThat("User triggered build successful", future2.getStartCondition().isDone(), is(true));
             assertThat(master.isInQueue(), is(true));
             future.cancel(true);
         }
