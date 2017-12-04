@@ -27,25 +27,35 @@ package integration;
 
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.Action;
+import hudson.model.Cause;
+import hudson.model.CauseAction;
 import hudson.model.FreeStyleProject;
 import hudson.model.ListView;
 import hudson.model.Result;
+import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.views.JobColumn;
 import hudson.views.StatusColumn;
 import hudson.views.WeatherColumn;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import jenkins.branch.Branch;
+import jenkins.branch.BranchIndexingCause;
 import jenkins.branch.BranchSource;
 import jenkins.branch.DescriptionColumn;
 import jenkins.branch.MultiBranchProject;
-import jenkins.branch.NameMangler;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEvents;
+import jenkins.scm.api.SCMHeadEvent;
+import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.mock.MockSCMController;
@@ -57,12 +67,14 @@ import jenkins.scm.impl.mock.MockSCMSourceEvent;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -151,6 +163,37 @@ public class BrandingTest {
             r.waitUntilNoActivity();
             assertThat(prj.getItem("master").getBuildByNumber(1).getAction(MockSCMLink.class),
                     hasProperty("id", is("revision")));
+        }
+    }
+
+    @Test
+    @Issue("JENKINS-48090")
+    public void given_multibranch_when_runBrandingIncludesAdditionalCauses_then_causesMerged() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()){
+                @NonNull
+                @Override
+                protected List<Action> retrieveActions(@NonNull SCMRevision revision, SCMHeadEvent event,
+                                                       @NonNull TaskListener listener)
+                        throws IOException, InterruptedException {
+                    List<Action> result = new ArrayList<>(super.retrieveActions(revision, event, listener));
+                    result.add(new CauseAction(new Cause.UserIdCause()));
+                    result.add(new CauseAction(new Cause.RemoteCause("test", "data")));
+                    return result;
+                }
+            }));
+            assertThat(prj.getAction(MockSCMLink.class), nullValue());
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            CauseAction causeAction = prj.getItem("master").getBuildByNumber(1).getAction(CauseAction.class);
+            assertThat(causeAction.getCauses(), containsInAnyOrder(
+                    instanceOf(BranchIndexingCause.class),
+                    instanceOf(Cause.UserIdCause.class),
+                    instanceOf(Cause.RemoteCause.class)
+                    ));
         }
     }
 
