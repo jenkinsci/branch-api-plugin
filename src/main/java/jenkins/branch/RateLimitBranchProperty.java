@@ -95,7 +95,7 @@ public class RateLimitBranchProperty extends BranchProperty {
     /**
      * If {@code true} then user cause builds will be allowed to exceed the throttle.
      *
-     * @since TODO
+     * @since 2.0.16
      */
     private final boolean userBoost;
 
@@ -231,7 +231,7 @@ public class RateLimitBranchProperty extends BranchProperty {
         /**
          * If {@code true} then user cause builds will be allowed to exceed the throttle.
          *
-         * @since TODO
+         * @since 2.0.16
          */
         private final boolean userBoost;
 
@@ -291,7 +291,7 @@ public class RateLimitBranchProperty extends BranchProperty {
         /**
          * If {@code true} then user cause builds will be allowed to exceed the throttle.
          *
-         * @since TODO
+         * @since 2.0.16
          */
         private final boolean userBoost;
 
