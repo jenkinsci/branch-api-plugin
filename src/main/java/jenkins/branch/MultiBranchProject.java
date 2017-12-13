@@ -893,9 +893,27 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
             setProjectFactory(req.bindJSON(BranchProjectFactory.class, json.getJSONObject("projectFactory")));
         }
-        for (SCMSource scmSource : _sources) {
+        fireSCMSourceAfterSave(_sources);
+        recalculateAfterSubmitted(updateDigests());
+    }
+
+    /**
+     * Fires the {@link SCMSource#afterSave()} method for the supplied sources.
+     * @param sources the sources.
+     */
+    protected void fireSCMSourceAfterSave(List<SCMSource> sources) {
+        for (SCMSource scmSource : sources) {
             scmSource.afterSave();
         }
+    }
+
+    /**
+     * Updates the digests used to detect changes to the sources and project factories (which would mandate a
+     * recalculation).
+     *
+     * @return {@code true} if the digests have changed.
+     */
+    /*package*/ boolean updateDigests() {
         String srcDigest;
         try {
             srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
@@ -908,10 +926,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         } catch (XStreamException e) {
             facDigest = null;
         }
-        recalculateAfterSubmitted(!StringUtils.equals(srcDigest, this.srcDigest));
-        recalculateAfterSubmitted(!StringUtils.equals(facDigest, this.facDigest));
-        this.srcDigest = srcDigest;
-        this.facDigest = facDigest;
+        try {
+            return !StringUtils.equals(srcDigest, this.srcDigest)
+                    || !StringUtils.equals(facDigest, this.facDigest);
+        } finally {
+            this.srcDigest = srcDigest;
+            this.facDigest = facDigest;
+        }
     }
 
     /**

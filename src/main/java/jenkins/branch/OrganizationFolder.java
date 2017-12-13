@@ -1385,7 +1385,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 } finally {
                                     bc.commit();
                                 }
-                                if (isBuildable()) {
+                                existing.fireSCMSourceAfterSave(existing.getSCMSources());
+                                if (isBuildable() && existing.isBuildable() && existing.updateDigests()) {
                                     existing.scheduleBuild(cause());
                                 }
                                 return;
@@ -1425,7 +1426,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 bc.commit();
                             }
                             observer.created(project);
-                            if (isBuildable()) {
+                            project.fireSCMSourceAfterSave(project.getSCMSources());
+                            if (isBuildable() && project.isBuildable() && project.updateDigests()) {
                                 project.scheduleBuild(cause());
                             }
                         } finally {
