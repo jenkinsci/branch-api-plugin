@@ -27,6 +27,7 @@ package integration;
 
 import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
 import hudson.Functions;
 import hudson.model.Computer;
@@ -70,6 +71,7 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
+import jenkins.scm.api.mixin.ChangeRequestSCMRevision;
 import jenkins.scm.impl.mock.MockFailure;
 import jenkins.scm.impl.mock.MockLatency;
 import jenkins.scm.impl.mock.MockSCMController;
@@ -594,7 +596,9 @@ public class EventsTest {
 
     public static class BuildEverythingStrategyImpl extends BranchBuildStrategy {
         @Override
-        public boolean isAutomaticBuild(SCMSource source, SCMHead head) {
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision prevRevision) {
             return true;
         }
 
@@ -642,7 +646,9 @@ public class EventsTest {
 
     public static class BuildChangeRequestsStrategyImpl extends BranchBuildStrategy {
         @Override
-        public boolean isAutomaticBuild(SCMSource source, SCMHead head) {
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision prevRevision) {
             return head instanceof ChangeRequestSCMHead;
         }
 
@@ -951,15 +957,11 @@ public class EventsTest {
         }
 
         @Override
-        public boolean isAutomaticBuild(SCMSource source, SCMHead head) {
-            return true;
-        }
-
-        @Override
-        public boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision revision) {
-            return revision instanceof MockSCMRevision
-                    && approved.contains(((MockSCMRevision) revision).getHash())
-                    && super.isAutomaticBuild(source, head, revision);
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision prevRevision) {
+            return currRevision instanceof MockSCMRevision
+                    && approved.contains(((MockSCMRevision) currRevision).getHash());
         }
 
         @TestExtension(
@@ -1011,6 +1013,100 @@ public class EventsTest {
             assertThat("The stable branch was not built", stable.getLastBuild(), nullValue());
             assertThat("The tag was not built", tag.getLastBuild(), nullValue());
             assertThat("The change request was not built", cr.getLastBuild(), nullValue());
+        }
+    }
+
+    public static class IgnoreTargetChangesStrategyImpl extends BranchBuildStrategy {
+
+        public IgnoreTargetChangesStrategyImpl() {
+        }
+
+        @Override
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision prevRevision) {
+            if (currRevision instanceof ChangeRequestSCMRevision) {
+                ChangeRequestSCMRevision<?> currCR = (ChangeRequestSCMRevision<?>) currRevision;
+                if (prevRevision instanceof ChangeRequestSCMRevision) {
+                    // if we have a previous, only build if the change is affecting the head not the target
+                    return !currCR.equivalent((ChangeRequestSCMRevision<?>) prevRevision);
+                } else {
+                    // we don't have a previous, so build
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @TestExtension(
+                "given_multibranchWithIgnoreTargetChangesStrategy_when_reindexing_then_onlyCRsWithHeadChangesRebuilt")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
+
+        }
+    }
+
+    @Test
+    @Issue("JENKINS-48535")
+    public void
+    given_multibranchWithIgnoreTargetChangesStrategy_when_reindexing_then_onlyCRsWithHeadChangesRebuilt()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes("UTF-8"));
+            Integer cr1Num = c.openChangeRequest("foo", "master");
+            Integer cr2Num = c.openChangeRequest("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(
+                    c,
+                    "foo",
+                    new MockSCMDiscoverBranches(),
+                    new MockSCMDiscoverChangeRequests(
+                            ChangeRequestCheckoutStrategy.HEAD,
+                            ChangeRequestCheckoutStrategy.MERGE
+                    )
+            ));
+            source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new IgnoreTargetChangesStrategyImpl()));
+            prj.getSourcesList().add(source);
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("We now have projects",
+                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("We have master branch", master, notNullValue());
+            FreeStyleProject cr1Head = prj.getItem("CR-" + cr1Num + "-HEAD");
+            assertThat("We now have the change request 1 HEAD", cr1Head, notNullValue());
+            FreeStyleProject cr1Merge = prj.getItem("CR-" + cr1Num + "-MERGE");
+            assertThat("We now have the change request 1 MERGE", cr1Merge, notNullValue());
+            FreeStyleProject cr2Head = prj.getItem("CR-" + cr2Num + "-HEAD");
+            assertThat("We now have the change request 2 HEAD", cr2Head, notNullValue());
+            FreeStyleProject cr2Merge = prj.getItem("CR-" + cr2Num + "-MERGE");
+            assertThat("We now have the change request 2 MERGE", cr2Merge, notNullValue());
+            assertThat("We have only the expected items",
+                    prj.getItems(), containsInAnyOrder(master, cr1Head, cr1Merge, cr2Head, cr2Merge));
+            assertThat("The master branch was not built", master.getLastBuild(), nullValue());
+            assertThat("The change request 1 HEAD was built", cr1Head.getLastBuild(), notNullValue());
+            assertThat("The change request 1 HEAD was built", cr1Head.getLastBuild().getNumber(), is(1));
+            assertThat("The change request 1 MERGE was built", cr1Merge.getLastBuild(), notNullValue());
+            assertThat("The change request 1 MERGE was built", cr1Merge.getLastBuild().getNumber(), is(1));
+            assertThat("The change request 2 HEAD was built", cr2Head.getLastBuild(), notNullValue());
+            assertThat("The change request 2 HEAD was built", cr2Head.getLastBuild().getNumber(), is(1));
+            assertThat("The change request 2 MERGE was built", cr2Merge.getLastBuild(), notNullValue());
+            assertThat("The change request 2 MERGE was built", cr2Merge.getLastBuild().getNumber(), is(1));
+
+            // now change the master baseline and one of the change requests
+            c.addFile("foo", "master", "new revision", "dummy.txt", "anythingElse".getBytes("UTF-8"));
+            c.addFile("foo", "change-request/"+cr2Num, "new revision", "dummy.txt", "headChange".getBytes("UTF-8"));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+
+            assertThat("We have only the expected items",
+                    prj.getItems(), containsInAnyOrder(master, cr1Head, cr1Merge, cr2Head, cr2Merge));
+            assertThat("The master branch was not built", master.getLastBuild(), nullValue());
+            assertThat("The change request 1 HEAD was not rebuilt", cr1Head.getLastBuild().getNumber(), is(1));
+            assertThat("The change request 1 MERGE was not rebuilt", cr1Merge.getLastBuild().getNumber(), is(1));
+            assertThat("The change request 2 HEAD was rebuilt", cr2Head.getLastBuild().getNumber(), is(2));
+            assertThat("The change request 2 MERGE was rebuilt", cr2Merge.getLastBuild().getNumber(), is(2));
         }
     }
 
