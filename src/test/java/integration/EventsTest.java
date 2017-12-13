@@ -2043,6 +2043,7 @@ public class EventsTest {
 
             c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
             fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            r.waitUntilNoActivity();
 
             assertThat("we now have one enabled project", foo.isBuildable(), is(true));
             assertThat("we now have one disabled project", bar.isBuildable(), is(false));

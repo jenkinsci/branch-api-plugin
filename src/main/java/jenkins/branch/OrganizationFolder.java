@@ -1368,7 +1368,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             return;
                         }
                         String folderName = NameEncoder.encode(projectName);
-                        MultiBranchProject<?, ?> existing = observer.shouldUpdate(folderName);
+                        // HACK: observer.shouldUpdate will restore the buildable flag of the child, so pre-inspect
+                        MultiBranchProject<?, ?> existing = items.get(folderName);
+                        boolean wasBuildable = existing != null && existing.isBuildable();
+                        boolean wasDisabled = existing != null && existing.isDisabled();
+                        // END_HACK: now that we know if it was buildable, we can now proceed to see about updating
+                        existing = observer.shouldUpdate(folderName);
                         try {
                             if (existing != null) {
                                 BulkChange bc = new BulkChange(existing);
@@ -1386,7 +1391,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     bc.commit();
                                 }
                                 existing.fireSCMSourceAfterSave(existing.getSCMSources());
-                                if (isBuildable() && existing.isBuildable() && existing.updateDigests()) {
+                                if (isBuildable() && existing.isBuildable()
+                                        && (!wasBuildable || wasDisabled || existing.updateDigests())) {
+                                    // if the digests changed or this is now buildable where previously it was not
+                                    // schedule the build
                                     existing.scheduleBuild(cause());
                                 }
                                 return;
@@ -1427,7 +1435,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             }
                             observer.created(project);
                             project.fireSCMSourceAfterSave(project.getSCMSources());
-                            if (isBuildable() && project.isBuildable() && project.updateDigests()) {
+                            if (isBuildable() && project.isBuildable()) {
+                                // schedule the build
                                 project.scheduleBuild(cause());
                             }
                         } finally {
