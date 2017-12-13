@@ -28,6 +28,7 @@ package integration;
 import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.Extension;
 import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
@@ -69,6 +70,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
 
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -173,18 +175,7 @@ public class BrandingTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
-            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()){
-                @NonNull
-                @Override
-                protected List<Action> retrieveActions(@NonNull SCMRevision revision, SCMHeadEvent event,
-                                                       @NonNull TaskListener listener)
-                        throws IOException, InterruptedException {
-                    List<Action> result = new ArrayList<>(super.retrieveActions(revision, event, listener));
-                    result.add(new CauseAction(new Cause.UserIdCause()));
-                    result.add(new CauseAction(new Cause.RemoteCause("test", "data")));
-                    return result;
-                }
-            }));
+            prj.getSourcesList().add(new BranchSource(new BrandedMockSCMSource(c)));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -685,4 +676,23 @@ public class BrandingTest {
         r.waitUntilNoActivity();
     }
 
+    public static class BrandedMockSCMSource extends MockSCMSource {
+        public BrandedMockSCMSource(MockSCMController c) {
+            super(c, "foo", new MockSCMDiscoverBranches());
+        }
+
+        @NonNull
+        @Override
+        protected List<Action> retrieveActions(@NonNull SCMRevision revision, SCMHeadEvent event,
+                                               @NonNull TaskListener listener)
+                throws IOException, InterruptedException {
+            List<Action> result = new ArrayList<>(super.retrieveActions(revision, event, listener));
+            result.add(new CauseAction(new Cause.UserIdCause()));
+            result.add(new CauseAction(new Cause.RemoteCause("test", "data")));
+            return result;
+        }
+
+        @Extension()
+        public static class DescriptorImpl extends MockSCMSource.DescriptorImpl {}
+    }
 }
