@@ -24,10 +24,14 @@
 
 package jenkins.branch;
 
+import hudson.ExtensionList;
 import hudson.model.ItemGroup;
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.View;
+
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.api.SCMNavigator;
@@ -53,9 +57,12 @@ import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
+import jenkins.scm.impl.mock.MockSCMSource;
+import jenkins.scm.impl.mock.MockSCMSourceSaveListener;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
@@ -99,19 +106,24 @@ public class OrganizationFolderTest {
     }
 
     @Test
-    @Issue("JENKINS-31516")
+    @Issue({"JENKINS-31516", "JENKINS-48035"})
     public void indexChildrenOnOrganizationFolderIndex() throws Exception {
-        try (MockSCMController c = MockSCMController.create()) {
+        final TestMockSCMSourceSaveListener listener = new TestMockSCMSourceSaveListener();
+        try (MockSCMController c = MockSCMController.create().withSaveListener(listener)) {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
             top.getNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches(), new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests()));
             assertThat("Top level has not been scanned", top.getItem("stuff"), nullValue());
             top.scheduleBuild(0);
             r.waitUntilNoActivity();
-            assertThat("Top level has been scanned", top.getItem("stuff"), notNullValue());
+            final MultiBranchProject<?, ?> stuff = top.getItem("stuff");
+            assertThat("Top level has been scanned", stuff, notNullValue());
             assertThat("We have run an index on the child item",
-                    top.getItem("stuff").getComputation().getResult(), is(Result.SUCCESS)
+                    stuff.getComputation().getResult(), is(Result.SUCCESS)
             );
+            for (SCMSource source : stuff.getSCMSources()) {
+                assertThat(listener.saved, contains(source));
+            }
         }
     }
 
@@ -175,6 +187,20 @@ public class OrganizationFolderTest {
         @Override
         public String getDisplayName() {
             return "MockFactory";
+        }
+    }
+
+    /**
+     * Collects whatever {@link MockSCMSource}s that has gotten a call to {@link SCMSource#afterSave()}
+     * @see #indexChildrenOnOrganizationFolderIndex
+     */
+    static class TestMockSCMSourceSaveListener extends MockSCMSourceSaveListener {
+
+        final Set<MockSCMSource> saved = new CopyOnWriteArraySet<>();
+
+        @Override
+        public void afterSave(MockSCMSource mockSCMSource) {
+            saved.add(mockSCMSource);
         }
     }
 
