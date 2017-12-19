@@ -1425,6 +1425,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 bc.commit();
                             }
                             observer.created(project);
+                            for (SCMSource source : project.getSCMSources()) {
+                                source.afterSave();
+                            }
                             if (isBuildable()) {
                                 project.scheduleBuild(cause());
                             }
