@@ -2062,7 +2062,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 revision
                         );
                         needSave = true;
-                        if (isAutomaticBuild(source, head, revision)) {
+                        // the previous "revision" for this head is not a revision for the current source
+                        // either because the head was removed and then recreated, or because the head
+                        // was taken over by a different source, thus the previous revision is null
+                        if (isAutomaticBuild(source, head, revision, null)) {
                             scheduleBuild(
                                     _factory,
                                     project,
@@ -2076,12 +2079,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             listener.getLogger().format("No automatic builds for %s%n", rawName);
                         }
                     } else if (revision.isDeterministic()) {
-                        SCMRevision lastBuild = _factory.getRevision(project);
-                        if (!revision.equals(lastBuild)) {
+                        SCMRevision prevRevision = _factory.getRevision(project);
+                        if (!revision.equals(prevRevision)) {
                             listener.getLogger()
-                                    .format("Changes detected: %s (%s → %s)%n", rawName, lastBuild, revision);
+                                    .format("Changes detected: %s (%s → %s)%n", rawName, prevRevision, revision);
                             needSave = true;
-                            if (isAutomaticBuild(source, head, revision)) {
+                            if (isAutomaticBuild(source, head, revision, prevRevision)) {
                                 scheduleBuild(
                                         _factory,
                                         project,
@@ -2098,6 +2101,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
                         }
                     } else {
+                        // TODO check if we should compare the revisions anyway...
+                        // the revisions may not be deterministic, as in two checkouts of the same revision
+                        // may result in additional changes (looking at you CVS) but that doesn't mean
+                        // that the revisions are not capable of checking for differences, e.g. if
+                        // rev1 == 2017-12-13 and rev2 == 2017-12-12 these could show as non-equal while both
+                        // being non-deterministic (because they just specify the day not the timestamp within
+                        // the day.
+
                         // fall back to polling when we have a non-deterministic revision/hash.
                         SCMTriggerItem scmProject = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
                         if (scmProject != null) {
@@ -2105,7 +2116,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             if (pollingResult.hasChanges()) {
                                 listener.getLogger().format("Changes detected: %s%n", rawName);
                                 needSave = true;
-                                if (isAutomaticBuild(source, head, revision)) {
+                                // get the previous revision
+                                SCMRevision prevRevision = _factory.getRevision(project);
+                                if (isAutomaticBuild(source, head, revision, prevRevision)) {
                                     scheduleBuild(
                                             _factory,
                                             project,
@@ -2169,7 +2182,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 _factory.decorate(project);
                 // ok it is now up to the observer to ensure it does the actual save.
                 observer.created(project);
-                if (isAutomaticBuild(source, head, revision)) {
+                if (isAutomaticBuild(source, head, revision, null)) {
                     scheduleBuild(
                             _factory,
                             project,
@@ -2192,10 +2205,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * Tests if the specified {@link SCMHead} should be automatically built when discovered / modified.
      * @param source the source.
      * @param head the head.
-     * @param revision the revision.
+     * @param currRevision the revision.
      * @return {@code true} if the head should be automatically built when discovered / modified.
      */
-    private boolean isAutomaticBuild(SCMSource source, SCMHead head, SCMRevision revision) {
+    private boolean isAutomaticBuild(@NonNull SCMSource source,
+                                     @NonNull SCMHead head,
+                                     @NonNull SCMRevision currRevision,
+                                     @CheckForNull SCMRevision prevRevision) {
         BranchSource branchSource = null;
         for (BranchSource s: sources) {
             if (s.getSource().getId().equals(source.getId())) {
@@ -2213,7 +2229,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return !(head instanceof TagSCMHead);
         } else {
             for (BranchBuildStrategy s: buildStrategies) {
-                if (s.isAutomaticBuild(source, head, revision)) {
+                if (s.automaticBuild(source, head, currRevision, prevRevision)) {
                     return true;
                 }
             }
