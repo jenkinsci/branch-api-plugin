@@ -49,6 +49,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -68,6 +70,7 @@ import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceEvent;
+import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.impl.mock.MockFailure;
@@ -82,6 +85,7 @@ import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMRevision;
 import jenkins.scm.impl.mock.MockSCMSource;
 import jenkins.scm.impl.mock.MockSCMSourceEvent;
+import jenkins.scm.impl.mock.MockSCMSourceSaveListener;
 import jenkins.scm.impl.trait.WildcardSCMSourceFilterTrait;
 import org.hamcrest.Matchers;
 import org.junit.Before;
@@ -96,6 +100,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
@@ -1712,6 +1717,40 @@ public class EventsTest {
         }
     }
 
+    @Issue("JENKINS-48536")
+    @Test
+    public void given_orgFolder_when_someReposMatch_then_scanFiresSCMSourceAfterSave() throws Exception {
+        final ConcurrentMap<SCMSourceOwner,MockSCMSource> saved = new ConcurrentHashMap<>();
+        try (MockSCMController c = MockSCMController.create().withSaveListener(new MockSCMSourceSaveListener() {
+            @Override
+            public void afterSave(MockSCMSource source) {
+                saved.putIfAbsent(source.getOwner(), source);
+            }
+        })) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.createRepository("manchu");
+            c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            assertThat(saved.isEmpty(), is(true));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("A scan picks up a newly qualified repo",
+                    prj.getItems(),
+                    not(is((Collection<MultiBranchProject<?, ?>>) Collections.<MultiBranchProject<?, ?>>emptyList())));
+            BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
+            assertThat("We now have the one project matching", foo, notNullValue());
+            assertThat("We now have only the one project matching",
+                    prj.getItems(),
+                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+            assertThat("The matching branch exists", foo.getItem("master"), notNullValue());
+            assertThat(saved, hasKey((SCMSourceOwner)foo));
+        }
+    }
+
     @Test
     public void given_orgFolderWithFilteringTrait_when_someReposMatch_then_scanCreatesMatchingProjects() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
@@ -2004,6 +2043,7 @@ public class EventsTest {
 
             c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
             fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            r.waitUntilNoActivity();
 
             assertThat("we now have one enabled project", foo.isBuildable(), is(true));
             assertThat("we now have one disabled project", bar.isBuildable(), is(false));
