@@ -25,7 +25,7 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:section title="${%Automatic branch project triggering}">
+    <f:section title="${%secTitle}">
         <f:entry title="${%Branch names to build automatically}" field="branches">
             <f:textbox default=".*"/>
         </f:entry>

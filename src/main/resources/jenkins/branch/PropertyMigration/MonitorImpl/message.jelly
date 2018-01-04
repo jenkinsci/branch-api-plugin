@@ -1,0 +1,13 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+  <div class="warning">
+    ${%blurb(it.pluginNames)}
+    <br/>
+    ${%blurb2}
+    <ul>
+      <j:forEach items="${it.descriptions}" var="description">
+        <li>${description}</li>
+      </j:forEach>
+    </ul>
+  </div>
+</j:jelly>

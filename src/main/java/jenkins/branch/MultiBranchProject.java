@@ -172,6 +172,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     public void onLoad(ItemGroup<? extends Item> parent, String name) throws IOException {
         super.onLoad(parent, name);
         init2();
+        PropertyMigration.applyAll(this);
         try {
             srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
         } catch (XStreamException e) {
