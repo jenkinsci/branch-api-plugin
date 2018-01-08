@@ -16,6 +16,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.jvnet.localizer.Localizable;
@@ -30,7 +32,7 @@ import org.jvnet.localizer.Localizable;
 public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends AbstractFolderProperty<F>>
         implements ExtensionPoint {
 
-
+    private static final Logger LOGGER = Logger.getLogger(PropertyMigration.class.getName());
     private final Class<F> folderClass;
     private final Class<P> propertyClass;
     private final String pluginName;
@@ -114,7 +116,15 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
                 if (migration.canApply()) {
                     migration.apply(folder);
                 } else {
-                    ExtensionList.lookup(AdministrativeMonitor.class).get(MonitorImpl.class).add(migration);
+                    MonitorImpl monitor = ExtensionList.lookup(AdministrativeMonitor.class).get(MonitorImpl.class);
+                    if (monitor != null) {
+                        monitor.add(migration);
+                    } else {
+                        LOGGER.log(Level.SEVERE, "{0} is loaded but no {1} singleton present.",
+                                new Object[]{PropertyMigration.class, MonitorImpl.class});
+                        // we didn't apply, so we can continue and let something else worry about the
+                        // failure to load extensions.
+                    }
                 }
             }
         }
