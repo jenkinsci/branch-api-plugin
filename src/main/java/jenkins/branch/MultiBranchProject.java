@@ -348,9 +348,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         if (factory == projectFactory) {
             return;
         }
-        if (factory != null) {
-            factory.setOwner(null);
-        }
         factory = projectFactory;
         factory.setOwner(this);
     }
