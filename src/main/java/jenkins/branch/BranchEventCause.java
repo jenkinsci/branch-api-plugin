@@ -49,10 +49,13 @@ public final class BranchEventCause extends Cause {
 
     private final String description;
 
+    private final Object event;
+
     BranchEventCause(@NonNull SCMEvent<?> event, @CheckForNull String description) {
         timestamp = event.getTimestamp();
         origin = event.getOrigin();
         this.description = StringUtils.isBlank(description) ? event.description() : description;
+        this.event = event;
     }
 
     /**
@@ -73,6 +76,11 @@ public final class BranchEventCause extends Cause {
     @NonNull
     public String getOrigin() {
         return origin;
+    }
+
+    @NonNull
+    public Object getEvent(){
+        return event;
     }
 
     /**
