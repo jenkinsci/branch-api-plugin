@@ -49,7 +49,7 @@ public final class BranchEventCause extends Cause {
 
     private final String description;
 
-    private final Object event;
+    private final SCMEvent event;
 
     BranchEventCause(@NonNull SCMEvent<?> event, @CheckForNull String description) {
         timestamp = event.getTimestamp();
@@ -79,7 +79,7 @@ public final class BranchEventCause extends Cause {
     }
 
     @NonNull
-    public Object getEvent(){
+    public SCMEvent getEvent(){
         return event;
     }
 
