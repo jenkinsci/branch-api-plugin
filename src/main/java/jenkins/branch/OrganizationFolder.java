@@ -185,7 +185,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             }
         }
         try {
-            addTrigger(new PeriodicFolderTrigger("1d"));
+            addTrigger(new PeriodicFolderTrigger("1m"));
         } catch (ANTLRException x) {
             throw new IllegalStateException(x);
         }
@@ -1426,7 +1426,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 project.setOrphanedItemStrategy(getOrphanedItemStrategy());
                                 project.getSourcesList().addAll(createBranchSources());
                                 try {
-                                    project.addTrigger(new PeriodicFolderTrigger("1d"));
+                                    project.addTrigger(new PeriodicFolderTrigger("1m"));
                                 } catch (ANTLRException x) {
                                     throw new IllegalStateException(x);
                                 }
