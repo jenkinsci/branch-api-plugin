@@ -113,7 +113,6 @@ import static jenkins.scm.api.SCMEvent.Type.UPDATED;
 /**
  * A folder-like collection of {@link MultiBranchProject}s, one per repository.
  */
-@Restricted(NoExternalUse.class) // not currently intended as an API
 @SuppressWarnings({"unchecked", "rawtypes"}) // mistakes in various places
 public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<?,?>>
         implements SCMNavigatorOwner, IconSpec {
