@@ -114,6 +114,7 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.export.Exported;
 
 /**
  * Abstract base class for multiple-branch based projects.
@@ -365,6 +366,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      *
      * @return the sources of branches.
      */
+    @Exported
     @NonNull
     public List<BranchSource> getSources() {
         if (sources != null) {

@@ -66,7 +66,7 @@
 
   <properties>
     <jenkins.version>1.642.3</jenkins.version>
-    <scm-api.version>2.2.6</scm-api.version>
+    <scm-api.version>2.2.7-20180420.001519-1</scm-api.version> <!-- TODO https://github.com/jenkinsci/scm-api-plugin/pull/53 -->
     <git-plugin.version>3.3.0</git-plugin.version>
   </properties>
 
