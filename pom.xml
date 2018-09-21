@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>2.37</version>
+    <version>3.22</version>
     <relativePath />
   </parent>
 
@@ -41,7 +41,7 @@
   <description>
     This plugin provides an API for multiple branch based projects.
   </description>
-  <url>http://wiki.jenkins-ci.org/display/JENKINS/Branch+API+Plugin</url>
+  <url>https://wiki.jenkins.io/display/JENKINS/Branch+API+Plugin</url>
   <licenses>
     <license>
       <name>The MIT license</name>
@@ -65,7 +65,8 @@
   </scm>
 
   <properties>
-    <jenkins.version>1.642.3</jenkins.version>
+    <jenkins.version>2.73.3</jenkins.version>
+    <java.level>8</java.level>
     <scm-api.version>2.2.7</scm-api.version>
     <git-plugin.version>3.3.0</git-plugin.version>
   </properties>
@@ -85,16 +86,6 @@
   </pluginRepositories>
 
   <dependencies>
-    <dependency>
-      <groupId>org.kohsuke</groupId>
-      <artifactId>access-modifier-annotation</artifactId>
-      <version>1.11</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci</groupId>
-      <artifactId>annotation-indexer</artifactId>
-      <version>1.9</version>
-    </dependency>
     <!-- plugin dependencies -->
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>

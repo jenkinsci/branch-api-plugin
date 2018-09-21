@@ -41,7 +41,7 @@ import org.apache.commons.lang.StringUtils;
  */
 public final class NameMangler {
 
-    private static final int MAX_SAFE_LENGTH = 32;
+    static final int MAX_SAFE_LENGTH = 32;
     private static final int MIN_HASH_LENGTH = 6;
     private static final int MAX_HASH_LENGTH = 12;
 

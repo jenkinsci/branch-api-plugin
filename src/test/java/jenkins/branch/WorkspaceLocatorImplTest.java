@@ -59,6 +59,7 @@ public class WorkspaceLocatorImplTest {
     }
 
     @WithoutJenkins
+    @SuppressWarnings("deprecation")
     @Test
     public void minimize() {
         assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM57BBNSYVIXGXHCE4KAEVPV5KZYQ", WorkspaceLocatorImpl.minimize("a/b"));
@@ -121,7 +122,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("U-OSF24EPB4C", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
     }
 
-    @Issue({"JENKINS-34564", "JENKINS-38837"})
+    @Issue({"JENKINS-34564", "JENKINS-38837", "JENKINS-2111"})
     @Test
     public void locate() throws Exception {
         assertEquals("${JENKINS_HOME}/workspace/${ITEM_FULLNAME}", r.jenkins.getRawWorkspaceDir());
@@ -132,9 +133,9 @@ public class WorkspaceLocatorImplTest {
         showComputation(stuff);
         FreeStyleProject master = r.jenkins.getItemByFullName("stuff/dev%2Fflow", FreeStyleProject.class);
         assertNotNull(master);
-        assertEquals(r.jenkins.getRootPath().child("workspace/stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(r.jenkins.getRootPath().child("workspace/stuff_dev_flow"), r.jenkins.getWorkspaceFor(master));
         DumbSlave slave = r.createOnlineSlave();
-        assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), slave.getWorkspaceFor(master));
+        assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow"), slave.getWorkspaceFor(master));
         FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
         assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
         // Checking other values of workspaceDir.
@@ -145,7 +146,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("JENKINS-34564 inactive in this case", new FilePath(master.getRootDir()).child("workspace"), r.jenkins.getWorkspaceFor(master));
         // JENKINS-38837: customized root.
         workspaceDir.set(r.jenkins, "${JENKINS_HOME}/ws/${ITEM_FULLNAME}");
-        assertEquals("ITEM_FULLNAME interpreted a little differently", r.jenkins.getRootPath().child("ws/stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), r.jenkins.getWorkspaceFor(master));
+        assertEquals("ITEM_FULLNAME interpreted a little differently", r.jenkins.getRootPath().child("ws/stuff_dev_flow"), r.jenkins.getWorkspaceFor(master));
     }
 
     @Issue({"JENKINS-2111", "JENKINS-41068"})
@@ -162,12 +163,12 @@ public class WorkspaceLocatorImplTest {
         assertNotNull(master);
         FreeStyleProject pr1 = r.jenkins.getItemByFullName("p/PR-1", FreeStyleProject.class);
         assertNotNull(pr1);
-        assertEquals(r.jenkins.getRootPath().child("workspace/p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA"), r.jenkins.getWorkspaceFor(master));
-        assertEquals(r.jenkins.getRootPath().child("workspace/p_PR-1-4FMSDR3M7ZFZIJ2EAYSJ4FQ5NYFE7ONABCE3ULVB2MF75EK665PA"), r.jenkins.getWorkspaceFor(pr1));
+        assertEquals(r.jenkins.getRootPath().child("workspace/p_master"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(r.jenkins.getRootPath().child("workspace/p_PR-1"), r.jenkins.getWorkspaceFor(pr1));
         // Do builds on an agent too.
         DumbSlave slave = r.createOnlineSlave();
-        assertEquals(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA"), slave.getWorkspaceFor(master));
-        assertEquals(slave.getWorkspaceRoot().child("p_PR-1-4FMSDR3M7ZFZIJ2EAYSJ4FQ5NYFE7ONABCE3ULVB2MF75EK665PA"), slave.getWorkspaceFor(pr1));
+        assertEquals(slave.getWorkspaceRoot().child("p_master"), slave.getWorkspaceFor(master));
+        assertEquals(slave.getWorkspaceRoot().child("p_PR-1"), slave.getWorkspaceFor(pr1));
         master.setAssignedNode(slave);
         assertEquals(2, r.buildAndAssertSuccess(master).getNumber());
         pr1.setAssignedNode(slave);
@@ -185,26 +186,13 @@ public class WorkspaceLocatorImplTest {
         showComputation(p);
         WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
         assertEquals(Collections.singletonList(master), r.jenkins.getAllItems(FreeStyleProject.class));
-        assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), r.jenkins.getRootPath().child("workspace").listDirectories());
-        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), slave.getWorkspaceRoot().listDirectories());
+        assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master")), r.jenkins.getRootPath().child("workspace").listDirectories());
+        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master")), slave.getWorkspaceRoot().listDirectories());
         assertFalse(pr1Root.isDirectory());
-        // Also check behavior with customized paths.
-        WorkspaceLocatorImpl.PATH_MAX = 40;
-        p.getSourcesList().add(pr1Source);
-        p.scheduleBuild2(0).getFuture().get();
-        r.waitUntilNoActivity();
-        showComputation(p);
-        pr1 = r.jenkins.getItemByFullName("p/PR-1", FreeStyleProject.class);
-        assertNotNull(pr1);
-        pr1.setAssignedNode(slave);
-        assertEquals(slave.getWorkspaceRoot().child("p_PR-1-4FMSDR3M7ZFZIJ2EAYSJ4FQ5N"), slave.getWorkspaceFor(pr1));
-        assertEquals(2, r.buildAndAssertSuccess(pr1).getNumber());
-        p.getSourcesList().remove(pr1Source);
-        p.scheduleBuild2(0).getFuture().get();
-        r.waitUntilNoActivity();
-        showComputation(p);
-        WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
-        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), slave.getWorkspaceRoot().listDirectories());
     }
+
+    // TODO test rename/move
+    // TODO test delete job while agent disconnected, then reconnect
+    // TODO test uniquification of directory names
 
 }
