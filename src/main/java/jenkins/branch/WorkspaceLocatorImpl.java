@@ -188,8 +188,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     private static void save(Map<String, String> index, FilePath workspace) throws IOException, InterruptedException {
-        FilePath tmp = workspace.child(INDEX_FILE_NAME + ".tmp");
-        try (OutputStream os = tmp.write(); Writer w = new OutputStreamWriter(os, StandardCharsets.UTF_8)) {
+        // FilePath.renameTo does not support REPLACE_EXISTING, and AtomicFileWriter does not work remotely.
+        // Anyway we are synchronizing access to this file so the only potential problem is half-written content.
+        try (OutputStream os = workspace.child(INDEX_FILE_NAME).write(); Writer w = new OutputStreamWriter(os, StandardCharsets.UTF_8)) {
             for (Map.Entry<String, String> entry : index.entrySet()) {
                 w.write(entry.getKey());
                 w.write('\n');
@@ -197,7 +198,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 w.write('\n');
             }
         }
-        tmp.renameTo(workspace.child(INDEX_FILE_NAME));
     }
 
     private static final Pattern GOOD_RAW_WORKSPACE_DIR = Pattern.compile("[$][{]JENKINS_HOME[}]/(.+)/[$][{]ITEM_FULL_?NAME[}]");
