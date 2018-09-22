@@ -24,4 +24,11 @@ THE SOFTWARE.
 -->
 
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core"/>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:entry title="${%Suppress build after indexing}" field="disableBranchIndexingCause">
+    <f:checkbox default="false"/>
+  </f:entry>
+  <f:entry title="${%Suppress triggered build}" field="disableBranchEventCause">
+    <f:checkbox default="false"/>
+  </f:entry>
+</j:jelly>

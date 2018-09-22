@@ -43,14 +43,28 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 @Restricted(NoExternalUse.class)
 public class NoTriggerBranchProperty extends BranchProperty {
+    private final Boolean disableBranchIndexingCause;
+    private final Boolean disableBranchEventCause;
+
+    public Boolean getDisableBranchIndexingCause() {
+        return disableBranchIndexingCause;
+    }
+
+    public Boolean getDisableBranchEventCause() {
+        return disableBranchEventCause;
+    }
 
     @DataBoundConstructor
-    public NoTriggerBranchProperty() {}
+    public NoTriggerBranchProperty(Boolean disableBranchIndexingCause, Boolean disableBranchEventCause) {
+        this.disableBranchEventCause = disableBranchEventCause;
+        this.disableBranchIndexingCause = disableBranchIndexingCause;
+    }
 
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
         return null;
     }
+
 
     @Extension
     public static class DescriptorImpl extends BranchPropertyDescriptor {
@@ -82,7 +96,10 @@ public class NoTriggerBranchProperty extends BranchProperty {
                                     } else {
                                         for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
                                             if (prop instanceof NoTriggerBranchProperty) {
-                                                return false;
+                                                if((c instanceof BranchIndexingCause && ((NoTriggerBranchProperty) prop).getDisableBranchIndexingCause()) ||
+                                                        (c instanceof  BranchEventCause && ((NoTriggerBranchProperty) prop).getDisableBranchEventCause())) {
+                                                    return false;
+                                                }
                                             }
                                         }
                                     }

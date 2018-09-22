@@ -64,7 +64,7 @@ public class OverrideIndexTriggersJobPropertyTest {
         MultiBranchImpl stuff = r.jenkins.createProject(MultiBranchImpl.class, "stuff");
         BranchSource branchSource = new BranchSource(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false));
         branchSource.setStrategy(new NamedExceptionsBranchPropertyStrategy(new BranchProperty[0], new NamedExceptionsBranchPropertyStrategy.Named[] {
-            new NamedExceptionsBranchPropertyStrategy.Named("release*", new BranchProperty[] {new NoTriggerBranchProperty()})
+            new NamedExceptionsBranchPropertyStrategy.Named("release*", new BranchProperty[] {new NoTriggerBranchProperty(true, true)})
         }));
         stuff.getSourcesList().add(branchSource);
         r.configRoundtrip(stuff);
