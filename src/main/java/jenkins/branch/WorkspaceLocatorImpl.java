@@ -35,6 +35,7 @@ import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
+import hudson.model.WorkspaceCleanupThread;
 import hudson.model.listeners.ItemListener;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
@@ -91,7 +92,21 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
     static /* not final */ int MAX_LENGTH = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".MAX_LENGTH", NameMangler.MAX_SAFE_LENGTH);
 
-    static /* not final */ boolean MULTIBRANCH_ONLY = Boolean.parseBoolean(System.getProperty(WorkspaceLocatorImpl.class.getName() + ".MULTIBRANCH_ONLY", /* TBD */ "true"));
+    enum Mode {
+        DISABLED,
+        MULTIBRANCH_ONLY,
+        ENABLED
+    }
+    /**
+     * On which projects to use this extension.
+     * Could be set to {@link Mode#ENABLED} to turn on the smarter behavior for all projects,
+     * including standalone Pipeline and even freestyle, matrix, etc.
+     * On the one hand I do not like having installation of what is otherwise a library plugin affect behavior of core functionality.
+     * On the other hand, the name shortening is very useful for projects in deep folder hierarchies;
+     * the character sanitization is useful for all sorts of project generation systems other than multibranch;
+     * and the automatic cleanup is useful for pretty much everyone, since {@link WorkspaceCleanupThread} is unreliable.
+     */
+    static /* not final */ Mode MODE = Mode.valueOf(System.getProperty(WorkspaceLocatorImpl.class.getName() + ".MODE", Mode.MULTIBRANCH_ONLY.name()));
 
     /**
      * File containing pairs of lines tracking workspaces.
@@ -107,8 +122,18 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     private static FilePath locate(TopLevelItem item, Node node, boolean create) {
-        if (MULTIBRANCH_ONLY && !(item.getParent() instanceof MultiBranchProject)) {
+        switch (MODE) {
+        case DISABLED:
             return null;
+        case MULTIBRANCH_ONLY:
+            if (!(item.getParent() instanceof MultiBranchProject)) {
+                return null;
+            }
+            break;
+        case ENABLED:
+            break;
+        default:
+            throw new AssertionError();
         }
         FilePath workspace = getWorkspaceRoot(node);
         if (workspace == null) {
@@ -384,7 +409,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     while (it.hasNext()) {
                         Map.Entry<String, String> entry = it.next();
                         String fullName = entry.getKey();
-                        if (Jenkins.getActiveInstance().getItemByFullName(fullName, TopLevelItem.class) == null) {
+                        if (Jenkins.get().getItemByFullName(fullName, TopLevelItem.class) == null) {
                             String path = entry.getValue();
                             it.remove();
                             modified = true;
