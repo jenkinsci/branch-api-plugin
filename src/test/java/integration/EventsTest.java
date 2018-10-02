@@ -81,7 +81,6 @@ import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
-import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMRevision;
@@ -1639,6 +1638,7 @@ public class EventsTest {
 
     @Test
     public void given_multibranch_when_oneEventBlocking_then_otherEventsProcessed() throws Exception {
+        assumeThat("TODO master==null on Windows CI (but not locally); ClosedByInterruptException?", Functions.isWindows(), is(false));
         List<String> branchNames = Arrays.asList( // top 20 names for boys and girls 2016 in case you are wondering
                 "Sophia", "Jackson", "Emma", "Aiden", "Olivia", "Lucas", "Ava", "Liam", "Mia", "Noah", "Isabella",
                 "Ethan", "Riley", "Mason", "Aria", "Caden", "Zoe", "Oliver", "Charlotte", "Elijah", "Lily", "Grayson",
