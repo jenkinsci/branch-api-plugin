@@ -32,6 +32,7 @@ import hudson.slaves.WorkspaceList;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.stream.Collectors;
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.model.Jenkins;
@@ -53,6 +54,7 @@ public class WorkspaceLocatorImplTest {
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
+    @SuppressWarnings("deprecation")
     @Before
     public void defaultPathMax() {
         WorkspaceLocatorImpl.PATH_MAX = WorkspaceLocatorImpl.PATH_MAX_DEFAULT;
@@ -127,7 +129,7 @@ public class WorkspaceLocatorImplTest {
     public void locate() throws Exception {
         assertEquals("${JENKINS_HOME}/workspace/${ITEM_FULL_NAME}", r.jenkins.getRawWorkspaceDir());
         MultiBranchImpl stuff = r.createProject(MultiBranchImpl.class, "stuff");
-        stuff.getSourcesList().add(new BranchSource(new SingleSCMSource(null, "dev/flow", new NullSCM())));
+        stuff.getSourcesList().add(new BranchSource(new SingleSCMSource("dev/flow", new NullSCM())));
         stuff.scheduleBuild2(0).getFuture().get();
         r.waitUntilNoActivity();
         showComputation(stuff);
@@ -153,8 +155,8 @@ public class WorkspaceLocatorImplTest {
     @Test
     public void delete() throws Exception {
         MultiBranchImpl p = r.createProject(MultiBranchImpl.class, "p");
-        p.getSourcesList().add(new BranchSource(new SingleSCMSource(null, "master", new NullSCM())));
-        BranchSource pr1Source = new BranchSource(new SingleSCMSource(null, "PR-1", new NullSCM()));
+        p.getSourcesList().add(new BranchSource(new SingleSCMSource("master", new NullSCM())));
+        BranchSource pr1Source = new BranchSource(new SingleSCMSource("PR-1", new NullSCM()));
         p.getSourcesList().add(pr1Source);
         p.scheduleBuild2(0).getFuture().get();
         r.waitUntilNoActivity();
@@ -191,8 +193,31 @@ public class WorkspaceLocatorImplTest {
         assertFalse(pr1Root.isDirectory());
     }
 
+    @Issue("JENKINS-2111")
+    @Test
+    public void deleteOffline() throws Exception {
+        WorkspaceLocatorImpl.Mode origMode = WorkspaceLocatorImpl.MODE;
+        WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
+        try {
+            FreeStyleProject p = r.createFreeStyleProject("a$b");
+            DumbSlave s = r.createSlave("remote", null, null);
+            p.setAssignedNode(s);
+            assertEquals(s, r.buildAndAssertSuccess(p).getBuiltOn());
+            assertEquals(Collections.singletonList("a_b"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+            s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
+            s.toComputer().disconnect(null);
+            p.delete();
+            s = (DumbSlave) r.jenkins.getNode("remote");
+            s.toComputer().connect(true).get();
+            WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
+            assertEquals(Collections.emptyList(), s.getWorkspaceRoot().listDirectories());
+            s.toComputer().getLogText().writeLogTo(0, System.out);
+        } finally {
+            WorkspaceLocatorImpl.MODE = origMode;
+        }
+    }
+
     // TODO test rename/move
-    // TODO test delete job while agent disconnected, then reconnect
     // TODO test uniquification of directory names
 
 }

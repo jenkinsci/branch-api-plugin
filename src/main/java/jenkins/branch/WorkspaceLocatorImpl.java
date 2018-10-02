@@ -114,7 +114,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
      * the second is a workspace-relative path.
      * Reads and writes to this file should be synchronized on the {@link Node}.
      */
-    private static final String INDEX_FILE_NAME = "workspaces.txt";
+    static final String INDEX_FILE_NAME = "workspaces.txt";
 
     @Override
     public FilePath locate(TopLevelItem item, Node node) {
