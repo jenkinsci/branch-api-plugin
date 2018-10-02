@@ -52,10 +52,10 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -192,7 +192,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
     
     private static Map<String, String> load(FilePath workspace) throws IOException, InterruptedException {
-        Map<String, String> map = new HashMap<>();
+        Map<String, String> map = new TreeMap<>();
         FilePath index = workspace.child(INDEX_FILE_NAME);
         if (index.exists()) {
             try (InputStream is = index.read(); Reader r = new InputStreamReader(is, StandardCharsets.UTF_8); BufferedReader br = new BufferedReader(r)) {
