@@ -70,7 +70,7 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
- * Chooses manageable workspace names for branch projects.
+ * Chooses manageable workspace names for (especially branch) projects.
  * @see "JENKINS-34564"
  * @see "JENKINS-2111"
  */
@@ -116,12 +116,20 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
      */
     static final String INDEX_FILE_NAME = "workspaces.txt";
 
+    /** Same as {@link WorkspaceList#COMBINATOR}. */
+    private static final String COMBINATOR = System.getProperty(WorkspaceList.class.getName(), "@");
+
     @Override
     public FilePath locate(TopLevelItem item, Node node) {
         return locate(item, node, true);
     }
 
     private static FilePath locate(TopLevelItem item, Node node, boolean create) {
+        return locate(item, item.getFullName(), node, create);
+    }
+
+    @CheckForNull
+    private static FilePath locate(TopLevelItem item, String fullName, Node node, boolean create) {
         switch (MODE) {
         case DISABLED:
             return null;
@@ -139,7 +147,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         if (workspace == null) {
             return null;
         }
-        String fullName = item.getFullName();
         if (fullName.contains("\n") || fullName.equals(INDEX_FILE_NAME)) {
             throw new IllegalArgumentException(); // better not to mess around
         }
@@ -280,7 +287,8 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     /**
-     * Cleans up workspace when an orphaned branch project is deleted.
+     * Cleans up workspace when an orphaned project is deleted.
+     * Also moves workspace when it is renamed or moved.
      * @see "JENKINS-2111"
      */
     @Extension
@@ -301,7 +309,15 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         @Override
         public void onLocationChanged(Item item, String oldFullName, String newFullName) {
-            // TODO update index
+            if (!(item instanceof TopLevelItem)) {
+                return;
+            }
+            TopLevelItem tli = (TopLevelItem) item;
+            Jenkins jenkins = Jenkins.getActiveInstance();
+            Computer.threadPoolForRemoting.submit(new MoveTask(oldFullName, newFullName, jenkins));
+            for (Node node : jenkins.getNodes()) {
+                Computer.threadPoolForRemoting.submit(new MoveTask(oldFullName, newFullName, node));
+            }
         }
 
         /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
@@ -357,7 +373,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         List<FilePath> dirs = parent.listDirectories();
                         for (FilePath child : dirs) {
                             String childName = child.getName();
-                            if (childName.equals(base) || childName.startsWith(base + /* COMBINATOR */ System.getProperty(WorkspaceList.class.getName(), "@"))) {
+                            if (childName.equals(base) || childName.startsWith(base + COMBINATOR)) {
                                 LOGGER.log(Level.INFO, "deleting obsolete workspace {0} on {1}", new Object[] {child, nodeName});
                                 child.deleteRecursive();
                             }
@@ -372,6 +388,80 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         }
                     } catch (IOException | InterruptedException x) {
                         LOGGER.log(Level.WARNING, "could not clean up workspace directory for " + tli.getFullName() + " on " + nodeName, x);
+                    }
+                } finally {
+                    t.setName(oldName);
+                    taskFinished();
+                }
+            }
+
+        }
+
+        private static class MoveTask implements Runnable {
+
+            @NonNull
+            private final String oldFullName;
+
+            @NonNull
+            private final String newFullName;
+
+            @NonNull
+            private final Node node;
+
+            MoveTask(String oldFullName, String newFullName, Node node) {
+                this.oldFullName = oldFullName;
+                this.newFullName = newFullName;
+                this.node = node;
+                taskStarted();
+            }
+
+            @Override
+            public void run() {
+                String nodeName = node instanceof Jenkins ? "master" : node.getNodeName();
+                TopLevelItem tli = Jenkins.get().getItemByFullName(newFullName, TopLevelItem.class);
+                if (tli == null) { // race condition after multiple renames, perhaps
+                    LOGGER.warning(newFullName + " no longer exists so cannot process rename from " + oldFullName + " in " + nodeName);
+                    return;
+                }
+                Thread t = Thread.currentThread();
+                String oldName = t.getName();
+                try {
+                    try (Timeout timeout = Timeout.limit(5, TimeUnit.MINUTES)) {
+                        FilePath from = locate(tli, oldFullName, node, false);
+                        if (from == null) {
+                            return;
+                        }
+                        FilePath to = locate(tli, newFullName, node, true);
+                        if (to == null) {
+                            return;
+                        }
+                        t.setName(oldName + ": moving workspace from " + from + " to " + to + " on " + nodeName);
+                        String base = from.getName();
+                        FilePath parent = from.getParent();
+                        if (parent == null) {
+                            return;
+                        }
+                        assert parent.equals(to.getParent());
+                        List<FilePath> dirs = parent.listDirectories();
+                        for (FilePath child : dirs) {
+                            String childName = child.getName();
+                            if (childName.equals(base) || childName.startsWith(base + COMBINATOR)) {
+                                FilePath target = to.withSuffix(childName.substring(base.length()));
+                                LOGGER.log(Level.INFO, "moving workspace {0} to {1} on {2}", new Object[] {child, target, nodeName});
+                                child.renameTo(target);
+                            }
+                        }
+                        FilePath workspace = getWorkspaceRoot(node);
+                        if (workspace != null) {
+                            synchronized (node) {
+                                Map<String, String> index = load(workspace);
+                                index.remove(oldFullName);
+                                assert index.containsKey(newFullName); // locate(…, true) should have added it
+                                save(index, workspace);
+                            }
+                        }
+                    } catch (IOException | InterruptedException x) {
+                        LOGGER.log(Level.WARNING, "could not move workspace directory from " + oldFullName + " on " + nodeName, x);
                     }
                 } finally {
                     t.setName(oldName);
@@ -415,7 +505,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                             modified = true;
                             for (FilePath child : workspace.listDirectories()) {
                                 String childName = child.getName();
-                                if (childName.equals(path) || childName.startsWith(path + /* COMBINATOR */ System.getProperty(WorkspaceList.class.getName(), "@"))) {
+                                if (childName.equals(path) || childName.startsWith(path + COMBINATOR)) {
                                     listener.getLogger().println("deleting obsolete workspace " + child);
                                     child.deleteRecursive();
                                 }

@@ -209,7 +209,6 @@ public class WorkspaceLocatorImplTest {
             p.delete();
             s = (DumbSlave) r.jenkins.getNode("remote");
             s.toComputer().connect(true).get();
-            WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
             assertEquals(Collections.emptyList(), s.getWorkspaceRoot().listDirectories());
             s.toComputer().getLogText().writeLogTo(0, System.out);
         } finally {
@@ -234,6 +233,25 @@ public class WorkspaceLocatorImplTest {
         }
     }
 
-    // TODO test rename/move
+    @Issue("JENKINS-2111")
+    @Test
+    public void move() throws Exception {
+        WorkspaceLocatorImpl.Mode origMode = WorkspaceLocatorImpl.MODE;
+        WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
+        try {
+            FreeStyleProject p = r.createFreeStyleProject("old");
+            DumbSlave s = r.createSlave("remote", null, null);
+            p.setAssignedNode(s);
+            assertEquals("old", r.buildAndAssertSuccess(p).getWorkspace().getName());
+            assertEquals(Collections.singletonList("old"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+            p.renameTo("new");
+            WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
+            assertEquals(Collections.singletonList("new"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+            assertEquals("new", r.buildAndAssertSuccess(p).getWorkspace().getName());
+            s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
+        } finally {
+            WorkspaceLocatorImpl.MODE = origMode;
+        }
+    }
 
 }
