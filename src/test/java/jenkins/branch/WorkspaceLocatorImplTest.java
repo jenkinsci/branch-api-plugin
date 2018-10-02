@@ -242,13 +242,19 @@ public class WorkspaceLocatorImplTest {
             FreeStyleProject p = r.createFreeStyleProject("old");
             DumbSlave s = r.createSlave("remote", null, null);
             p.setAssignedNode(s);
-            assertEquals("old", r.buildAndAssertSuccess(p).getWorkspace().getName());
+            FilePath workspace = r.buildAndAssertSuccess(p).getWorkspace();
+            assertEquals("old", workspace.getName());
             assertEquals(Collections.singletonList("old"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+            workspace.child("something").write("", null);
             p.renameTo("new");
             WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
             assertEquals(Collections.singletonList("new"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
-            assertEquals("new", r.buildAndAssertSuccess(p).getWorkspace().getName());
+            workspace = r.buildAndAssertSuccess(p).getWorkspace();
+            assertEquals("new", workspace.getName());
+            assertTrue(workspace.child("something").exists());
             s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
+            // Note that we do not try to do anything for offline workspaces when a project is moved:
+            // that is treated like a delete and recreate.
         } finally {
             WorkspaceLocatorImpl.MODE = origMode;
         }
