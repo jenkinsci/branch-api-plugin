@@ -148,7 +148,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             return null;
         }
         if (fullName.contains("\n") || fullName.equals(INDEX_FILE_NAME)) {
-            throw new IllegalArgumentException(); // better not to mess around
+            throw new IllegalArgumentException("Dangerous job name `" + fullName + "`"); // better not to mess around
         }
         try {
             synchronized (node) {
