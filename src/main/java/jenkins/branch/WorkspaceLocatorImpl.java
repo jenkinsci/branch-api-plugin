@@ -37,18 +37,18 @@ import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.WorkspaceCleanupThread;
 import hudson.model.listeners.ItemListener;
+import hudson.remoting.VirtualChannel;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.slaves.ComputerListener;
 import hudson.slaves.WorkspaceList;
+import hudson.util.TextFile;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -62,6 +62,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.CheckForNull;
+import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
 import jenkins.slaves.WorkspaceLocator;
 import org.apache.commons.codec.binary.Base32;
@@ -220,15 +221,25 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     private static void save(Map<String, String> index, FilePath workspace) throws IOException, InterruptedException {
-        // FilePath.renameTo does not support REPLACE_EXISTING, and AtomicFileWriter does not work remotely.
-        // Anyway we are synchronizing access to this file so the only potential problem is half-written content.
-        try (OutputStream os = workspace.child(INDEX_FILE_NAME).write(); Writer w = new OutputStreamWriter(os, StandardCharsets.UTF_8)) {
-            for (Map.Entry<String, String> entry : index.entrySet()) {
-                w.write(entry.getKey());
-                w.write('\n');
-                w.write(entry.getValue());
-                w.write('\n');
-            }
+        // FilePath.renameTo does not support REPLACE_EXISTING, and FilePath.write(String, String) is not atomic.
+        // So we use TextFile, which wraps AtomicFileWriter (in UTF-8 encoding), but which does not have any built-in remote overload.
+        // Note that we are synchronizing access to this file so the only potential problem with a non-atomic write is half-written content.
+        StringBuilder b = new StringBuilder();
+        for (Map.Entry<String, String> entry : index.entrySet()) {
+            b.append(entry.getKey()).append('\n').append(entry.getValue()).append('\n');
+        }
+        workspace.child(INDEX_FILE_NAME).act(new WriteAtomic(b.toString()));
+    }
+    private static final class WriteAtomic extends MasterToSlaveFileCallable<Void> {
+        private static final long serialVersionUID = 1;
+        private final String text;
+        WriteAtomic(String text) {
+            this.text = text;
+        }
+        @Override
+        public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
+            new TextFile(f).write(text);
+            return null;
         }
     }
 
