@@ -47,6 +47,11 @@ public class BasicBranchProjectFactory extends BranchProjectFactory<FreeStylePro
     public FreeStyleProject newInstance(Branch branch) {
         FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getEncodedName());
         setBranch(job, branch);
+        try {
+            job.setQuietPeriod(0);
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
         return job;
     }
 

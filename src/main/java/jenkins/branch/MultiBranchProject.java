@@ -690,7 +690,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
             _actions[0] = new CauseAction(_causes);
         }
-        if (ParameterizedJobMixIn.scheduleBuild2(item, 0, _actions) != null) {
+        if (ParameterizedJobMixIn.scheduleBuild2(item, -1, _actions) != null) {
             listener.getLogger().println("Scheduled build for branch: " + name);
             try {
                 factory.setRevisionHash(item, revision);
