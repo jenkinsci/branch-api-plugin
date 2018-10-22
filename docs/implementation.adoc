@@ -38,7 +38,7 @@ The combination of these factors together means that CI users now want to get th
 
 The original design for Jenkins is ill-suited to such a dynamic environment.
 
-The Branch API plugin is designed to provide one vision of a better solution to the needs of these kinds of dynamic developement methodologies.
+The Branch API plugin is designed to provide one vision of a better solution to the needs of these kinds of dynamic development methodologies.
 
 === Use-cases
 
@@ -465,7 +465,7 @@ Users want to be able to mark customizations as applying to specific branches.
 By way of example:
 
 * Users may want to modify the build steps to prevent a deployment step from running for feature branches.
-* Users may want to replace the email notification on chanfe request branches with an alternative implementation that only ever sends emails to the change request author.
+* Users may want to replace the email notification on change request branches with an alternative implementation that only ever sends emails to the change request author.
 * Users may want named branches to use a specific queue item authenticator so that the mainline branch build has access to the deployment credentials.
 * _etc_
 

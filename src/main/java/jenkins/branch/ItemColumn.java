@@ -115,13 +115,13 @@ public class ItemColumn extends ListViewColumn {
             Actionable actionable = (Actionable) job;
             ObjectMetadataAction action = actionable.getAction(ObjectMetadataAction.class);
             if (action != null) {
-                String dispayName = action.getObjectDisplayName();
-                if (StringUtils.isBlank(dispayName) || dispayName.equals(actionable.getDisplayName())) {
+                String displayName = action.getObjectDisplayName();
+                if (StringUtils.isBlank(displayName) || displayName.equals(actionable.getDisplayName())) {
                     // if the display name is the same, then the description is more useful
                     String description = action.getObjectDescription();
-                    return description != null ? description : dispayName;
+                    return description != null ? description : displayName;
                 }
-                return dispayName;
+                return displayName;
             }
         }
         return null;
