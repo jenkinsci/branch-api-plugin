@@ -43,6 +43,7 @@ import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
 import java.io.IOException;
 import java.lang.management.ThreadInfo;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -985,7 +986,7 @@ public class EventsTest {
             c.createRepository("foo");
             c.createTag("foo", "master", "master-1.0");
             c.cloneBranch("foo", "master","stable");
-            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes("UTF-8"));
+            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes(StandardCharsets.UTF_8));
             c.cloneBranch("foo", "master", "development");
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -1057,7 +1058,7 @@ public class EventsTest {
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
-            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes("UTF-8"));
+            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes(StandardCharsets.UTF_8));
             Integer cr1Num = c.openChangeRequest("foo", "master");
             Integer cr2Num = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -1100,8 +1101,8 @@ public class EventsTest {
             assertThat("The change request 2 MERGE was built", cr2Merge.getLastBuild().getNumber(), is(1));
 
             // now change the master baseline and one of the change requests
-            c.addFile("foo", "master", "new revision", "dummy.txt", "anythingElse".getBytes("UTF-8"));
-            c.addFile("foo", "change-request/"+cr2Num, "new revision", "dummy.txt", "headChange".getBytes("UTF-8"));
+            c.addFile("foo", "master", "new revision", "dummy.txt", "anythingElse".getBytes(StandardCharsets.UTF_8));
+            c.addFile("foo", "change-request/"+cr2Num, "new revision", "dummy.txt", "headChange".getBytes(StandardCharsets.UTF_8));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
 

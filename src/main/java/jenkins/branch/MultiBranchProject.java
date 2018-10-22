@@ -68,7 +68,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1060,12 +1060,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @NonNull
     public static String rawDecode(@NonNull String s) {
-        final byte[] bytes; // should be US-ASCII but we can be tolerant
-        try {
-            bytes = s.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException("JLS specification mandates UTF-8 as a supported encoding", e);
-        }
+        // should be US-ASCII but we can be tolerant
+        final byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
         final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         for (int i = 0; i < bytes.length; i++) {
             final int b = bytes[i];
@@ -1081,11 +1077,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
             buffer.write(b);
         }
-        try {
-            return new String(buffer.toByteArray(), "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException("JLS specification mandates UTF-8 as a supported encoding", e);
-        }
+        return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
     }
 
     private static class BranchSourceList extends PersistedList<BranchSource> {
