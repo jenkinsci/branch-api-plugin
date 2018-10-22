@@ -2713,21 +2713,21 @@ public class EventsTest {
         System.out.println();
         for (String name : c.listRepositories()) {
             System.out.printf("  * %s%n", name);
-            System.out.printf("    * Branches%n", name);
+            System.out.printf("    * Branches%n");
             for (String branch : c.listBranches(name)) {
                 System.out.printf("      - %s%n", branch);
                 MockSCMController.LogEntry e = c.log(name, branch).get(0);
                 System.out
                         .printf("          %s %tc %s%n", e.getHash().substring(0, 7), e.getTimestamp(), e.getMessage());
             }
-            System.out.printf("    * Tags%n", name);
+            System.out.printf("    * Tags%n");
             for (String tag : c.listTags(name)) {
                 System.out.printf("      - %s%n", tag);
                 MockSCMController.LogEntry e = c.log(name, tag).get(0);
                 System.out
                         .printf("          %s %tc %s%n", e.getHash().substring(0, 7), e.getTimestamp(), e.getMessage());
             }
-            System.out.printf("    * Change requests%n", name);
+            System.out.printf("    * Change requests%n");
             for (Integer crNum : c.listChangeRequests(name)) {
                 System.out.printf("      - #%d%n", crNum);
                 MockSCMController.LogEntry e = c.log(name, "change-request/" + crNum).get(0);
