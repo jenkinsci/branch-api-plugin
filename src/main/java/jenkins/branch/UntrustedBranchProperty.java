@@ -70,7 +70,7 @@ public class UntrustedBranchProperty extends BranchProperty {
 
     @DataBoundConstructor
     public UntrustedBranchProperty(String[] publisherWhitelist) {
-        this.publisherWhitelist = publisherWhitelist == null ? Collections.<String>emptySet() : new TreeSet<String>(
+        this.publisherWhitelist = publisherWhitelist == null ? Collections.<String>emptySet() : new TreeSet<>(
                 Arrays.asList(publisherWhitelist));
     }
 
@@ -85,7 +85,7 @@ public class UntrustedBranchProperty extends BranchProperty {
             @NonNull
             @Override
             public List<Publisher> publishers(@NonNull List<Publisher> publishers) {
-                List<Publisher> result = new ArrayList<Publisher>();
+                List<Publisher> result = new ArrayList<>();
                 Set<String> whitelist = getPublisherWhitelist();
                 if (!whitelist.isEmpty()) {
                     for (Publisher publisher: publishers) {
@@ -132,7 +132,7 @@ public class UntrustedBranchProperty extends BranchProperty {
         }
 
         public Map<String,Descriptor<Publisher>> getPublisherDescriptors() {
-            Map<String,Descriptor<Publisher>> result = new LinkedHashMap<String,Descriptor<Publisher>>();
+            Map<String,Descriptor<Publisher>> result = new LinkedHashMap<>();
             for (Descriptor<Publisher> d: Publisher.all()) {
                 result.put(d.clazz.getName(), d);
             }

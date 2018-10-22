@@ -74,7 +74,7 @@ public class Branch {
     /**
      * The properties of this branch.
      */
-    private final CopyOnWriteArrayList<BranchProperty> properties = new CopyOnWriteArrayList<BranchProperty>();
+    private final CopyOnWriteArrayList<BranchProperty> properties = new CopyOnWriteArrayList<>();
 
     /**
      * The {@link SCMSource#fetchActions(SCMHead, SCMHeadEvent, TaskListener)} for this branch.

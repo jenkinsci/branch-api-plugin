@@ -938,7 +938,7 @@ public class EventsTest {
             assertThat(prj.getComputation().getEventsFile().lastModified(), greaterThan(lastModified));
             assertThat("The master branch was built once only", master.getLastBuild().getNumber(), is(1));
             assertThat(master.getLastBuild().getResult(), is(Result.SUCCESS));
-            List<Throwable> deaths = new ArrayList<Throwable>();
+            List<Throwable> deaths = new ArrayList<>();
             for (Computer comp : r.jenkins.getComputers()) {
                 for (Executor e : comp.getExecutors()) {
                     if (e.getCauseOfDeath() != null) {
@@ -1135,8 +1135,8 @@ public class EventsTest {
                 return;
 
             if (System.currentTimeMillis() - startTime > timeout) {
-                List<Queue.Executable> building = new ArrayList<Queue.Executable>();
-                List<Throwable> deaths = new ArrayList<Throwable>();
+                List<Queue.Executable> building = new ArrayList<>();
+                List<Throwable> deaths = new ArrayList<>();
                 for (Computer c : r.jenkins.getComputers()) {
                     for (Executor e : c.getExecutors()) {
                         if (e.isBusy()) {

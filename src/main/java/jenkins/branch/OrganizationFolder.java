@@ -124,11 +124,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * Our navigators.
      */
-    private final DescribableList<SCMNavigator,SCMNavigatorDescriptor> navigators = new DescribableList<SCMNavigator, SCMNavigatorDescriptor>(this);
+    private final DescribableList<SCMNavigator,SCMNavigatorDescriptor> navigators = new DescribableList<>(this);
     /**
      * Our project factories.
      */
-    private final DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor> projectFactories = new DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor>(this);
+    private final DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor> projectFactories = new DescribableList<>(this);
     /**
      * The rules for automatic building of branches.
      *
@@ -530,13 +530,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      */
     @Override
     public List<SCMSource> getSCMSources() {
-        Set<SCMSource> result = new HashSet<SCMSource>();
+        Set<SCMSource> result = new HashSet<>();
         for (MultiBranchProject<?,?> child : getItems()) {
             if (child.isBuildable()) {
                 result.addAll(child.getSCMSources());
             }
         }
-        return new ArrayList<SCMSource>(result);
+        return new ArrayList<>(result);
     }
 
     /**
@@ -764,7 +764,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Nonnull
         public static <T> List<T> remove(@Nonnull Iterable<T> base, @Nonnull Class<? extends T> type) {
-            List<T> r = new ArrayList<T>();
+            List<T> r = new ArrayList<>();
             for (T i : base) {
                 if (!type.isInstance(i))
                     r.add(i);
@@ -1312,7 +1312,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public ProjectObserver observe(@NonNull final String projectName) {
             return new ProjectObserver() {
-                List<SCMSource> sources = new ArrayList<SCMSource>();
+                List<SCMSource> sources = new ArrayList<>();
 
                 @Override
                 public void addSource(@NonNull SCMSource source) {
@@ -1324,7 +1324,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     if (sources == null) {
                         throw new IllegalStateException();
                     }
-                    List<BranchSource> branchSources = new ArrayList<BranchSource>();
+                    List<BranchSource> branchSources = new ArrayList<>();
                     for (SCMSource source : sources) {
                         BranchSource branchSource = new BranchSource(source);
                         branchSource.setBuildStrategies(buildStrategies);
@@ -1549,7 +1549,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
 
         public void setActions(SCMNavigator navigator, List<Action> actions) {
-            this.actions.put(navigator.getId(), new ArrayList<Action>(actions));
+            this.actions.put(navigator.getId(), new ArrayList<>(actions));
         }
 
         public Map<SCMNavigator, List<Action>> getActions() {
@@ -1565,7 +1565,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             Set<String> keys = new HashSet<>();
             for (Map.Entry<SCMNavigator, List<Action>> entry: actions.entrySet()) {
                 String id = entry.getKey().getId();
-                this.actions.put(id, new ArrayList<Action>(Util.fixNull(entry.getValue())));
+                this.actions.put(id, new ArrayList<>(Util.fixNull(entry.getValue())));
                 keys.add(id);
             }
             this.actions.keySet().retainAll(keys);

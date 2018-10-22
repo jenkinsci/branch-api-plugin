@@ -241,7 +241,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     private synchronized void init2() {
         if (sources == null) {
-            sources = new PersistedList<BranchSource>(this);
+            sources = new PersistedList<>(this);
         }
         if (nullSCMSource == null) {
             nullSCMSource = new NullSCMSource();
@@ -477,7 +477,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @NonNull
     public List<SCMSource> getSCMSources() {
-        List<SCMSource> result = new ArrayList<SCMSource>();
+        List<SCMSource> result = new ArrayList<>();
         if (sources != null) {
             for (BranchSource source : sources) {
                 result.add(source.getSource());
@@ -1049,7 +1049,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @Override
     protected FolderComputation<P> createComputation(FolderComputation<P> previous) {
-        return new BranchIndexing<P, R>(this, (BranchIndexing) previous);
+        return new BranchIndexing<>(this, (BranchIndexing) previous);
     }
 
     /**

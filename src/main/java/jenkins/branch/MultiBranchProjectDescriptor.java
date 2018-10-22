@@ -177,7 +177,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     @SuppressWarnings("unused") // used by stapler
     @NonNull
     public List<BranchProjectFactoryDescriptor> getProjectFactoryDescriptors() {
-        List<BranchProjectFactoryDescriptor> result = new ArrayList<BranchProjectFactoryDescriptor>();
+        List<BranchProjectFactoryDescriptor> result = new ArrayList<>();
         for (BranchProjectFactoryDescriptor descriptor : ExtensionList.lookup(BranchProjectFactoryDescriptor.class)) {
             if (descriptor.isApplicable(getClazz()) && descriptor.getProjectClass().isAssignableFrom(getProjectClass())) {
                 result.add(descriptor);

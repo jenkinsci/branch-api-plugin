@@ -103,10 +103,10 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
     public List<BranchProperty> getPropertiesFor(SCMHead head) {
         for (Named named : namedExceptions) {
             if (named.isMatch(head)) {
-                return new ArrayList<BranchProperty>(named.getProps());
+                return new ArrayList<>(named.getProps());
             }
         }
-        return new ArrayList<BranchProperty>(defaultProperties);
+        return new ArrayList<>(defaultProperties);
     }
 
     /**
