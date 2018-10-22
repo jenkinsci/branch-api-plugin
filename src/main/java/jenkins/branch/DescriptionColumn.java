@@ -28,7 +28,6 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.Util;
-import hudson.markup.MarkupFormatter;
 import hudson.model.Actionable;
 import hudson.model.Item;
 import hudson.model.Job;

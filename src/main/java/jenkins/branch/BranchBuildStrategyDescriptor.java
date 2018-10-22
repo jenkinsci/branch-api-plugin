@@ -28,7 +28,6 @@ import hudson.ExtensionList;
 import hudson.model.Descriptor;
 import java.util.ArrayList;
 import java.util.List;
-import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMSourceDescriptor;
 
 /**

@@ -82,7 +82,6 @@ import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
-import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMRevision;

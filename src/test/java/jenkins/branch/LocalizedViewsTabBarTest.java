@@ -27,7 +27,6 @@ package jenkins.branch;
 
 import hudson.model.Descriptor;
 import hudson.model.Item;
-import hudson.model.ListView;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
 import java.io.IOException;
