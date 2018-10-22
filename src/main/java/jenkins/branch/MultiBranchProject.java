@@ -2036,7 +2036,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
                 try {
                     List<Action> actions = source.fetchActions(revision, event, listener);
-                    revisionActions = actions.toArray(new Action[actions.size()]);
+                    revisionActions = actions.toArray(new Action[0]);
                 } catch (IOException | InterruptedException e) {
                     printStackTrace(e, listener.error("Could not fetch metadata for revision %s of branch %s",
                             revision, rawName));

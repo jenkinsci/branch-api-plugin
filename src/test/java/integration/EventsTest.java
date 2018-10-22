@@ -1572,7 +1572,7 @@ public class EventsTest {
                 assertThat("The "+n+" branch was built", branch.getLastBuild().getNumber(), is(1));
                 expected.add(branch);
             }
-            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[0])));
         }
     }
 
@@ -1632,7 +1632,7 @@ public class EventsTest {
                 assertThat("The " + n + " branch was built", branch.getLastBuild().getNumber(), is(1));
                 expected.add(branch);
             }
-            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[0])));
         }
         assertThat("More than one event processed concurrently", maxInflight.get(), greaterThan(1));
     }
@@ -1699,7 +1699,7 @@ public class EventsTest {
                 assertThat("The " + n + " branch was built", branch.getLastBuild().getNumber(), is(1));
                 expected.add(branch);
             }
-            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[0])));
 
             // release the block
             block.countDown();
@@ -1712,7 +1712,7 @@ public class EventsTest {
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
 
             expected.add(master);
-            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[0])));
         } finally {
             block.countDown(); // release it just in case to ensure any background threads get to terminate promptly
         }
