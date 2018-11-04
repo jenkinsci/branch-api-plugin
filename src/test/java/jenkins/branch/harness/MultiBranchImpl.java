@@ -25,7 +25,6 @@
 package jenkins.branch.harness;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;

@@ -3,7 +3,7 @@
 This document provides the user guide to the functionality provided by the Branch API plugin.
 
 The Branch API plugin is a framework for one solution to the problem of how synchronize Jenkins with the branching structure of your source control system.
-The solution that the Branch API plugin provides will automatically create projects for branches and tidy them up based on the criterial you configure.
+The solution that the Branch API plugin provides will automatically create projects for branches and tidy them up based on the criteria you configure.
 The Branch API plugin also provides a framework for another layer of abstraction above this, namely that Jenkins will be synchronized with a collection of repositories and will create multi-branch projects for each repository as those repositories meet the criteria required to manage them as multi-branch projects.
 
 In order to use the Branch API plugin, you need to also have installed two other kinds of plugins:
@@ -92,7 +92,7 @@ The strategy is only ever applied during a full indexing of the multi-branch pro
 TIP: Individual orphaned items can be manually deleted proactively ahead of the orphaned item strategy.
 
 The _Health metrics_ section allows configuration of how the health metrics of this folder are reported to higher levels.
-See the https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Folders+Plugin[Folders Plugin] documention for details of this.
+See the https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Folders+Plugin[Folders Plugin] documentation for details of this.
 
 Finally the _Properties_ section includes both generic folder properties and properties specific to this type of multi-branch project
 

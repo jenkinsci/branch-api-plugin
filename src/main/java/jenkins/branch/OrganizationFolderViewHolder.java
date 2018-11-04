@@ -34,7 +34,6 @@ import hudson.model.ViewDescriptor;
 import hudson.model.ViewGroup;
 import hudson.security.ACL;
 import hudson.security.Permission;
-import hudson.views.JobColumn;
 import hudson.views.StatusColumn;
 import hudson.views.ViewsTabBar;
 import hudson.views.WeatherColumn;

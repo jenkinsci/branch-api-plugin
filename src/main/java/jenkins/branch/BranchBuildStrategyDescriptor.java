@@ -28,7 +28,6 @@ import hudson.ExtensionList;
 import hudson.model.Descriptor;
 import java.util.ArrayList;
 import java.util.List;
-import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMSourceDescriptor;
 
 /**
@@ -91,7 +90,7 @@ public abstract class BranchBuildStrategyDescriptor extends Descriptor<BranchBui
      */
     public static List<BranchBuildStrategyDescriptor> all(
             @NonNull MultiBranchProject project, @NonNull SCMSourceDescriptor sourceDescriptor) {
-        List<BranchBuildStrategyDescriptor> result = new ArrayList<BranchBuildStrategyDescriptor>();
+        List<BranchBuildStrategyDescriptor> result = new ArrayList<>();
         for (BranchBuildStrategyDescriptor d : all()) {
             if (d.isApplicable(project) && d.isApplicable(sourceDescriptor)) {
                 result.add(d);

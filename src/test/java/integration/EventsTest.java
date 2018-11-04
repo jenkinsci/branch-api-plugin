@@ -43,6 +43,7 @@ import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
 import java.io.IOException;
 import java.lang.management.ThreadInfo;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -81,7 +82,6 @@ import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
-import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMRevision;
@@ -937,7 +937,7 @@ public class EventsTest {
             assertThat(prj.getComputation().getEventsFile().lastModified(), greaterThan(lastModified));
             assertThat("The master branch was built once only", master.getLastBuild().getNumber(), is(1));
             assertThat(master.getLastBuild().getResult(), is(Result.SUCCESS));
-            List<Throwable> deaths = new ArrayList<Throwable>();
+            List<Throwable> deaths = new ArrayList<>();
             for (Computer comp : r.jenkins.getComputers()) {
                 for (Executor e : comp.getExecutors()) {
                     if (e.getCauseOfDeath() != null) {
@@ -985,7 +985,7 @@ public class EventsTest {
             c.createRepository("foo");
             c.createTag("foo", "master", "master-1.0");
             c.cloneBranch("foo", "master","stable");
-            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes("UTF-8"));
+            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes(StandardCharsets.UTF_8));
             c.cloneBranch("foo", "master", "development");
             Integer crNum = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -1057,7 +1057,7 @@ public class EventsTest {
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
-            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes("UTF-8"));
+            c.addFile("foo", "master", "new revision", "dummy.txt", "anything".getBytes(StandardCharsets.UTF_8));
             Integer cr1Num = c.openChangeRequest("foo", "master");
             Integer cr2Num = c.openChangeRequest("foo", "master");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -1100,8 +1100,8 @@ public class EventsTest {
             assertThat("The change request 2 MERGE was built", cr2Merge.getLastBuild().getNumber(), is(1));
 
             // now change the master baseline and one of the change requests
-            c.addFile("foo", "master", "new revision", "dummy.txt", "anythingElse".getBytes("UTF-8"));
-            c.addFile("foo", "change-request/"+cr2Num, "new revision", "dummy.txt", "headChange".getBytes("UTF-8"));
+            c.addFile("foo", "master", "new revision", "dummy.txt", "anythingElse".getBytes(StandardCharsets.UTF_8));
+            c.addFile("foo", "change-request/"+cr2Num, "new revision", "dummy.txt", "headChange".getBytes(StandardCharsets.UTF_8));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
 
@@ -1134,8 +1134,8 @@ public class EventsTest {
                 return;
 
             if (System.currentTimeMillis() - startTime > timeout) {
-                List<Queue.Executable> building = new ArrayList<Queue.Executable>();
-                List<Throwable> deaths = new ArrayList<Throwable>();
+                List<Queue.Executable> building = new ArrayList<>();
+                List<Throwable> deaths = new ArrayList<>();
                 for (Computer c : r.jenkins.getComputers()) {
                     for (Executor e : c.getExecutors()) {
                         if (e.isBusy()) {
@@ -1572,7 +1572,7 @@ public class EventsTest {
                 assertThat("The "+n+" branch was built", branch.getLastBuild().getNumber(), is(1));
                 expected.add(branch);
             }
-            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[0])));
         }
     }
 
@@ -1632,7 +1632,7 @@ public class EventsTest {
                 assertThat("The " + n + " branch was built", branch.getLastBuild().getNumber(), is(1));
                 expected.add(branch);
             }
-            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[0])));
         }
         assertThat("More than one event processed concurrently", maxInflight.get(), greaterThan(1));
     }
@@ -1699,7 +1699,7 @@ public class EventsTest {
                 assertThat("The " + n + " branch was built", branch.getLastBuild().getNumber(), is(1));
                 expected.add(branch);
             }
-            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[0])));
 
             // release the block
             block.countDown();
@@ -1712,7 +1712,7 @@ public class EventsTest {
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
 
             expected.add(master);
-            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[expected.size()])));
+            assertThat(prj.getItems(), containsInAnyOrder(expected.toArray(new FreeStyleProject[0])));
         } finally {
             block.countDown(); // release it just in case to ensure any background threads get to terminate promptly
         }
@@ -2713,21 +2713,21 @@ public class EventsTest {
         System.out.println();
         for (String name : c.listRepositories()) {
             System.out.printf("  * %s%n", name);
-            System.out.printf("    * Branches%n", name);
+            System.out.printf("    * Branches%n");
             for (String branch : c.listBranches(name)) {
                 System.out.printf("      - %s%n", branch);
                 MockSCMController.LogEntry e = c.log(name, branch).get(0);
                 System.out
                         .printf("          %s %tc %s%n", e.getHash().substring(0, 7), e.getTimestamp(), e.getMessage());
             }
-            System.out.printf("    * Tags%n", name);
+            System.out.printf("    * Tags%n");
             for (String tag : c.listTags(name)) {
                 System.out.printf("      - %s%n", tag);
                 MockSCMController.LogEntry e = c.log(name, tag).get(0);
                 System.out
                         .printf("          %s %tc %s%n", e.getHash().substring(0, 7), e.getTimestamp(), e.getMessage());
             }
-            System.out.printf("    * Change requests%n", name);
+            System.out.printf("    * Change requests%n");
             for (Integer crNum : c.listChangeRequests(name)) {
                 System.out.printf("      - #%d%n", crNum);
                 MockSCMController.LogEntry e = c.log(name, "change-request/" + crNum).get(0);

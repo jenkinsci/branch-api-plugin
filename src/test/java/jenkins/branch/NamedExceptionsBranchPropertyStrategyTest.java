@@ -1,6 +1,5 @@
 package jenkins.branch;
 
-import jenkins.scm.api.SCMHead;
 import org.junit.Test;
 
 import static jenkins.branch.NamedExceptionsBranchPropertyStrategy.Named.isMatch;
