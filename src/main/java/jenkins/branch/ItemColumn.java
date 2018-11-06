@@ -30,8 +30,6 @@ import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
-import hudson.model.TopLevelItem;
-import hudson.remoting.Callable;
 import hudson.security.ACL;
 import hudson.views.JobColumn;
 import hudson.views.ListViewColumn;
@@ -41,7 +39,6 @@ import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -118,13 +115,13 @@ public class ItemColumn extends ListViewColumn {
             Actionable actionable = (Actionable) job;
             ObjectMetadataAction action = actionable.getAction(ObjectMetadataAction.class);
             if (action != null) {
-                String dispayName = action.getObjectDisplayName();
-                if (StringUtils.isBlank(dispayName) || dispayName.equals(actionable.getDisplayName())) {
+                String displayName = action.getObjectDisplayName();
+                if (StringUtils.isBlank(displayName) || displayName.equals(actionable.getDisplayName())) {
                     // if the display name is the same, then the description is more useful
                     String description = action.getObjectDescription();
-                    return description != null ? description : dispayName;
+                    return description != null ? description : displayName;
                 }
-                return dispayName;
+                return displayName;
             }
         }
         return null;

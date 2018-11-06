@@ -25,9 +25,7 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
-import hudson.Util;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
 import hudson.model.Job;
@@ -74,7 +72,7 @@ public class Branch {
     /**
      * The properties of this branch.
      */
-    private final CopyOnWriteArrayList<BranchProperty> properties = new CopyOnWriteArrayList<BranchProperty>();
+    private final CopyOnWriteArrayList<BranchProperty> properties = new CopyOnWriteArrayList<>();
 
     /**
      * The {@link SCMSource#fetchActions(SCMHead, SCMHeadEvent, TaskListener)} for this branch.

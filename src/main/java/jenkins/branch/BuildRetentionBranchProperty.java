@@ -52,9 +52,7 @@ public class BuildRetentionBranchProperty extends BranchProperty {
                             } finally {
                                 if (!accessible) logRotator.setAccessible(false);
                             }
-                        } catch (IllegalAccessException e) {
-                            return false;
-                        } catch (NoSuchFieldException e) {
+                        } catch (IllegalAccessException | NoSuchFieldException e) {
                             return false;
                         }
                     }

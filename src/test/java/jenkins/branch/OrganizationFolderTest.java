@@ -28,21 +28,15 @@ import hudson.model.ItemGroup;
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.View;
-import java.util.concurrent.TimeUnit;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.impl.SingleSCMNavigator;
 import hudson.scm.NullSCM;
-import hudson.util.RingBufferLogHandler;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMSource;
@@ -53,7 +47,6 @@ import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
-import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.is;
@@ -61,7 +54,6 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.*;
 
-import org.junit.Assert;
 import org.junit.Rule;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;

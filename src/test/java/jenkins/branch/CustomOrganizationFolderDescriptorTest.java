@@ -162,7 +162,7 @@ public class CustomOrganizationFolderDescriptorTest {
     @Test
     public void insideFolder() throws Exception {
         Folder folder = r.jenkins.createProject(Folder.class, "d");
-        List<String> names = new ArrayList<String>();
+        List<String> names = new ArrayList<>();
         for (TopLevelItemDescriptor d : DescriptorVisibilityFilter.apply(folder, Items.all())) {
             if (d.clazz == OrganizationFolder.class || d instanceof CustomOrganizationFolderDescriptor) {
                 names.add(d.getDisplayName());
@@ -203,7 +203,7 @@ public class CustomOrganizationFolderDescriptorTest {
         View allView = r.jenkins.getView("All");
         assertNotNull(allView);
         // Cf. View/newJob.jelly:
-        List<String> names = new ArrayList<String>();
+        List<String> names = new ArrayList<>();
         for (TopLevelItemDescriptor d : DescriptorVisibilityFilter.apply(allView, Items.all())) {
             if (d.clazz == OrganizationFolder.class || d instanceof CustomOrganizationFolderDescriptor) {
                 names.add(d.getDisplayName());

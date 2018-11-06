@@ -75,7 +75,7 @@ public class DefaultBranchPropertyStrategy extends BranchPropertyStrategy {
     @NonNull
     @Override
     public List<BranchProperty> getPropertiesFor(SCMHead head) {
-        return new ArrayList<BranchProperty>(properties);
+        return new ArrayList<>(properties);
     }
 
     /**

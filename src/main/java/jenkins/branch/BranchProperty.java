@@ -111,6 +111,6 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
      * newly created {@link ArrayList}.
      */
     protected static <T> ArrayList<T> asArrayList(List<T> list) {
-        return list instanceof ArrayList ? (ArrayList<T>)list : new ArrayList<T>(list);
+        return list instanceof ArrayList ? (ArrayList<T>)list : new ArrayList<>(list);
     }
 }
