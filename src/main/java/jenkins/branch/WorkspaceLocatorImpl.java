@@ -133,9 +133,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     private static FilePath locate(TopLevelItem item, String fullName, Node node, boolean create) {
         switch (MODE) {
         case DISABLED:
+            LOGGER.log(Level.FINE, "disabled, skipping for {0} on {1}", new Object[] {item, node});
             return null;
         case MULTIBRANCH_ONLY:
             if (!(item.getParent() instanceof MultiBranchProject)) {
+                LOGGER.log(Level.FINE, "ignoring non-branch project {0} on {1}", new Object[] {item, node});
                 return null;
             }
             break;
@@ -146,6 +148,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
         FilePath workspace = getWorkspaceRoot(node);
         if (workspace == null) {
+            LOGGER.log(Level.FINE, "no available workspace root for {0} so skipping {1}", new Object[] {node, item});
             return null;
         }
         if (fullName.contains("\n") || fullName.equals(INDEX_FILE_NAME)) {
@@ -157,7 +160,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 // Already listed:
                 String path = index.get(fullName);
                 if (path != null) {
-                    return workspace.child(path);
+                    FilePath dir = workspace.child(path);
+                    LOGGER.finer("index already lists " + dir + " for " + item + " on " + node);
+                    return dir;
                 }
                 // Old JENKINS-34564 implementation:
                 if (PATH_MAX != 0 && item.getParent() instanceof MultiBranchProject) {
@@ -166,6 +171,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     if (dir.isDirectory()) {
                         index.put(fullName, path);
                         save(index, workspace);
+                        LOGGER.log(Level.FINE, "detected existing workspace {0} under old naming scheme for {1} on {2}", new Object[] {dir, item, node});
                         return dir;
                     }
                 }
@@ -174,9 +180,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 if (dir.isDirectory()) {
                     index.put(fullName, fullName);
                     save(index, workspace);
+                    LOGGER.log(Level.FINE, "using plain default location {0} for {1} on {2}", new Object[] {dir, item, node});
                     return dir;
                 }
                 if (!create) {
+                    LOGGER.log(Level.FINE, "not creating a new workspace for {0} on {1} since {2} does not exist", new Object[] {item, node, dir});
                     return null;
                 }
                 // Allocate:
@@ -188,6 +196,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         if (!dir.isDirectory()) {
                             index.put(fullName, path);
                             save(index, workspace);
+                            LOGGER.log(Level.FINE, "allocating {0} for {1} on {2}", new Object[] {dir, item, node});
                             return dir;
                         }
                     }
