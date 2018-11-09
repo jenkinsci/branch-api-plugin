@@ -26,25 +26,43 @@ package jenkins.branch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.FilePath;
-import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Item;
 import hudson.model.Node;
 import hudson.model.Slave;
+import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
+import hudson.model.WorkspaceCleanupThread;
 import hudson.model.listeners.ItemListener;
+import hudson.remoting.VirtualChannel;
+import hudson.security.ACL;
+import hudson.security.ACLContext;
+import hudson.slaves.ComputerListener;
+import hudson.slaves.WorkspaceList;
+import hudson.util.TextFile;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.annotation.CheckForNull;
+import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
 import jenkins.slaves.WorkspaceLocator;
 import org.apache.commons.codec.binary.Base32;
@@ -53,8 +71,9 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
- * Chooses manageable workspace names for branch projects.
+ * Chooses manageable workspace names for (especially branch) projects.
  * @see "JENKINS-34564"
+ * @see "JENKINS-2111"
  */
 @Restricted(NoExternalUse.class)
 @Extension(ordinal = -100)
@@ -62,44 +81,186 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
     private static final Logger LOGGER = Logger.getLogger(WorkspaceLocatorImpl.class.getName());
 
+    @Deprecated
     static final int PATH_MAX_DEFAULT = 80;
-    /** The most characters to allow in a workspace directory name, relative to the root. Zero to disable altogether. */
-    // TODO 2.4+ use SystemProperties
+    /**
+     * The most characters to allow in a workspace directory name, relative to the root.
+     * Zero to disable altogether.
+     * Not used for new workspaces; only for continuing to use workspaces created prior to {@link #MAX_LENGTH}.
+     */
+    @Deprecated
     static /* not final */ int PATH_MAX = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".PATH_MAX", PATH_MAX_DEFAULT);
+
+    static /* not final */ int MAX_LENGTH = Integer.getInteger(WorkspaceLocatorImpl.class.getName() + ".MAX_LENGTH", NameMangler.MAX_SAFE_LENGTH);
+
+    enum Mode {
+        DISABLED,
+        MULTIBRANCH_ONLY,
+        ENABLED
+    }
+    /**
+     * On which projects to use this extension.
+     * Could be set to {@link Mode#ENABLED} to turn on the smarter behavior for all projects,
+     * including standalone Pipeline and even freestyle, matrix, etc.
+     * On the one hand I do not like having installation of what is otherwise a library plugin affect behavior of core functionality.
+     * On the other hand, the name shortening is very useful for projects in deep folder hierarchies;
+     * the character sanitization is useful for all sorts of project generation systems other than multibranch;
+     * and the automatic cleanup is useful for pretty much everyone, since {@link WorkspaceCleanupThread} is unreliable.
+     */
+    static /* not final */ Mode MODE = Mode.valueOf(System.getProperty(WorkspaceLocatorImpl.class.getName() + ".MODE", Mode.MULTIBRANCH_ONLY.name()));
+
+    /**
+     * File containing pairs of lines tracking workspaces.
+     * The first line in a pair is a {@link TopLevelItem#getFullName};
+     * the second is a workspace-relative path.
+     * Reads and writes to this file should be synchronized on the {@link Node}.
+     */
+    static final String INDEX_FILE_NAME = "workspaces.txt";
+
+    /** Same as {@link WorkspaceList#COMBINATOR}. */
+    private static final String COMBINATOR = System.getProperty(WorkspaceList.class.getName(), "@");
 
     @Override
     public FilePath locate(TopLevelItem item, Node node) {
-        if (PATH_MAX == 0) {
+        return locate(item, node, true);
+    }
+
+    private static FilePath locate(TopLevelItem item, Node node, boolean create) {
+        return locate(item, item.getFullName(), node, create);
+    }
+
+    @CheckForNull
+    private static FilePath locate(TopLevelItem item, String fullName, Node node, boolean create) {
+        switch (MODE) {
+        case DISABLED:
             return null;
-        }
-        if (!(item.getParent() instanceof MultiBranchProject)) {
-            return null;
-        }
-        String minimized = minimize(item.getFullName());
-        if (node instanceof Jenkins) {
-            String workspaceDir = ((Jenkins) node).getRawWorkspaceDir();
-            if (!workspaceDir.contains("ITEM_FULL")) {
-                LOGGER.log(Level.WARNING, "JENKINS-34564 path sanitization ineffective when using legacy Workspace Root Directory ‘{0}’; switch to $'{'JENKINS_HOME'}'/workspace/$'{'ITEM_FULLNAME'}' as in JENKINS-8446 / JENKINS-21942", workspaceDir);
+        case MULTIBRANCH_ONLY:
+            if (!(item.getParent() instanceof MultiBranchProject)) {
+                return null;
             }
-            return new FilePath(new File(expandVariablesForDirectory(workspaceDir, minimized, item.getRootDir().getPath())));
+            break;
+        case ENABLED:
+            break;
+        default:
+            throw new AssertionError();
+        }
+        FilePath workspace = getWorkspaceRoot(node);
+        if (workspace == null) {
+            return null;
+        }
+        if (fullName.contains("\n") || fullName.equals(INDEX_FILE_NAME)) {
+            throw new IllegalArgumentException("Dangerous job name `" + fullName + "`"); // better not to mess around
+        }
+        try {
+            synchronized (node) {
+                Map<String, String> index = load(workspace);
+                // Already listed:
+                String path = index.get(fullName);
+                if (path != null) {
+                    return workspace.child(path);
+                }
+                // Old JENKINS-34564 implementation:
+                if (PATH_MAX != 0 && item.getParent() instanceof MultiBranchProject) {
+                    path = minimize(fullName);
+                    FilePath dir = workspace.child(path);
+                    if (dir.isDirectory()) {
+                        index.put(fullName, path);
+                        save(index, workspace);
+                        return dir;
+                    }
+                }
+                // Plain default:
+                FilePath dir = workspace.child(fullName);
+                if (dir.isDirectory()) {
+                    index.put(fullName, fullName);
+                    save(index, workspace);
+                    return dir;
+                }
+                if (!create) {
+                    return null;
+                }
+                // Allocate:
+                String mnemonic = mnemonicOf(fullName);
+                for (int i = 1; ; i++) {
+                    path = StringUtils.right(i > 1 ? mnemonic + "_" + i : mnemonic, MAX_LENGTH);
+                    if (!index.containsKey(path)) {
+                        dir = workspace.child(path);
+                        if (!dir.isDirectory()) {
+                            index.put(fullName, path);
+                            save(index, workspace);
+                            return dir;
+                        }
+                    }
+                }
+            }
+        } catch (IOException | InterruptedException x) {
+            LOGGER.log(Level.WARNING, "could not manage workspaces on " + node, x);
+            return null;
+        }
+    }
+    
+    private static Map<String, String> load(FilePath workspace) throws IOException, InterruptedException {
+        Map<String, String> map = new TreeMap<>();
+        FilePath index = workspace.child(INDEX_FILE_NAME);
+        if (index.exists()) {
+            try (InputStream is = index.read(); Reader r = new InputStreamReader(is, StandardCharsets.UTF_8); BufferedReader br = new BufferedReader(r)) {
+                while (true) {
+                    String key = br.readLine();
+                    if (key == null) {
+                        break;
+                    }
+                    String value = br.readLine();
+                    if (value == null) {
+                        throw new IOException("malformed " + index);
+                    }
+                    map.put(key, value);
+                }
+            }
+        }
+        return map;
+    }
+
+    private static void save(Map<String, String> index, FilePath workspace) throws IOException, InterruptedException {
+        // FilePath.renameTo does not support REPLACE_EXISTING, and FilePath.write(String, String) is not atomic.
+        // So we use TextFile, which wraps AtomicFileWriter (in UTF-8 encoding), but which does not have any built-in remote overload.
+        // Note that we are synchronizing access to this file so the only potential problem with a non-atomic write is half-written content.
+        StringBuilder b = new StringBuilder();
+        for (Map.Entry<String, String> entry : index.entrySet()) {
+            b.append(entry.getKey()).append('\n').append(entry.getValue()).append('\n');
+        }
+        workspace.child(INDEX_FILE_NAME).act(new WriteAtomic(b.toString()));
+    }
+    private static final class WriteAtomic extends MasterToSlaveFileCallable<Void> {
+        private static final long serialVersionUID = 1;
+        private final String text;
+        WriteAtomic(String text) {
+            this.text = text;
+        }
+        @Override
+        public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
+            new TextFile(f).write(text);
+            return null;
+        }
+    }
+
+    private static final Pattern GOOD_RAW_WORKSPACE_DIR = Pattern.compile("[$][{]JENKINS_HOME[}]/(.+)/[$][{]ITEM_FULL_?NAME[}]");
+    private static @CheckForNull FilePath getWorkspaceRoot(Node node) {
+        if (node instanceof Jenkins) {
+            Matcher m = GOOD_RAW_WORKSPACE_DIR.matcher(((Jenkins) node).getRawWorkspaceDir());
+            if (m.matches()) {
+                return node.getRootPath().child(m.group(1));
+            } else {
+                LOGGER.log(Level.WARNING, "JENKINS-2111 path sanitization ineffective when using legacy Workspace Root Directory ‘{0}’; switch to $'{'JENKINS_HOME'}'/workspace/$'{'ITEM_FULLNAME'}' as in JENKINS-8446 / JENKINS-21942", ((Jenkins) node).getRawWorkspaceDir());
+                return null;
+            }
         } else if (node instanceof Slave) {
-            FilePath root = ((Slave) node).getWorkspaceRoot();
-            return root != null ? root.child(minimized) : null;
+            return ((Slave) node).getWorkspaceRoot();
         } else { // ?
             return null;
         }
     }
 
-    /** copied from {@link Jenkins} */
-    static String expandVariablesForDirectory(String base, String itemFullName, String itemRootDir) {
-        return Util.replaceMacro(base, ImmutableMap.of(
-                "JENKINS_HOME", Jenkins.getActiveInstance().getRootDir().getPath(),
-                "ITEM_ROOTDIR", itemRootDir,
-                "ITEM_FULLNAME", itemFullName,   // legacy, deprecated
-                "ITEM_FULL_NAME", itemFullName.replace(':','$'))); // safe, see JENKINS-12251
-
-    }
-
+    @Deprecated
     private static String uniqueSuffix(String name) {
         // TODO still in beta: byte[] sha256 = Hashing.sha256().hashString(name).asBytes();
         byte[] sha256;
@@ -111,8 +272,14 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         return new Base32(0).encodeToString(sha256).replaceFirst("=+$", "");
     }
 
+    private static String mnemonicOf(String name) {
+        // Do not need the complexity of NameMangler here, since we uniquify as needed.
+        return name.replaceAll("(%[0-9A-F]{2}|[^a-zA-Z0-9-_.])+", "_");
+    }
+
+    @Deprecated
     static String minimize(String name) {
-        String mnemonic = name.replaceAll("(%[0-9A-F]{2}|[^a-zA-Z0-9-_.])+", "_");
+        String mnemonic = mnemonicOf(name);
         int maxSuffix = 53; /* ceil(256 / lg(32)) + length("-") */
         int maxMnemonic = Math.max(PATH_MAX - maxSuffix, 1);
         if (maxSuffix + maxMnemonic > PATH_MAX) {
@@ -131,7 +298,8 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     /**
-     * Cleans up workspace when an orphaned branch project is deleted.
+     * Cleans up workspace when an orphaned project is deleted.
+     * Also moves workspace when it is renamed or moved.
      * @see "JENKINS-2111"
      */
     @Extension
@@ -144,15 +312,21 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
             TopLevelItem tli = (TopLevelItem) item;
             Jenkins jenkins = Jenkins.getActiveInstance();
-            FilePath masterLoc = new WorkspaceLocatorImpl().locate(tli, jenkins);
-            if (masterLoc != null) {
-                Computer.threadPoolForRemoting.submit(new CleanupTask(masterLoc, "master"));
-                for (Node node : jenkins.getNodes()) {
-                    FilePath slaveLoc = new WorkspaceLocatorImpl().locate(tli, node);
-                    if (slaveLoc != null) {
-                        Computer.threadPoolForRemoting.submit(new CleanupTask(slaveLoc, node.getNodeName()));
-                    }
-                }
+            Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
+            for (Node node : jenkins.getNodes()) {
+                Computer.threadPoolForRemoting.submit(new CleanupTask(tli, node));
+            }
+        }
+
+        @Override
+        public void onLocationChanged(Item item, String oldFullName, String newFullName) {
+            if (!(item instanceof TopLevelItem)) {
+                return;
+            }
+            Jenkins jenkins = Jenkins.get();
+            Computer.threadPoolForRemoting.submit(new MoveTask(oldFullName, newFullName, jenkins));
+            for (Node node : jenkins.getNodes()) {
+                Computer.threadPoolForRemoting.submit(new MoveTask(oldFullName, newFullName, node));
             }
         }
 
@@ -178,41 +352,52 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         private static class CleanupTask implements Runnable {
 
             @NonNull
-            private final FilePath loc;
+            private final TopLevelItem tli;
 
             @NonNull
-            private final String nodeName;
+            private final Node node;
 
-            CleanupTask(FilePath loc, String nodeName) {
-                this.loc = loc;
-                this.nodeName = nodeName;
+            CleanupTask(TopLevelItem tli, Node node) {
+                this.tli = tli;
+                this.node = node;
                 taskStarted();
             }
 
             @Override
             public void run() {
-                String base = loc.getName();
-                FilePath parent = loc.getParent();
-                if (parent == null) { // unlikely but just in case
-                    return;
-                }
                 Thread t = Thread.currentThread();
                 String oldName = t.getName();
-                t.setName(oldName + ": deleting workspace in " + loc + " on " + nodeName);
+                String nodeName = node instanceof Jenkins ? "master" : node.getNodeName();
                 try {
                     try (Timeout timeout = Timeout.limit(5, TimeUnit.MINUTES)) {
-                        List<FilePath> dirs = parent.listDirectories();
-                        if (dirs == null) { // impossible as of https://github.com/jenkinsci/jenkins/pull/2914
+                        FilePath loc = locate(tli, node, false);
+                        if (loc == null) {
                             return;
                         }
+                        t.setName(oldName + ": deleting workspace in " + loc + " on " + nodeName);
+                        String base = loc.getName();
+                        FilePath parent = loc.getParent();
+                        if (parent == null) { // unlikely but just in case
+                            return;
+                        }
+                        List<FilePath> dirs = parent.listDirectories();
                         for (FilePath child : dirs) {
-                            if (child.getName().startsWith(base)) {
+                            String childName = child.getName();
+                            if (childName.equals(base) || childName.startsWith(base + COMBINATOR)) {
                                 LOGGER.log(Level.INFO, "deleting obsolete workspace {0} on {1}", new Object[] {child, nodeName});
                                 child.deleteRecursive();
                             }
                         }
+                        FilePath workspace = getWorkspaceRoot(node);
+                        if (workspace != null) {
+                            synchronized (node) {
+                                Map<String, String> index = load(workspace);
+                                index.remove(tli.getFullName());
+                                save(index, workspace);
+                            }
+                        }
                     } catch (IOException | InterruptedException x) {
-                        LOGGER.log(Level.WARNING, "could not clean up workspace directory " + loc + " on " + nodeName, x);
+                        LOGGER.log(Level.WARNING, "could not clean up workspace directory for " + tli.getFullName() + " on " + nodeName, x);
                     }
                 } finally {
                     t.setName(oldName);
@@ -220,6 +405,128 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 }
             }
 
+        }
+
+        private static class MoveTask implements Runnable {
+
+            @NonNull
+            private final String oldFullName;
+
+            @NonNull
+            private final String newFullName;
+
+            @NonNull
+            private final Node node;
+
+            MoveTask(String oldFullName, String newFullName, Node node) {
+                this.oldFullName = oldFullName;
+                this.newFullName = newFullName;
+                this.node = node;
+                taskStarted();
+            }
+
+            @Override
+            public void run() {
+                String nodeName = node instanceof Jenkins ? "master" : node.getNodeName();
+                TopLevelItem tli = Jenkins.get().getItemByFullName(newFullName, TopLevelItem.class);
+                if (tli == null) { // race condition after multiple renames, perhaps
+                    LOGGER.warning(newFullName + " no longer exists so cannot process rename from " + oldFullName + " in " + nodeName);
+                    return;
+                }
+                Thread t = Thread.currentThread();
+                String oldName = t.getName();
+                try {
+                    try (Timeout timeout = Timeout.limit(5, TimeUnit.MINUTES)) {
+                        FilePath from = locate(tli, oldFullName, node, false);
+                        if (from == null) {
+                            return;
+                        }
+                        FilePath to = locate(tli, newFullName, node, true);
+                        if (to == null) {
+                            return;
+                        }
+                        t.setName(oldName + ": moving workspace from " + from + " to " + to + " on " + nodeName);
+                        String base = from.getName();
+                        FilePath parent = from.getParent();
+                        if (parent == null) {
+                            return;
+                        }
+                        assert parent.equals(to.getParent());
+                        List<FilePath> dirs = parent.listDirectories();
+                        for (FilePath child : dirs) {
+                            String childName = child.getName();
+                            if (childName.equals(base) || childName.startsWith(base + COMBINATOR)) {
+                                FilePath target = to.withSuffix(childName.substring(base.length()));
+                                LOGGER.log(Level.INFO, "moving workspace {0} to {1} on {2}", new Object[] {child, target, nodeName});
+                                child.renameTo(target);
+                            }
+                        }
+                        FilePath workspace = getWorkspaceRoot(node);
+                        if (workspace != null) {
+                            synchronized (node) {
+                                Map<String, String> index = load(workspace);
+                                index.remove(oldFullName);
+                                assert index.containsKey(newFullName); // locate(…, true) should have added it
+                                save(index, workspace);
+                            }
+                        }
+                    } catch (IOException | InterruptedException x) {
+                        LOGGER.log(Level.WARNING, "could not move workspace directory from " + oldFullName + " on " + nodeName, x);
+                    }
+                } finally {
+                    t.setName(oldName);
+                    taskFinished();
+                }
+            }
+
+        }
+
+    }
+
+    /**
+     * Cleans up workspaces for apparently missing jobs when a node goes online.
+     * This is a counterpart to {@link Deleter},
+     * which only deletes those workspaces of a job being deleted which happen to be online at the time.
+     */
+    @Extension
+    public static final class Collector extends ComputerListener {
+
+        @Override
+        public void onOnline(Computer c, TaskListener listener) throws IOException, InterruptedException {
+            Node node = c.getNode();
+            if (node == null) {
+                return;
+            }
+            FilePath workspace = getWorkspaceRoot(node);
+            if (workspace == null) {
+                return;
+            }
+            synchronized (node) {
+                Map<String, String> index = load(workspace);
+                boolean modified = false;
+                try (ACLContext as = ACL.as(ACL.SYSTEM)) {
+                    Iterator<Map.Entry<String, String>> it = index.entrySet().iterator();
+                    while (it.hasNext()) {
+                        Map.Entry<String, String> entry = it.next();
+                        String fullName = entry.getKey();
+                        if (Jenkins.get().getItemByFullName(fullName, TopLevelItem.class) == null) {
+                            String path = entry.getValue();
+                            it.remove();
+                            modified = true;
+                            for (FilePath child : workspace.listDirectories()) {
+                                String childName = child.getName();
+                                if (childName.equals(path) || childName.startsWith(path + COMBINATOR)) {
+                                    listener.getLogger().println("deleting obsolete workspace " + child);
+                                    child.deleteRecursive();
+                                }
+                            }
+                        }
+                    }
+                }
+                if (modified) {
+                    save(index, workspace);
+                }
+            }
         }
 
     }

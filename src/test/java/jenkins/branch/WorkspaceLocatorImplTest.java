@@ -32,6 +32,7 @@ import hudson.slaves.WorkspaceList;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.stream.Collectors;
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.model.Jenkins;
@@ -53,12 +54,14 @@ public class WorkspaceLocatorImplTest {
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
+    @SuppressWarnings("deprecation")
     @Before
     public void defaultPathMax() {
         WorkspaceLocatorImpl.PATH_MAX = WorkspaceLocatorImpl.PATH_MAX_DEFAULT;
     }
 
     @WithoutJenkins
+    @SuppressWarnings("deprecation")
     @Test
     public void minimize() {
         assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM57BBNSYVIXGXHCE4KAEVPV5KZYQ", WorkspaceLocatorImpl.minimize("a/b"));
@@ -121,20 +124,20 @@ public class WorkspaceLocatorImplTest {
         assertEquals("U-OSF24EPB4C", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
     }
 
-    @Issue({"JENKINS-34564", "JENKINS-38837"})
+    @Issue({"JENKINS-34564", "JENKINS-38837", "JENKINS-2111"})
     @Test
     public void locate() throws Exception {
-        assertEquals("${JENKINS_HOME}/workspace/${ITEM_FULLNAME}", r.jenkins.getRawWorkspaceDir());
+        assertEquals("${JENKINS_HOME}/workspace/${ITEM_FULL_NAME}", r.jenkins.getRawWorkspaceDir());
         MultiBranchImpl stuff = r.createProject(MultiBranchImpl.class, "stuff");
-        stuff.getSourcesList().add(new BranchSource(new SingleSCMSource(null, "dev/flow", new NullSCM())));
+        stuff.getSourcesList().add(new BranchSource(new SingleSCMSource("dev/flow", new NullSCM())));
         stuff.scheduleBuild2(0).getFuture().get();
         r.waitUntilNoActivity();
         showComputation(stuff);
         FreeStyleProject master = r.jenkins.getItemByFullName("stuff/dev%2Fflow", FreeStyleProject.class);
         assertNotNull(master);
-        assertEquals(r.jenkins.getRootPath().child("workspace/stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(r.jenkins.getRootPath().child("workspace/stuff_dev_flow"), r.jenkins.getWorkspaceFor(master));
         DumbSlave slave = r.createOnlineSlave();
-        assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), slave.getWorkspaceFor(master));
+        assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow"), slave.getWorkspaceFor(master));
         FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
         assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
         // Checking other values of workspaceDir.
@@ -145,15 +148,15 @@ public class WorkspaceLocatorImplTest {
         assertEquals("JENKINS-34564 inactive in this case", new FilePath(master.getRootDir()).child("workspace"), r.jenkins.getWorkspaceFor(master));
         // JENKINS-38837: customized root.
         workspaceDir.set(r.jenkins, "${JENKINS_HOME}/ws/${ITEM_FULLNAME}");
-        assertEquals("ITEM_FULLNAME interpreted a little differently", r.jenkins.getRootPath().child("ws/stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ"), r.jenkins.getWorkspaceFor(master));
+        assertEquals("ITEM_FULLNAME interpreted a little differently", r.jenkins.getRootPath().child("ws/stuff_dev_flow"), r.jenkins.getWorkspaceFor(master));
     }
 
     @Issue({"JENKINS-2111", "JENKINS-41068"})
     @Test
     public void delete() throws Exception {
         MultiBranchImpl p = r.createProject(MultiBranchImpl.class, "p");
-        p.getSourcesList().add(new BranchSource(new SingleSCMSource(null, "master", new NullSCM())));
-        BranchSource pr1Source = new BranchSource(new SingleSCMSource(null, "PR-1", new NullSCM()));
+        p.getSourcesList().add(new BranchSource(new SingleSCMSource("master", new NullSCM())));
+        BranchSource pr1Source = new BranchSource(new SingleSCMSource("PR-1", new NullSCM()));
         p.getSourcesList().add(pr1Source);
         p.scheduleBuild2(0).getFuture().get();
         r.waitUntilNoActivity();
@@ -162,12 +165,12 @@ public class WorkspaceLocatorImplTest {
         assertNotNull(master);
         FreeStyleProject pr1 = r.jenkins.getItemByFullName("p/PR-1", FreeStyleProject.class);
         assertNotNull(pr1);
-        assertEquals(r.jenkins.getRootPath().child("workspace/p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA"), r.jenkins.getWorkspaceFor(master));
-        assertEquals(r.jenkins.getRootPath().child("workspace/p_PR-1-4FMSDR3M7ZFZIJ2EAYSJ4FQ5NYFE7ONABCE3ULVB2MF75EK665PA"), r.jenkins.getWorkspaceFor(pr1));
+        assertEquals(r.jenkins.getRootPath().child("workspace/p_master"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(r.jenkins.getRootPath().child("workspace/p_PR-1"), r.jenkins.getWorkspaceFor(pr1));
         // Do builds on an agent too.
         DumbSlave slave = r.createOnlineSlave();
-        assertEquals(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA"), slave.getWorkspaceFor(master));
-        assertEquals(slave.getWorkspaceRoot().child("p_PR-1-4FMSDR3M7ZFZIJ2EAYSJ4FQ5NYFE7ONABCE3ULVB2MF75EK665PA"), slave.getWorkspaceFor(pr1));
+        assertEquals(slave.getWorkspaceRoot().child("p_master"), slave.getWorkspaceFor(master));
+        assertEquals(slave.getWorkspaceRoot().child("p_PR-1"), slave.getWorkspaceFor(pr1));
         master.setAssignedNode(slave);
         assertEquals(2, r.buildAndAssertSuccess(master).getNumber());
         pr1.setAssignedNode(slave);
@@ -185,26 +188,76 @@ public class WorkspaceLocatorImplTest {
         showComputation(p);
         WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
         assertEquals(Collections.singletonList(master), r.jenkins.getAllItems(FreeStyleProject.class));
-        assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), r.jenkins.getRootPath().child("workspace").listDirectories());
-        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), slave.getWorkspaceRoot().listDirectories());
+        assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master")), r.jenkins.getRootPath().child("workspace").listDirectories());
+        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master")), slave.getWorkspaceRoot().listDirectories());
         assertFalse(pr1Root.isDirectory());
-        // Also check behavior with customized paths.
-        WorkspaceLocatorImpl.PATH_MAX = 40;
-        p.getSourcesList().add(pr1Source);
-        p.scheduleBuild2(0).getFuture().get();
-        r.waitUntilNoActivity();
-        showComputation(p);
-        pr1 = r.jenkins.getItemByFullName("p/PR-1", FreeStyleProject.class);
-        assertNotNull(pr1);
-        pr1.setAssignedNode(slave);
-        assertEquals(slave.getWorkspaceRoot().child("p_PR-1-4FMSDR3M7ZFZIJ2EAYSJ4FQ5N"), slave.getWorkspaceFor(pr1));
-        assertEquals(2, r.buildAndAssertSuccess(pr1).getNumber());
-        p.getSourcesList().remove(pr1Source);
-        p.scheduleBuild2(0).getFuture().get();
-        r.waitUntilNoActivity();
-        showComputation(p);
-        WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
-        assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master-NFABYX74Y6QHVCY2OKHXKUN4SSHQIWYYSJW7JE3FM65W5M5OSXMA")), slave.getWorkspaceRoot().listDirectories());
+    }
+
+    @Issue("JENKINS-2111")
+    @Test
+    public void deleteOffline() throws Exception {
+        WorkspaceLocatorImpl.Mode origMode = WorkspaceLocatorImpl.MODE;
+        WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
+        try {
+            FreeStyleProject p = r.createFreeStyleProject("a$b");
+            DumbSlave s = r.createSlave("remote", null, null);
+            p.setAssignedNode(s);
+            assertEquals(s, r.buildAndAssertSuccess(p).getBuiltOn());
+            assertEquals(Collections.singletonList("a_b"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+            s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
+            s.toComputer().disconnect(null);
+            p.delete();
+            s = (DumbSlave) r.jenkins.getNode("remote");
+            s.toComputer().connect(true).get();
+            assertEquals(Collections.emptyList(), s.getWorkspaceRoot().listDirectories());
+            s.toComputer().getLogText().writeLogTo(0, System.out);
+        } finally {
+            WorkspaceLocatorImpl.MODE = origMode;
+        }
+    }
+
+    @Issue("JENKINS-2111")
+    @Test
+    public void uniquification() throws Exception {
+        WorkspaceLocatorImpl.Mode origMode = WorkspaceLocatorImpl.MODE;
+        WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
+        try {
+            assertEquals("a_b", r.buildAndAssertSuccess(r.createFreeStyleProject("a$b")).getWorkspace().getName());
+            assertEquals("a_b_2", r.buildAndAssertSuccess(r.createFreeStyleProject("a!b")).getWorkspace().getName());
+            assertEquals("ch_to_fit_in_a_short_path_at_all", r.buildAndAssertSuccess(r.createFreeStyleProject("way too much to fit in a short path at all")).getWorkspace().getName());
+            assertEquals("_to_fit_in_a_short_path_at_all_2", r.buildAndAssertSuccess(r.createFreeStyleProject("really way too much to fit in a short path at all")).getWorkspace().getName());
+            assertEquals("_to_fit_in_a_short_path_at_all_3", r.buildAndAssertSuccess(r.createFreeStyleProject("way, way, way too much to fit in a short path at all")).getWorkspace().getName());
+            r.jenkins.getRootPath().child("workspace/" + WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
+        } finally {
+            WorkspaceLocatorImpl.MODE = origMode;
+        }
+    }
+
+    @Issue("JENKINS-2111")
+    @Test
+    public void move() throws Exception {
+        WorkspaceLocatorImpl.Mode origMode = WorkspaceLocatorImpl.MODE;
+        WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
+        try {
+            FreeStyleProject p = r.createFreeStyleProject("old");
+            DumbSlave s = r.createSlave("remote", null, null);
+            p.setAssignedNode(s);
+            FilePath workspace = r.buildAndAssertSuccess(p).getWorkspace();
+            assertEquals("old", workspace.getName());
+            assertEquals(Collections.singletonList("old"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+            workspace.child("something").write("", null);
+            p.renameTo("new");
+            WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
+            assertEquals(Collections.singletonList("new"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+            workspace = r.buildAndAssertSuccess(p).getWorkspace();
+            assertEquals("new", workspace.getName());
+            assertTrue(workspace.child("something").exists());
+            s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
+            // Note that we do not try to do anything for offline workspaces when a project is moved:
+            // that is treated like a delete and recreate.
+        } finally {
+            WorkspaceLocatorImpl.MODE = origMode;
+        }
     }
 
 }

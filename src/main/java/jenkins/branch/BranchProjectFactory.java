@@ -204,7 +204,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
             List<BranchProperty> properties = new ArrayList<>(branch.getProperties());
             Collections.sort(properties, DescriptorOrder.reverse(BranchProperty.class));
             for (BranchProperty property : properties) {
-                JobDecorator<P, R> decorator = property.jobDecorator(project.getClass());
+                JobDecorator<P, R> decorator = property.jobDecorator((Class) project.getClass());
                 if (decorator != null) {
                     // if Project then we can feed the publishers and build wrappers
                     if (project instanceof Project && decorator instanceof ProjectDecorator) {
