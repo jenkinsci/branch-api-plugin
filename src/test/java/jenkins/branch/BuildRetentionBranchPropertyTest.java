@@ -46,7 +46,7 @@ public class BuildRetentionBranchPropertyTest {
     public void decoratesStandardJobByFieldReflectionAccess() throws Exception {
         BuildRetentionBranchProperty instance = new BuildRetentionBranchProperty(new LogRotator(5, 5, 5, 5));
         Job job = new FreeStyleProject(mock(ItemGroup.class), "foo");
-        assertThat(instance.jobDecorator(Job.class).project(job).getBuildDiscarder(), is(instance.getBuildDiscarder()));
+        assertThat(instance.jobDecorator((Class) Job.class).project(job).getBuildDiscarder(), is(instance.getBuildDiscarder()));
     }
 
     @Test
@@ -54,7 +54,7 @@ public class BuildRetentionBranchPropertyTest {
         BuildRetentionBranchProperty instance = new BuildRetentionBranchProperty(new LogRotator(5, 5, 5, 5));
         Job job = mock(Job.class);
         when(job.getBuildDiscarder()).thenReturn(new LogRotator(0, 0, 0, 0));
-        instance.jobDecorator(Job.class).project(job);
+        instance.jobDecorator((Class) Job.class).project(job);
         verify(job).setBuildDiscarder(instance.getBuildDiscarder());
     }
 
@@ -64,7 +64,7 @@ public class BuildRetentionBranchPropertyTest {
         Job job = mock(Job.class);
         when(job.getBuildDiscarder()).thenReturn(new LogRotator(0, 0, 0, 0));
         doThrow(new IOException("boom")).when(job).setBuildDiscarder(new LogRotator(5, 5, 5, 5));
-        instance.jobDecorator(Job.class).project(job);
+        instance.jobDecorator((Class) Job.class).project(job);
         assertTrue("The IOException was caught and ignored", true);
         verify(job).setBuildDiscarder(instance.getBuildDiscarder());
     }

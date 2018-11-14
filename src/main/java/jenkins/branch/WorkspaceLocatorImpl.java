@@ -202,9 +202,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 try {
                     try (Timeout timeout = Timeout.limit(5, TimeUnit.MINUTES)) {
                         List<FilePath> dirs = parent.listDirectories();
-                        if (dirs == null) { // impossible as of https://github.com/jenkinsci/jenkins/pull/2914
-                            return;
-                        }
                         for (FilePath child : dirs) {
                             if (child.getName().startsWith(base)) {
                                 LOGGER.log(Level.INFO, "deleting obsolete workspace {0} on {1}", new Object[] {child, nodeName});

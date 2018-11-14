@@ -41,6 +41,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
@@ -75,11 +76,11 @@ public class RateLimitBranchProperty extends BranchProperty {
      */
     private static Map<String, Long> createDurations() {
         Map<String, Long> result = new LinkedHashMap<String, Long>();
-        result.put("hour", TimeUnit2.HOURS.toMillis(1));
-        result.put("day", TimeUnit2.DAYS.toMillis(1));
-        result.put("week", TimeUnit2.DAYS.toMillis(7));
-        result.put("month", TimeUnit2.DAYS.toMillis(31));
-        result.put("year", TimeUnit2.DAYS.toMillis(365));
+        result.put("hour", TimeUnit.HOURS.toMillis(1));
+        result.put("day", TimeUnit.DAYS.toMillis(1));
+        result.put("week", TimeUnit.DAYS.toMillis(7));
+        result.put("month", TimeUnit.DAYS.toMillis(31));
+        result.put("year", TimeUnit.DAYS.toMillis(365));
         return Collections.unmodifiableMap(result);
     }
 
@@ -354,7 +355,7 @@ public class RateLimitBranchProperty extends BranchProperty {
             if (duration < 1) {
                 final String durationName = getDurationName();
                 duration =
-                        DURATIONS.containsKey(durationName) ? DURATIONS.get(durationName) : TimeUnit2.HOURS.toMillis(1);
+                        DURATIONS.containsKey(durationName) ? DURATIONS.get(durationName) : TimeUnit.HOURS.toMillis(1);
             }
             return duration;
         }
@@ -430,36 +431,36 @@ public class RateLimitBranchProperty extends BranchProperty {
              */
             public FormValidation doCheckCount(@QueryParameter int value, @QueryParameter String durationName) {
                 long duration =
-                        DURATIONS.containsKey(durationName) ? DURATIONS.get(durationName) : TimeUnit2.HOURS.toMillis(1);
+                        DURATIONS.containsKey(durationName) ? DURATIONS.get(durationName) : TimeUnit.HOURS.toMillis(1);
                 if (value == 0) {
                     return FormValidation.ok();
                 }
                 long interval = duration / Math.max(1, value);
-                if (interval < TimeUnit2.SECONDS.toMillis(1)) {
+                if (interval < TimeUnit.SECONDS.toMillis(1)) {
                     return FormValidation.ok();
                 }
-                if (interval < TimeUnit2.MINUTES.toMillis(1)) {
+                if (interval < TimeUnit.MINUTES.toMillis(1)) {
                     return FormValidation.ok(
                             Messages.RateLimitBranchProperty_ApproxSecsBetweenBuilds(
-                                    TimeUnit2.MILLISECONDS.toSeconds(interval)));
+                                    TimeUnit.MILLISECONDS.toSeconds(interval)));
                 }
-                if (interval < TimeUnit2.HOURS.toMillis(2)) {
+                if (interval < TimeUnit.HOURS.toMillis(2)) {
                     return FormValidation.ok(
                             Messages.RateLimitBranchProperty_ApproxMinsBetweenBuilds(
-                                    TimeUnit2.MILLISECONDS.toMinutes(interval)));
+                                    TimeUnit.MILLISECONDS.toMinutes(interval)));
                 }
-                if (interval < TimeUnit2.DAYS.toMillis(2)) {
+                if (interval < TimeUnit.DAYS.toMillis(2)) {
                     return FormValidation.ok(
                             Messages.RateLimitBranchProperty_ApproxHoursBetweenBuilds(
-                                    TimeUnit2.MILLISECONDS.toHours(interval)));
+                                    TimeUnit.MILLISECONDS.toHours(interval)));
                 }
-                if (interval < TimeUnit2.DAYS.toMillis(14)) {
+                if (interval < TimeUnit.DAYS.toMillis(14)) {
                     return FormValidation.ok(
                             Messages.RateLimitBranchProperty_ApproxDaysBetweenBuilds(
-                                    TimeUnit2.MILLISECONDS.toDays(interval)));
+                                    TimeUnit.MILLISECONDS.toDays(interval)));
                 }
                 return FormValidation.ok(Messages.RateLimitBranchProperty_ApproxWeeksBetweenBuilds(
-                        TimeUnit2.MILLISECONDS.toDays(interval) / 7));
+                        TimeUnit.MILLISECONDS.toDays(interval) / 7));
             }
         }
     }
