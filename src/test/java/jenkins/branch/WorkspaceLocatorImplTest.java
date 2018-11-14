@@ -124,7 +124,7 @@ public class WorkspaceLocatorImplTest {
     @Issue({"JENKINS-34564", "JENKINS-38837"})
     @Test
     public void locate() throws Exception {
-        assertEquals("${JENKINS_HOME}/workspace/${ITEM_FULLNAME}", r.jenkins.getRawWorkspaceDir());
+        assertEquals("${JENKINS_HOME}/workspace/${ITEM_FULL_NAME}", r.jenkins.getRawWorkspaceDir());
         MultiBranchImpl stuff = r.createProject(MultiBranchImpl.class, "stuff");
         stuff.getSourcesList().add(new BranchSource(new SingleSCMSource(null, "dev/flow", new NullSCM())));
         stuff.scheduleBuild2(0).getFuture().get();

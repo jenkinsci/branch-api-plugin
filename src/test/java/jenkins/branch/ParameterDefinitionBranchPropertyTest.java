@@ -89,14 +89,14 @@ public class ParameterDefinitionBranchPropertyTest {
     @Test
     public void isApplicable_Job() throws Exception {
         assertThat("Jobs are not parameterized",
-                new ParameterDefinitionBranchPropertyImpl().isApplicable(Job.class), is(false));
+                new ParameterDefinitionBranchPropertyImpl().isApplicable((Class) Job.class), is(false));
 
     }
 
     @Test
     public void isApplicable_Job_implementing_ParameterizedJob() throws Exception {
         assertThat("Parameterized Jobs are are Applicable",
-                new ParameterDefinitionBranchPropertyImpl().isApplicable(ParamJob.class), is(true));
+                new ParameterDefinitionBranchPropertyImpl().isApplicable((Class) ParamJob.class), is(true));
 
     }
 
@@ -108,12 +108,12 @@ public class ParameterDefinitionBranchPropertyTest {
 
     @Test
     public void jobDecorator_Job() throws Exception {
-        assertThat(new ParameterDefinitionBranchPropertyImpl().jobDecorator(Job.class), nullValue());
+        assertThat(new ParameterDefinitionBranchPropertyImpl().jobDecorator((Class) Job.class), nullValue());
     }
 
     @Test
     public void jobDecorator_Job_implementing_ParameterizedJob() throws Exception {
-        assertThat(new ParameterDefinitionBranchPropertyImpl().jobDecorator(ParamJob.class), notNullValue());
+        assertThat(new ParameterDefinitionBranchPropertyImpl().jobDecorator((Class) ParamJob.class), notNullValue());
     }
 
     @Test
