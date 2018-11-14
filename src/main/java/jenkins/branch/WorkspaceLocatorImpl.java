@@ -161,7 +161,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 String path = index.get(fullName);
                 if (path != null) {
                     FilePath dir = workspace.child(path);
-                    LOGGER.finer("index already lists " + dir + " for " + item + " on " + node);
+                    LOGGER.log(Level.FINER, "index already lists {0} for {1} on {2}", new Object[] {dir, item, node});
                     return dir;
                 }
                 // Old JENKINS-34564 implementation:
