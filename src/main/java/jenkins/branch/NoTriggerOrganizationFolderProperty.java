@@ -139,7 +139,7 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
     public static class PropertyMigrationImpl extends PropertyMigration<OrganizationFolder, NoTriggerOrganizationFolderProperty> {
 
         public PropertyMigrationImpl() {
-            super(OrganizationFolder.class, NoTriggerOrganizationFolderProperty.class, "basic-branch-build-strategies");
+            super(OrganizationFolder.class, NoTriggerOrganizationFolderProperty.class, "basic-branch-build-strategies:1.1.0");
         }
 
         @Override

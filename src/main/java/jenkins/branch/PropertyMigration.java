@@ -6,20 +6,20 @@ import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
-import hudson.PluginManager;
 import hudson.PluginWrapper;
 import hudson.model.AdministrativeMonitor;
+import hudson.model.UpdateSite;
 import hudson.util.DescribableList;
+import hudson.util.VersionNumber;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
-import org.apache.commons.lang.StringUtils;
 import org.jvnet.localizer.Localizable;
 
 /**
@@ -36,11 +36,14 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
     private final Class<F> folderClass;
     private final Class<P> propertyClass;
     private final String pluginName;
+    private final String pluginVersion;
 
     public PropertyMigration(Class<F> folderClass, Class<P> propertyClass, String pluginName) {
         this.folderClass = folderClass;
         this.propertyClass = propertyClass;
-        this.pluginName = pluginName;
+        int index = pluginName.indexOf(':');
+        this.pluginName = index == -1 ? pluginName : pluginName.substring(0, index);
+        this.pluginVersion = index == -1 ? null : pluginName.substring(index + 1);
     }
 
     public final boolean isApplicable(AbstractFolder<?> folder) {
@@ -60,6 +63,38 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
         return pluginName;
     }
 
+    public final String getPluginDisplayName() {
+        UpdateSite.Plugin plugin = Jenkins.get().getUpdateCenter().getPlugin(pluginName);
+        return plugin == null ? pluginName : plugin.getDisplayName();
+    }
+
+    public final String getPluginInstallId() {
+        UpdateSite.Plugin plugin = Jenkins.get().getUpdateCenter().getPlugin(pluginName);
+        if (pluginVersion != null) {
+            VersionNumber versionNumber = plugin == null ? null : new VersionNumber(plugin.version);
+            if (new VersionNumber(pluginVersion).isNewerThan(versionNumber)) {
+                return null;
+            }
+        }
+        return plugin == null ? null : "plugin." + pluginName + "." + plugin.sourceId;
+    }
+
+    public final String getPluginVersion() {
+        return pluginVersion;
+    }
+
+    public final boolean isPendingRestart() {
+        PluginWrapper plugin = Jenkins.get().getPluginManager().getPlugin(pluginName);
+        return plugin != null && !plugin.isActive() && plugin.isEnabled();
+    }
+
+    public final boolean isPluginUpgrade() {
+        PluginWrapper plugin = Jenkins.get().getPluginManager().getPlugin(pluginName);
+        VersionNumber versionNumber = plugin == null ? null : plugin.getVersionNumber();
+        return pluginVersion != null && versionNumber != null && new VersionNumber(pluginVersion)
+                .isNewerThan(versionNumber);
+    }
+
     public abstract Localizable getDescription();
 
     @SuppressWarnings("unchecked")
@@ -74,7 +109,7 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
         }
         for (Migrator<?, ?> migrator : ExtensionList.lookup(Migrator.class)) {
             if (folderClass.equals(migrator.folderClass) && propertyClass.equals(migrator.propertyClass)) {
-                ((Migrator<F,P>)migrator).apply(f, p);
+                ((Migrator<F, P>) migrator).apply(f, p);
                 return;
             }
         }
@@ -111,7 +146,7 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
     public static void applyAll(AbstractFolder<?> folder) {
         DescribableList<AbstractFolderProperty<?>, AbstractFolderPropertyDescriptor> properties =
                 folder.getProperties();
-        for (PropertyMigration<?,?> migration: ExtensionList.lookup(PropertyMigration.class)) {
+        for (PropertyMigration<?, ?> migration : ExtensionList.lookup(PropertyMigration.class)) {
             if (migration.folderClass.isInstance(folder) && properties.get(migration.propertyClass) != null) {
                 if (migration.canApply()) {
                     migration.apply(folder);
@@ -121,7 +156,7 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
                         monitor.add(migration);
                     } else {
                         LOGGER.log(Level.SEVERE, "{0} is loaded but no {1} singleton present.",
-                                new Object[]{PropertyMigration.class, MonitorImpl.class});
+                                new Object[] {PropertyMigration.class, MonitorImpl.class});
                         // we didn't apply, so we can continue and let something else worry about the
                         // failure to load extensions.
                     }
@@ -150,32 +185,37 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
     @Extension
     public static class MonitorImpl extends AdministrativeMonitor {
 
-        private Set<PropertyMigration<?,?>> missing = new HashSet<>();
+        private Set<PropertyMigration<?, ?>> missing = new HashSet<>();
 
         @Override
         public boolean isActivated() {
             return !missing.isEmpty();
         }
 
-        public String getPluginNames() {
-            Set<String> names = new TreeSet<>();
-            PluginManager mgr = Jenkins.getActiveInstance().pluginManager;
-            for (PropertyMigration migration: missing) {
-                String pluginName = migration.getPluginName();
-                PluginWrapper plugin = mgr.getPlugin(pluginName);
-                if (plugin == null || !plugin.isActive()) {
-                    names.add(pluginName);
+        public List<PropertyMigration<?, ?>> getPending() {
+            List<PropertyMigration<?, ?>> result = new ArrayList<>(missing.size());
+            for (PropertyMigration<?, ?> m : missing) {
+                if (!m.canApply()) {
+                    result.add(m);
                 }
             }
-            return StringUtils.join(names, ", ");
+            Collections.sort(result, new Comparator<PropertyMigration<?, ?>>() {
+                @Override
+                public int compare(PropertyMigration<?, ?> o1, PropertyMigration<?, ?> o2) {
+                    // just want a depterministic sort
+                    return o1.getClass().getName().compareTo(o2.getClass().getName());
+                }
+            });
+            return result;
         }
 
-        public List<Localizable> getDescriptions() {
-            List<Localizable> result = new ArrayList<>();
-            for (PropertyMigration migration: missing) {
-                result.add(migration.getDescription());
+        public boolean isReady() {
+            for (PropertyMigration<?, ?> m : missing) {
+                if (!m.canApply()) {
+                    return false;
+                }
             }
-            return result;
+            return true;
         }
 
         public synchronized void add(PropertyMigration<?, ?> migration) {
