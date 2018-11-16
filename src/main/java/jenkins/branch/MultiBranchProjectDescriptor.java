@@ -29,7 +29,6 @@ import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
-import hudson.Util;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
@@ -41,7 +40,6 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.WeakHashMap;
 import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
@@ -177,7 +175,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     @SuppressWarnings("unused") // used by stapler
     @NonNull
     public List<BranchProjectFactoryDescriptor> getProjectFactoryDescriptors() {
-        List<BranchProjectFactoryDescriptor> result = new ArrayList<BranchProjectFactoryDescriptor>();
+        List<BranchProjectFactoryDescriptor> result = new ArrayList<>();
         for (BranchProjectFactoryDescriptor descriptor : ExtensionList.lookup(BranchProjectFactoryDescriptor.class)) {
             if (descriptor.isApplicable(getClazz()) && descriptor.getProjectClass().isAssignableFrom(getProjectClass())) {
                 result.add(descriptor);

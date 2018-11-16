@@ -54,7 +54,7 @@ public class DescriptorOrder<T extends Describable<T>> implements Comparator<T> 
      * @return a {@link java.util.Comparator}.
      */
     public static <T extends Describable<T>> Comparator<T> forward(Class<T> type) {
-        return new DescriptorOrder<T>(type);
+        return new DescriptorOrder<>(type);
     }
 
     /**

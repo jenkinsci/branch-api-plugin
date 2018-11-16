@@ -41,7 +41,7 @@ import org.apache.commons.lang.StringUtils;
  */
 public final class NameMangler {
 
-    private static final int MAX_SAFE_LENGTH = 32;
+    static final int MAX_SAFE_LENGTH = 32;
     private static final int MIN_HASH_LENGTH = 6;
     private static final int MAX_HASH_LENGTH = 12;
 
@@ -146,7 +146,7 @@ public final class NameMangler {
             byte[] bytes = sha.digest(name.getBytes(StandardCharsets.UTF_8));
             int bits = 0;
             int data = 0;
-            StringBuffer dd = new StringBuffer(32);
+            StringBuilder dd = new StringBuilder(32);
             for (byte b : bytes) {
                 while (bits >= 5) {
                     dd.append(toDigit(data & 0x1f));

@@ -97,7 +97,7 @@ public abstract class BranchPropertyStrategyDescriptor extends Descriptor<Branch
      */
     public static List<BranchPropertyStrategyDescriptor> all(
             @NonNull MultiBranchProject project, @NonNull SCMSourceDescriptor sourceDescriptor) {
-        List<BranchPropertyStrategyDescriptor> result = new ArrayList<BranchPropertyStrategyDescriptor>();
+        List<BranchPropertyStrategyDescriptor> result = new ArrayList<>();
         for (BranchPropertyStrategyDescriptor d : all()) {
             if (d.isApplicable(project) && d.isApplicable(sourceDescriptor)) {
                 result.add(d);

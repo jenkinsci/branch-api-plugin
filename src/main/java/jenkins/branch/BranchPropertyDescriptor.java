@@ -78,7 +78,7 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
      * @return all the {@link BranchPropertyDescriptor} instances  applicable to the specified project.
      */
     public static List<BranchPropertyDescriptor> all(@NonNull MultiBranchProject project) {
-        List<BranchPropertyDescriptor> result = new ArrayList<BranchPropertyDescriptor>();
+        List<BranchPropertyDescriptor> result = new ArrayList<>();
         for (BranchPropertyDescriptor d : all()) {
             if (d.isApplicable(project)) {
                 result.add(d);

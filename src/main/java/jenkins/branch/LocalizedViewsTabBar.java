@@ -52,7 +52,7 @@ public class LocalizedViewsTabBar extends ViewsTabBar {
     @Restricted(NoExternalUse.class)
     @SuppressWarnings("unused") // invoked from stapler view
     public List<View> sort(@Nonnull List<? extends View> views) {
-        List<View> result = new ArrayList<View>(views);
+        List<View> result = new ArrayList<>(views);
         Collections.sort(result, new Comparator<View>() {
             @Override
             public int compare(View o1, View o2) {

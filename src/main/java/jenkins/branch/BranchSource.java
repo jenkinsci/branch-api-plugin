@@ -36,6 +36,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.List;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.export.ExportedBean;
 
 /**
  * A source of branches, which consists of a source and a strategy for creating properties of the branches from this
@@ -43,6 +45,7 @@ import org.kohsuke.stapler.DataBoundSetter;
  *
  * @author Stephen Connolly
  */
+@ExportedBean
 public class BranchSource extends AbstractDescribableImpl<BranchSource> {
     /**
      * The source.
@@ -87,6 +90,7 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
      *
      * @return the source.
      */
+    @Exported
     @NonNull
     public SCMSource getSource() {
         return source;

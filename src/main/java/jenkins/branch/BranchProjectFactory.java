@@ -201,10 +201,10 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
         // it would be better if Core gave us some hooks to do this
         BulkChange bc = new BulkChange(project);
         try {
-            List<BranchProperty> properties = new ArrayList<BranchProperty>(branch.getProperties());
+            List<BranchProperty> properties = new ArrayList<>(branch.getProperties());
             Collections.sort(properties, DescriptorOrder.reverse(BranchProperty.class));
             for (BranchProperty property : properties) {
-                JobDecorator<P, R> decorator = property.jobDecorator(project.getClass());
+                JobDecorator<P, R> decorator = property.jobDecorator((Class) project.getClass());
                 if (decorator != null) {
                     // if Project then we can feed the publishers and build wrappers
                     if (project instanceof Project && decorator instanceof ProjectDecorator) {
