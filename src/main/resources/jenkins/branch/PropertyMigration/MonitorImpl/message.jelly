@@ -1,0 +1,123 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+  <div class="alert alert-warning" role="alert">
+    ${%blurb}
+    <table width="100%" class="pane bigtable">
+      <thead>
+        <tr>
+          <th colspan="2">${%Step}</th>
+        </tr>
+      </thead>
+      <tfoot>
+        <tr>
+          <td>${%Start migration}</td>
+          <td align="right">
+            <j:choose>
+              <j:when test="${it.ready}">
+                <div>
+                  <form method="GET" action="${rootURL}/safeRestart"
+                        style="float: none; display: inline; position: inherit;">
+                    <span class="yui-button yui-link-button primary">
+                      <span class="first-child primary">
+                        <button type="submit">
+                          ${%Restart Jenkins}
+                        </button>
+                      </span>
+                    </span>
+                  </form>
+                </div>
+              </j:when>
+              <j:otherwise>
+                <form method="GET" action="${rootURL}/safeRestart" disabled="disabled"
+                      onsubmit="return false;"
+                      style="float: none; display: inline; position: inherit;">
+                  <span class="yui-button yui-link-button">
+                    <span class="first-child">
+                      <button disabled="disabled">
+                        ${%Restart Jenkins}
+                      </button>
+                    </span>
+                  </span>
+                </form>
+              </j:otherwise>
+            </j:choose>
+          </td>
+        </tr>
+      </tfoot>
+      <tbody>
+        <j:forEach items="${it.pending}" var="p">
+          <tr>
+            <td>
+              <j:choose>
+                <j:when test="${p.pluginUpgrade}">
+                  ${%migrationUpgrade(p.description,p.pluginDisplayName,p.pluginVersion)}
+                </j:when>
+                <j:otherwise>
+                  ${%migrationInstall(p.description,p.pluginDisplayName)}
+                </j:otherwise>
+              </j:choose>
+            </td>
+            <td align="right">
+              <j:choose>
+                <j:when test="${p.pendingRestart}">
+                  <form id="install-${p.pluginName}"
+                        method="POST"
+                        enctype="multipart/form-data"
+                        disabled="disabled"
+                        action="${rootURL}/pluginManager/install"
+                        onsubmit="return addCrumb('install-${p.pluginName}');"
+                        style="float: none; display: inline; position: inherit;">
+                    <input type="hidden" name="plugin.${p.pluginName}.default" checked="true"/>
+                    <span class="yui-button yui-link-button" name="dynamicLoad">
+                      <span class="first-child">
+                        <button formenctype="multipart/form-data" disabled="disabled">
+                          ${%restart(p.pluginDisplayName)}
+                        </button>
+                      </span>
+                    </span>
+                  </form>
+                </j:when>
+                <j:when test="${p.pluginInstallId == null}">
+                  <span class="error">
+                    <j:choose>
+                      <j:when test="${p.pluginUpgrade}">
+                        ${%missingUpgrade(p.pluginDisplayName, p.pluginVersion)}
+                      </j:when>
+                      <j:otherwise>
+                        ${%missingInstall(p.pluginDisplayName)}
+                      </j:otherwise>
+                    </j:choose>
+                  </span>
+                </j:when>
+                <j:otherwise>
+                  <form id="install-${p.pluginName}"
+                        method="POST"
+                        enctype="multipart/form-data"
+                        action="${rootURL}/pluginManager/install"
+                        onsubmit="return addCrumb('install-${p.pluginName}');"
+                        style="float: none; display: inline; position: inherit;">
+                    <input type="hidden" name="${p.pluginInstallId}" checked="true"/>
+                    <span class="yui-button yui-link-button primary" name="${p.pluginUpgrade?'Submit':'dynamicLoad'}">
+                      <span class="first-child">
+                        <button formenctype="multipart/form-data" type="submit">
+                          <j:choose>
+                            <j:when test="${p.pluginUpgrade}">
+                              ${%upgrade(p.pluginDisplayName, p.pluginVersion)}
+                            </j:when>
+                            <j:otherwise>
+                              ${%install(p.pluginDisplayName)}
+                            </j:otherwise>
+                          </j:choose>
+                        </button>
+                      </span>
+                    </span>
+                  </form>
+                </j:otherwise>
+              </j:choose>
+            </td>
+          </tr>
+        </j:forEach>
+      </tbody>
+    </table>
+  </div>
+</j:jelly>

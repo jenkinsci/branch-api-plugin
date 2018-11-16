@@ -209,6 +209,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         if (!(getIcon() instanceof MetadataActionFolderIcon)) {
             setIcon(newDefaultFolderIcon());
         }
+        PropertyMigration.applyAll(this);
         if (state == null) {
             state = new State(this);
         }

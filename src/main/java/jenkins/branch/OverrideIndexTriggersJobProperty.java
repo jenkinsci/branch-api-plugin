@@ -34,6 +34,8 @@ import hudson.model.JobPropertyDescriptor;
 import hudson.model.Queue;
 import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -42,7 +44,10 @@ import java.util.List;
 /**
  * Allows overriding indexing triggers for an individual job - either by enabling when the multibranch or org is set to
  * suppress them, or disabling if they're otherwise enabled.
+ * @deprecated Replaced by a named branch build strategy in the <code>basic-branch-build-strategies</code> plugin.
  */
+@Deprecated
+@Restricted(NoExternalUse.class)
 public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
     private final boolean enableTriggers;
 
@@ -61,6 +66,11 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
 
         public boolean isOwnerMultibranch(Item item) {
             return item instanceof MultiBranchProject || item instanceof OrganizationFolder || item.getParent() instanceof MultiBranchProject;
+        }
+
+        @Override
+        public boolean isApplicable(Class<? extends Job> jobType) {
+            return super.isApplicable(jobType) && NoTriggerOrganizationFolderProperty.legacyCodeActive();
         }
 
         @Override public String getDisplayName() {

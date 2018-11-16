@@ -24,9 +24,11 @@
 
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
@@ -36,6 +38,7 @@ import hudson.util.FormValidation;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import org.jvnet.localizer.Localizable;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -43,8 +46,10 @@ import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Defines {@link NoTriggerBranchProperty} on selected branches.
+ * @deprecated Replaced by a named branch build strategy in the <code>basic-branch-build-strategies</code> plugin.
  */
-@Restricted(NoExternalUse.class)
+@Deprecated
+//@Restricted(NoExternalUse.class)
 public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<OrganizationFolder> {
 
     /** Regexp of branch names to trigger. */
@@ -67,15 +72,26 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();
         }
 
+        @Override
+        public boolean isApplicable(Class<? extends AbstractFolder> containerType) {
+            return super.isApplicable(containerType) && legacyCodeActive();
+        }
+
         public FormValidation doCheckBranches(@QueryParameter String value) {
             try {
                 Pattern.compile(value);
-                return FormValidation.ok();
+                return FormValidation.warning(Messages.NoTriggerOrganizationFolderProperty_PropertyMigration());
             } catch (PatternSyntaxException x) {
                 return FormValidation.error(x.getMessage());
             }
         }
 
+    }
+
+    static boolean legacyCodeActive() {
+        PropertyMigrationImpl migration =
+                ExtensionList.lookup(PropertyMigration.class).get(PropertyMigrationImpl.class);
+        return migration == null || !migration.canApply();
     }
 
     @Extension
@@ -119,4 +135,16 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
 
     }
 
+    @Extension
+    public static class PropertyMigrationImpl extends PropertyMigration<OrganizationFolder, NoTriggerOrganizationFolderProperty> {
+
+        public PropertyMigrationImpl() {
+            super(OrganizationFolder.class, NoTriggerOrganizationFolderProperty.class, "basic-branch-build-strategies:1.1.0");
+        }
+
+        @Override
+        public Localizable getDescription() {
+            return Messages._NoTriggerOrganizationFolderProperty_PropertyMigration();
+        }
+    }
 }
