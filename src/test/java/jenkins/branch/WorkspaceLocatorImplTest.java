@@ -32,6 +32,7 @@ import hudson.slaves.WorkspaceList;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
@@ -46,6 +47,7 @@ import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.WithoutJenkins;
 
 public class WorkspaceLocatorImplTest {
@@ -54,6 +56,8 @@ public class WorkspaceLocatorImplTest {
     public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule
     public JenkinsRule r = new JenkinsRule();
+    @Rule
+    public LoggerRule logging = new LoggerRule().record(WorkspaceLocatorImpl.class, Level.FINER);
 
     @SuppressWarnings("deprecation")
     @Before
@@ -254,6 +258,16 @@ public class WorkspaceLocatorImplTest {
         s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
         // Note that we do not try to do anything for offline workspaces when a project is moved:
         // that is treated like a delete and recreate.
+    }
+
+    @Issue("JENKINS-54640")
+    @Test
+    public void collisions() throws Exception {
+        WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
+        FilePath firstWs = r.buildAndAssertSuccess(r.createFreeStyleProject("first-project-with-a-rather-long-name")).getWorkspace();
+        assertEquals("-project-with-a-rather-long-name", firstWs.getName());
+        firstWs.deleteRecursive();
+        assertEquals("roject-with-a-rather-long-name_2", r.buildAndAssertSuccess(r.createFreeStyleProject("second-project-with-a-rather-long-name")).getWorkspace().getName());
     }
 
 }

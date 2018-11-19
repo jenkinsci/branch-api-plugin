@@ -191,9 +191,13 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 String mnemonic = mnemonicOf(fullName);
                 for (int i = 1; ; i++) {
                     path = StringUtils.right(i > 1 ? mnemonic + "_" + i : mnemonic, MAX_LENGTH);
-                    if (!index.containsKey(path)) {
+                    if (index.values().contains(path)) {
+                        LOGGER.log(Level.FINER, "index collision on {0} for {1} on {2}", new Object[] {path, item, node});
+                    } else {
                         dir = workspace.child(path);
-                        if (!dir.isDirectory()) {
+                        if (dir.isDirectory()) {
+                            LOGGER.log(Level.FINER, "directory collision on {0} for {1} on {2}", new Object[] {path, item, node});
+                        } else {
                             index.put(fullName, path);
                             save(index, workspace);
                             LOGGER.log(Level.FINE, "allocating {0} for {1} on {2}", new Object[] {dir, item, node});
