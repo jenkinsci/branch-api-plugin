@@ -37,6 +37,7 @@ import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.model.Jenkins;
 import jenkins.scm.impl.SingleSCMSource;
+import org.junit.After;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -58,6 +59,16 @@ public class WorkspaceLocatorImplTest {
     @Before
     public void defaultPathMax() {
         WorkspaceLocatorImpl.PATH_MAX = WorkspaceLocatorImpl.PATH_MAX_DEFAULT;
+    }
+
+    WorkspaceLocatorImpl.Mode origMode;
+    @Before
+    public void saveMode() {
+        origMode = WorkspaceLocatorImpl.MODE;
+    }
+    @After
+    public void restoreMode() {
+        WorkspaceLocatorImpl.MODE = origMode;
     }
 
     @WithoutJenkins
@@ -196,68 +207,53 @@ public class WorkspaceLocatorImplTest {
     @Issue("JENKINS-2111")
     @Test
     public void deleteOffline() throws Exception {
-        WorkspaceLocatorImpl.Mode origMode = WorkspaceLocatorImpl.MODE;
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
-        try {
-            FreeStyleProject p = r.createFreeStyleProject("a$b");
-            DumbSlave s = r.createSlave("remote", null, null);
-            p.setAssignedNode(s);
-            assertEquals(s, r.buildAndAssertSuccess(p).getBuiltOn());
-            assertEquals(Collections.singletonList("a_b"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
-            s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
-            s.toComputer().disconnect(null);
-            p.delete();
-            s = (DumbSlave) r.jenkins.getNode("remote");
-            s.toComputer().connect(true).get();
-            assertEquals(Collections.emptyList(), s.getWorkspaceRoot().listDirectories());
-            s.toComputer().getLogText().writeLogTo(0, System.out);
-        } finally {
-            WorkspaceLocatorImpl.MODE = origMode;
-        }
+        FreeStyleProject p = r.createFreeStyleProject("a$b");
+        DumbSlave s = r.createSlave("remote", null, null);
+        p.setAssignedNode(s);
+        assertEquals(s, r.buildAndAssertSuccess(p).getBuiltOn());
+        assertEquals(Collections.singletonList("a_b"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+        s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
+        s.toComputer().disconnect(null);
+        p.delete();
+        s = (DumbSlave) r.jenkins.getNode("remote");
+        s.toComputer().connect(true).get();
+        assertEquals(Collections.emptyList(), s.getWorkspaceRoot().listDirectories());
+        s.toComputer().getLogText().writeLogTo(0, System.out);
     }
 
     @Issue("JENKINS-2111")
     @Test
     public void uniquification() throws Exception {
-        WorkspaceLocatorImpl.Mode origMode = WorkspaceLocatorImpl.MODE;
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
-        try {
-            assertEquals("a_b", r.buildAndAssertSuccess(r.createFreeStyleProject("a$b")).getWorkspace().getName());
-            assertEquals("a_b_2", r.buildAndAssertSuccess(r.createFreeStyleProject("a!b")).getWorkspace().getName());
-            assertEquals("ch_to_fit_in_a_short_path_at_all", r.buildAndAssertSuccess(r.createFreeStyleProject("way too much to fit in a short path at all")).getWorkspace().getName());
-            assertEquals("_to_fit_in_a_short_path_at_all_2", r.buildAndAssertSuccess(r.createFreeStyleProject("really way too much to fit in a short path at all")).getWorkspace().getName());
-            assertEquals("_to_fit_in_a_short_path_at_all_3", r.buildAndAssertSuccess(r.createFreeStyleProject("way, way, way too much to fit in a short path at all")).getWorkspace().getName());
-            r.jenkins.getRootPath().child("workspace/" + WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
-        } finally {
-            WorkspaceLocatorImpl.MODE = origMode;
-        }
+        assertEquals("a_b", r.buildAndAssertSuccess(r.createFreeStyleProject("a$b")).getWorkspace().getName());
+        assertEquals("a_b_2", r.buildAndAssertSuccess(r.createFreeStyleProject("a!b")).getWorkspace().getName());
+        assertEquals("ch_to_fit_in_a_short_path_at_all", r.buildAndAssertSuccess(r.createFreeStyleProject("way too much to fit in a short path at all")).getWorkspace().getName());
+        assertEquals("_to_fit_in_a_short_path_at_all_2", r.buildAndAssertSuccess(r.createFreeStyleProject("really way too much to fit in a short path at all")).getWorkspace().getName());
+        assertEquals("_to_fit_in_a_short_path_at_all_3", r.buildAndAssertSuccess(r.createFreeStyleProject("way, way, way too much to fit in a short path at all")).getWorkspace().getName());
+        r.jenkins.getRootPath().child("workspace/" + WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
     }
 
     @Issue("JENKINS-2111")
     @Test
     public void move() throws Exception {
-        WorkspaceLocatorImpl.Mode origMode = WorkspaceLocatorImpl.MODE;
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
-        try {
-            FreeStyleProject p = r.createFreeStyleProject("old");
-            DumbSlave s = r.createSlave("remote", null, null);
-            p.setAssignedNode(s);
-            FilePath workspace = r.buildAndAssertSuccess(p).getWorkspace();
-            assertEquals("old", workspace.getName());
-            assertEquals(Collections.singletonList("old"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
-            workspace.child("something").write("", null);
-            p.renameTo("new");
-            WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
-            assertEquals(Collections.singletonList("new"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
-            workspace = r.buildAndAssertSuccess(p).getWorkspace();
-            assertEquals("new", workspace.getName());
-            assertTrue(workspace.child("something").exists());
-            s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
-            // Note that we do not try to do anything for offline workspaces when a project is moved:
-            // that is treated like a delete and recreate.
-        } finally {
-            WorkspaceLocatorImpl.MODE = origMode;
-        }
+        FreeStyleProject p = r.createFreeStyleProject("old");
+        DumbSlave s = r.createSlave("remote", null, null);
+        p.setAssignedNode(s);
+        FilePath workspace = r.buildAndAssertSuccess(p).getWorkspace();
+        assertEquals("old", workspace.getName());
+        assertEquals(Collections.singletonList("old"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+        workspace.child("something").write("", null);
+        p.renameTo("new");
+        WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
+        assertEquals(Collections.singletonList("new"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+        workspace = r.buildAndAssertSuccess(p).getWorkspace();
+        assertEquals("new", workspace.getName());
+        assertTrue(workspace.child("something").exists());
+        s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
+        // Note that we do not try to do anything for offline workspaces when a project is moved:
+        // that is treated like a delete and recreate.
     }
 
 }
