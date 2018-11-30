@@ -70,7 +70,7 @@
     <jenkins.version>2.107.3</jenkins.version>
     <java.level>8</java.level>
     <scm-api.version>2.2.7</scm-api.version>
-    <git-plugin.version>3.3.0</git-plugin.version>
+    <git-plugin.version>4.0.0-beta3</git-plugin.version>
   </properties>
 
   <repositories>
@@ -102,7 +102,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>structs</artifactId>
-      <version>1.9</version>
+      <version>1.10</version>
     </dependency>
     <!-- jenkins dependencies -->
     <!-- test dependencies -->
@@ -165,18 +165,6 @@
       <artifactId>junit</artifactId>
       <version>1.6</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>subversion</artifactId>
-      <version>2.5</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion> <!-- already included by the core -->
-          <groupId>org.jenkins-ci</groupId>
-          <artifactId>trilead-ssh2</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 
