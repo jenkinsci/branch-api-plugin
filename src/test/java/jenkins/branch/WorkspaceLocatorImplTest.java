@@ -273,7 +273,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("roject-with-a-rather-long-name_2", r.buildAndAssertSuccess(r.createFreeStyleProject("second-project-with-a-rather-long-name")).getWorkspace().getName());
     }
 
-    @Issue("JENKINS-54654")
+    @Issue({"JENKINS-54654", "JENKINS-54968"})
     @Test
     public void getWorkspaceRoot() throws Exception {
         File top = tmp.getRoot();
@@ -287,6 +287,8 @@ public class WorkspaceLocatorImplTest {
         assertEquals("something else using ${JENKINS_HOME} and also deprecated ${ITEM_FULLNAME}", r.jenkins.getRootPath().child("somewhere/else"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
         workspaceDir.set(r.jenkins, top + File.separator + "${ITEM_FULL_NAME}");
         assertEquals("different location altogether", new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        workspaceDir.set(r.jenkins, top + File.separator + "${ITEM_FULL_NAME}" + File.separator);
+        assertEquals("different location altogether (with slash)", new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
     }
 
 }
