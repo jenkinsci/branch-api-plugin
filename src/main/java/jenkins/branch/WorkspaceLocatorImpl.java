@@ -531,7 +531,12 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                                 String childName = child.getName();
                                 if (childName.equals(path) || childName.startsWith(path + COMBINATOR)) {
                                     listener.getLogger().println("deleting obsolete workspace " + child);
-                                    child.deleteRecursive();
+                                    try {
+                                        child.deleteRecursive();
+                                    } catch (IOException x) {
+                                        LOGGER.log(Level.WARNING, "could not delete workspace " + child, x);
+                                        listener.getLogger().println("could not delete workspace " + child + " , wrong file ownership? Review exception in jenkins log and manually remove the directory");
+                                    }
                                 }
                             }
                         }
