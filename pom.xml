@@ -65,11 +65,11 @@
   </scm>
 
   <properties>
-    <revision>2.1.2</revision>
+    <revision>2.2.1</revision>
     <changelist>-SNAPSHOT</changelist>
     <jenkins.version>2.107.3</jenkins.version>
     <java.level>8</java.level>
-    <scm-api.version>2.2.7</scm-api.version>
+    <scm-api.version>2.3.2</scm-api.version>
     <git-plugin.version>4.0.0-beta3</git-plugin.version>
   </properties>
 

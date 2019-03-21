@@ -44,6 +44,7 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -58,6 +59,8 @@ public class WorkspaceLocatorImplTest {
     public JenkinsRule r = new JenkinsRule();
     @Rule
     public LoggerRule logging = new LoggerRule().record(WorkspaceLocatorImpl.class, Level.FINER);
+    @Rule
+    public TemporaryFolder tmp = new TemporaryFolder();
 
     @SuppressWarnings("deprecation")
     @Before
@@ -268,6 +271,24 @@ public class WorkspaceLocatorImplTest {
         assertEquals("-project-with-a-rather-long-name", firstWs.getName());
         firstWs.deleteRecursive();
         assertEquals("roject-with-a-rather-long-name_2", r.buildAndAssertSuccess(r.createFreeStyleProject("second-project-with-a-rather-long-name")).getWorkspace().getName());
+    }
+
+    @Issue({"JENKINS-54654", "JENKINS-54968"})
+    @Test
+    public void getWorkspaceRoot() throws Exception {
+        File top = tmp.getRoot();
+        Field workspaceDir = Jenkins.class.getDeclaredField("workspaceDir");
+        workspaceDir.setAccessible(true);
+        workspaceDir.set(r.jenkins, "${ITEM_ROOTDIR}/workspace");
+        assertEquals("old default", null, WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        workspaceDir.set(r.jenkins, "${JENKINS_HOME}/workspace/${ITEM_FULL_NAME}");
+        assertEquals("new default", r.jenkins.getRootPath().child("workspace"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        workspaceDir.set(r.jenkins, "${JENKINS_HOME}/somewhere/else/${ITEM_FULLNAME}");
+        assertEquals("something else using ${JENKINS_HOME} and also deprecated ${ITEM_FULLNAME}", r.jenkins.getRootPath().child("somewhere/else"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        workspaceDir.set(r.jenkins, top + File.separator + "${ITEM_FULL_NAME}");
+        assertEquals("different location altogether", new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        workspaceDir.set(r.jenkins, top + File.separator + "${ITEM_FULL_NAME}" + File.separator);
+        assertEquals("different location altogether (with slash)", new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
     }
 
 }
