@@ -161,7 +161,7 @@ public class BranchCategoryFilterTest {
         }
     }
 
-    public static abstract class MockSCMSource extends SCMSource {
+    private static abstract class MockSCMSource extends SCMSource {
 
         protected MockSCMSource() {
             super("1");
