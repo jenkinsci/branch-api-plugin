@@ -256,7 +256,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
     }
 
-    private static final Pattern GOOD_RAW_WORKSPACE_DIR = Pattern.compile("(.+)[/\\\\][$][{]ITEM_FULL_?NAME[}]");
+    private static final Pattern GOOD_RAW_WORKSPACE_DIR = Pattern.compile("(.+)[/\\\\][$][{]ITEM_FULL_?NAME[}][/\\\\]?");
     static @CheckForNull FilePath getWorkspaceRoot(Node node) {
         if (node instanceof Jenkins) {
             Matcher m = GOOD_RAW_WORKSPACE_DIR.matcher(((Jenkins) node).getRawWorkspaceDir());
