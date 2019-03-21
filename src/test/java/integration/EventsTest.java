@@ -29,6 +29,7 @@ import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
+import hudson.Extension;
 import hudson.Functions;
 import hudson.model.Computer;
 import hudson.model.Executor;
@@ -36,6 +37,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.OneOffExecutor;
 import hudson.model.Queue;
 import hudson.model.Result;
+import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.queue.QueueTaskFuture;
 import integration.harness.BasicMultiBranchProject;
@@ -76,8 +78,10 @@ import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.api.mixin.ChangeRequestSCMRevision;
+import jenkins.scm.impl.mock.MockChangeRequestFlags;
 import jenkins.scm.impl.mock.MockFailure;
 import jenkins.scm.impl.mock.MockLatency;
+import jenkins.scm.impl.mock.MockRepositoryFlags;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
@@ -409,6 +413,40 @@ public class EventsTest {
     }
 
     @Test
+    public void
+    given_multibranchWithUntrustedChangeRequestBuildStrategy_when_indexing_then_onlyTrustedChangeRequestsAreFoundAndBuilt()
+            throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo", MockRepositoryFlags.TRUST_AWARE);
+            c.createTag("foo", "master", "master-1.0");
+            Integer untrustedCrNum = c.openChangeRequest("foo", "master", MockChangeRequestFlags.UNTRUSTED);
+            Integer trustedCrNum = c.openChangeRequest("foo", "master");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            prj.setCriteria(null);
+            BranchSource branchSource = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverChangeRequests()));
+            branchSource.setBuildStrategies(Collections.singletonList(new BuildTrustedChangeRequestsStrategyImpl()));
+            prj.getSourcesList().add(branchSource);
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            assertThat("We now have projects",
+                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+            FreeStyleProject master = prj.getItem("master");
+            assertThat("We have no master branch", master, nullValue());
+            FreeStyleProject tag = prj.getItem("master-1.0");
+            assertThat("We have no master-1.0 tag", tag, nullValue());
+            FreeStyleProject trustedCr = prj.getItem("CR-" + trustedCrNum);
+            FreeStyleProject untrustedCr = prj.getItem("CR-" + untrustedCrNum);
+            assertThat("We now have the change request", trustedCr, notNullValue());
+            assertThat("We have change request but no tags or branches",
+                    prj.getItems(), containsInAnyOrder(trustedCr, untrustedCr));
+            r.waitUntilNoActivity();
+            assertThat("The trusted change request was built", trustedCr.getLastBuild(), notNullValue());
+            assertThat("The change request was built", trustedCr.getLastBuild().getNumber(), is(1));
+            assertThat("The untrusted change request was not built", untrustedCr.getLastBuild(), nullValue());
+        }
+    }
+
+    @Test
     public void given_multibranchWithMergeableChangeRequests_when_indexing_then_mergableChangeRequestsBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
@@ -604,7 +642,7 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision) {
+                                        SCMRevision prevRevision, TaskListener listener) {
             return true;
         }
 
@@ -654,7 +692,8 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision) {
+                                        SCMRevision prevRevision,
+                                        @NonNull TaskListener listener) {
             return head instanceof ChangeRequestSCMHead;
         }
 
@@ -662,6 +701,28 @@ public class EventsTest {
                 "given_multibranchWithSourcesWantingEverythingAndBuildingCRs_when_indexing_then_everythingIsFoundAndOnlyCRsBuilt")
         public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
 
+        }
+    }
+
+    public static class BuildTrustedChangeRequestsStrategyImpl extends BranchBuildStrategy {
+        @Override
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision prevRevision, @NonNull TaskListener listener) {
+            if (head instanceof ChangeRequestSCMHead) {
+                try {
+                    return currRevision.equals(source.getTrustedRevision(currRevision, listener));
+                } catch (IOException | InterruptedException e) {
+                    Functions.printThrowable(e);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        @TestExtension(
+                "given_multibranchWithUntrustedChangeRequestBuildStrategy_when_indexing_then_onlyTrustedChangeRequestsAreFoundAndBuilt")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
         }
     }
 
@@ -965,7 +1026,8 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision) {
+                                        SCMRevision prevRevision,
+                                        @NonNull TaskListener listener) {
             return currRevision instanceof MockSCMRevision
                     && approved.contains(((MockSCMRevision) currRevision).getHash());
         }
@@ -1030,7 +1092,7 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision) {
+                                        SCMRevision prevRevision, @NonNull TaskListener listener) {
             if (currRevision instanceof ChangeRequestSCMRevision) {
                 ChangeRequestSCMRevision<?> currCR = (ChangeRequestSCMRevision<?>) currRevision;
                 if (prevRevision instanceof ChangeRequestSCMRevision) {
