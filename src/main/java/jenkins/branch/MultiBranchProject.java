@@ -2114,15 +2114,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                     } else if (revision.isDeterministic()) {
                         SCMRevision prevRevision = _factory.getRevision(project);
-                        try {
-                            factory.setRevisionHash(project, revision);
-                        } catch (IOException e) {
-                            printStackTrace(e, listener.error("Could not update last revision hash"));
-                        }
                         if (!revision.equals(prevRevision)) {
                             listener.getLogger()
                                     .format("Changes detected: %s (%s → %s)%n", rawName, prevRevision, revision);
                             needSave = true;
+                            try {
+                                factory.setRevisionHash(project, revision);
+                            } catch (IOException e) {
+                                printStackTrace(e, listener.error("Could not update last revision hash"));
+                            }
                             if (isAutomaticBuild(source, head, revision, prevRevision, listener)) {
                                 scheduleBuild(
                                         project,
