@@ -687,11 +687,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         } else {
             listener.getLogger().println("Did not schedule build for branch: " + name);
         }
-        try {
-            factory.setRevisionHash(item, revision);
-        } catch (IOException e) {
-            printStackTrace(e, listener.error("Could not update last revision hash"));
-        }
     }
 
     /**
