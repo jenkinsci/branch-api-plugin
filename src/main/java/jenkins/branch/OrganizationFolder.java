@@ -24,7 +24,43 @@
 
 package jenkins.branch;
 
-import antlr.ANTLRException;
+import static jenkins.scm.api.SCMEvent.Type.CREATED;
+import static jenkins.scm.api.SCMEvent.Type.UPDATED;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import javax.servlet.ServletException;
+
+import org.acegisecurity.AccessDeniedException;
+import org.acegisecurity.Authentication;
+import org.apache.commons.io.Charsets;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.jenkins.ui.icon.Icon;
+import org.jenkins.ui.icon.IconSet;
+import org.jenkins.ui.icon.IconSpec;
+import org.jvnet.localizer.LocaleProvider;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
+
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
@@ -36,7 +72,10 @@ import com.cloudbees.hudson.plugins.folder.computed.EventOutputStreams;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
+import com.google.common.collect.ImmutableSet;
 import com.thoughtworks.xstream.XStreamException;
+
+import antlr.ANTLRException;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
@@ -57,26 +96,10 @@ import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
 import hudson.model.listeners.SaveableListener;
+import hudson.security.ACL;
+import hudson.security.Permission;
 import hudson.util.DescribableList;
 import hudson.util.StreamTaskListener;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.TransientActionFactory;
 import jenkins.scm.api.SCMEvent;
@@ -95,21 +118,6 @@ import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
-import org.acegisecurity.AccessDeniedException;
-import org.apache.commons.io.Charsets;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.jenkins.ui.icon.Icon;
-import org.jenkins.ui.icon.IconSet;
-import org.jenkins.ui.icon.IconSpec;
-import org.jvnet.localizer.LocaleProvider;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
-
-import static jenkins.scm.api.SCMEvent.Type.CREATED;
-import static jenkins.scm.api.SCMEvent.Type.UPDATED;
 
 /**
  * A folder-like collection of {@link MultiBranchProject}s, one per repository.
@@ -650,6 +658,33 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ACL getACL() {
+        final ACL acl = super.getACL();
+        if (getParent() instanceof ComputedFolder<?>) {
+            return new ACL() {
+                @Override
+                public boolean hasPermission(Authentication a, Permission permission) {
+                    if (ACL.SYSTEM.equals(a)) {
+                        return true;
+                    } else if (SUPPRESSED_PERMISSIONS.contains(permission)) {
+                        return false;
+                    } else {
+                        return acl.hasPermission(a, permission);
+                    }
+                }
+            };
+        } else {
+            return acl;
+        }
+    }
+
+    private static final Set<Permission> SUPPRESSED_PERMISSIONS =
+                ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
+
+    /**
      * Our descriptor
      */
     @Extension
@@ -686,7 +721,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          *
          * @return A string with the category identifier. {@code TopLevelItemDescriptor#getCategoryId()}
          */
-        //@Override TODO once baseline is 2.x
+        @Override
         @NonNull
         public String getCategoryId() {
             return "nested-projects";
@@ -697,7 +732,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          *
          * @return A string with the description. {@code TopLevelItemDescriptor#getDescription()}.
          */
-        //@Override TODO once baseline is 2.x
+        @Override
         @NonNull
         public String getDescription() {
             if (Jenkins.getActiveInstance().getInitLevel().compareTo(InitMilestone.EXTENSIONS_AUGMENTED) > 0) {
@@ -716,7 +751,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             );
         }
 
-        //@Override TODO once baseline is 2.x
+        @Override
         public String getIconFilePathPattern() {
             List<SCMNavigatorDescriptor> descriptors =
                     remove(ExtensionList.lookup(SCMNavigatorDescriptor.class),
