@@ -2093,13 +2093,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 revision
                         );
                         needSave = true;
-
                         try {
                             factory.setRevisionHash(project, revision);
                         } catch (IOException e) {
                             printStackTrace(e, listener.error("Could not update last revision hash"));
                         }
-
                         // the previous "revision" for this head is not a revision for the current source
                         // either because the head was removed and then recreated, or because the head
                         // was taken over by a different source, thus the previous revision is null
