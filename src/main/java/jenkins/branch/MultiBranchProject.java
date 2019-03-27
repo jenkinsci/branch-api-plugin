@@ -2054,6 +2054,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 revision
                         );
                         needSave = true;
+
+                        try {
+                            factory.setRevisionHash(project, revision);
+                        } catch (IOException e) {
+                            printStackTrace(e, listener.error("Could not update last revision hash"));
+                        }
+
                         // the previous "revision" for this head is not a revision for the current source
                         // either because the head was removed and then recreated, or because the head
                         // was taken over by a different source, thus the previous revision is null
@@ -2072,6 +2079,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                     } else if (revision.isDeterministic()) {
                         SCMRevision prevRevision = _factory.getRevision(project);
+                        try {
+                            factory.setRevisionHash(project, revision);
+                        } catch (IOException e) {
+                            printStackTrace(e, listener.error("Could not update last revision hash"));
+                        }
+
                         if (!revision.equals(prevRevision)) {
                             listener.getLogger()
                                     .format("Changes detected: %s (%s → %s)%n", rawName, prevRevision, revision);
@@ -2110,6 +2123,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 needSave = true;
                                 // get the previous revision
                                 SCMRevision prevRevision = _factory.getRevision(project);
+                                try {
+                                    factory.setRevisionHash(project, revision);
+                                } catch (IOException e) {
+                                    printStackTrace(e, listener.error("Could not update last revision hash"));
+                                }
                                 if (isAutomaticBuild(source, head, revision, prevRevision)) {
                                     scheduleBuild(
                                             _factory,
@@ -2174,6 +2192,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 _factory.decorate(project);
                 // ok it is now up to the observer to ensure it does the actual save.
                 observer.created(project);
+                try {
+                    factory.setRevisionHash(project, revision);
+                } catch (IOException e) {
+                    printStackTrace(e, listener.error("Could not update last revision hash"));
+                }
                 if (isAutomaticBuild(source, head, revision, null)) {
                     scheduleBuild(
                             _factory,
