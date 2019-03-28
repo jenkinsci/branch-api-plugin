@@ -2051,7 +2051,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         try {
                             factory.setRevisionHash(project, revision);
                         } catch (IOException e) {
-                            printStackTrace(e, listener.error("Could not update last revision hash."));
+                            printStackTrace(e, listener.error("Could not update last revision hash"));
                         }
                         // the previous "revision" for this head is not a revision for the current source
                         // either because the head was removed and then recreated, or because the head
@@ -2076,7 +2076,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             try {
                                 factory.setRevisionHash(project, revision);
                             } catch (IOException e) {
-                                printStackTrace(e, listener.error("Could not update last revision hash."));
+                                printStackTrace(e, listener.error("Could not update last revision hash"));
                             }
                             if (isAutomaticBuild(source, head, revision, prevRevision, listener)) {
                                 scheduleBuild(
@@ -2113,7 +2113,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 try {
                                     factory.setRevisionHash(project, revision);
                                 } catch (IOException e) {
-                                    printStackTrace(e, listener.error("Could not update last revision hash."));
+                                    printStackTrace(e, listener.error("Could not update last revision hash"));
                                 }
                                 if (isAutomaticBuild(source, head, revision, prevRevision, listener)) {
                                     scheduleBuild(
@@ -2180,7 +2180,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 try {
                     factory.setRevisionHash(project, revision);
                 } catch (IOException e) {
-                    printStackTrace(e, listener.error("Could not update last revision hash."));
+                    printStackTrace(e, listener.error("Could not update last revision hash"));
                 }
                 if (isAutomaticBuild(source, head, revision, null, listener)) {
                     scheduleBuild(
