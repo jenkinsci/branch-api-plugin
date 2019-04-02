@@ -2063,7 +2063,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             listener.getLogger().format("No automatic builds for %s%n", rawName);
                         }
                         try {
-                            factory.setRevisionHash(project, revision);
+                            _factory.setRevisionHash(project, revision);
                         } catch (IOException e) {
                             printStackTrace(e, listener.error("Could not update last revision hash"));
                         }
@@ -2085,7 +2085,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 listener.getLogger().format("No automatic builds for %s%n", rawName);
                             }
                             try {
-                                factory.setRevisionHash(project, revision);
+                                _factory.setRevisionHash(project, revision);
                             } catch (IOException e) {
                                 printStackTrace(e, listener.error("Could not update last revision hash"));
                             }
@@ -2122,7 +2122,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     listener.getLogger().format("No automatic builds for %s%n", rawName);
                                 }
                                 try {
-                                    factory.setRevisionHash(project, revision);
+                                    _factory.setRevisionHash(project, revision);
                                 } catch (IOException e) {
                                     printStackTrace(e, listener.error("Could not update last revision hash"));
                                 }
@@ -2189,7 +2189,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     listener.getLogger().format("No automatic builds for %s%n", rawName);
                 }
                 try {
-                    factory.setRevisionHash(project, revision);
+                    _factory.setRevisionHash(project, revision);
                 } catch (IOException e) {
                     printStackTrace(e, listener.error("Could not update last revision hash"));
                 }
