@@ -646,8 +646,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
     }
 
-    private void scheduleBuild(BranchProjectFactory<P, R> factory, final P item, SCMRevision revision,
-                               TaskListener listener, String name, Cause[] causes, Action... actions) {
+    private void scheduleBuild(final P item, TaskListener listener, String name, Cause[] causes, Action... actions) {
         if (!isBuildable()) {
             listener.getLogger().printf("Did not schedule build for branch: %s (%s is disabled)%n",
                     name, getDisplayName());
@@ -684,11 +683,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         if (ParameterizedJobMixIn.scheduleBuild2(item, 0, _actions) != null) {
             listener.getLogger().println("Scheduled build for branch: " + name);
-            try {
-                factory.setRevisionHash(item, revision);
-            } catch (IOException e) {
-                printStackTrace(e, listener.error("Could not update last revision hash"));
-            }
         } else {
             listener.getLogger().println("Did not schedule build for branch: " + name);
         }
@@ -2059,9 +2053,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         // was taken over by a different source, thus the previous revision is null
                         if (isAutomaticBuild(source, head, revision, null, listener)) {
                             scheduleBuild(
-                                    _factory,
                                     project,
-                                    revision,
                                     listener,
                                     rawName,
                                     causeFactory.create(source),
@@ -2069,6 +2061,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             );
                         } else {
                             listener.getLogger().format("No automatic builds for %s%n", rawName);
+                        }
+                        try {
+                            _factory.setRevisionHash(project, revision);
+                        } catch (IOException e) {
+                            printStackTrace(e, listener.error("Could not update last revision hash"));
                         }
                     } else if (revision.isDeterministic()) {
                         SCMRevision prevRevision = _factory.getRevision(project);
@@ -2078,9 +2075,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             needSave = true;
                             if (isAutomaticBuild(source, head, revision, prevRevision, listener)) {
                                 scheduleBuild(
-                                        _factory,
                                         project,
-                                        revision,
                                         listener,
                                         rawName,
                                         causeFactory.create(source),
@@ -2088,6 +2083,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 );
                             } else {
                                 listener.getLogger().format("No automatic builds for %s%n", rawName);
+                            }
+                            try {
+                                _factory.setRevisionHash(project, revision);
+                            } catch (IOException e) {
+                                printStackTrace(e, listener.error("Could not update last revision hash"));
                             }
                         } else {
                             listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
@@ -2112,9 +2112,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 SCMRevision prevRevision = _factory.getRevision(project);
                                 if (isAutomaticBuild(source, head, revision, prevRevision, listener)) {
                                     scheduleBuild(
-                                            _factory,
                                             project,
-                                            revision,
                                             listener,
                                             rawName,
                                             causeFactory.create(source),
@@ -2122,6 +2120,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     );
                                 } else {
                                     listener.getLogger().format("No automatic builds for %s%n", rawName);
+                                }
+                                try {
+                                    _factory.setRevisionHash(project, revision);
+                                } catch (IOException e) {
+                                    printStackTrace(e, listener.error("Could not update last revision hash"));
                                 }
                             } else {
                                 listener.getLogger().format("No changes detected: %s%n", rawName);
@@ -2176,9 +2179,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 observer.created(project);
                 if (isAutomaticBuild(source, head, revision, null, listener)) {
                     scheduleBuild(
-                            _factory,
                             project,
-                            revision,
                             listener,
                             rawName,
                             causeFactory.create(source),
@@ -2186,6 +2187,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     );
                 } else {
                     listener.getLogger().format("No automatic builds for %s%n", rawName);
+                }
+                try {
+                    _factory.setRevisionHash(project, revision);
+                } catch (IOException e) {
+                    printStackTrace(e, listener.error("Could not update last revision hash"));
                 }
             } finally {
                 observer.completed(encodedName);
