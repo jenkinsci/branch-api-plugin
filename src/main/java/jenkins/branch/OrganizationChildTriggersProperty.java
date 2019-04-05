@@ -24,6 +24,8 @@
 
 package jenkins.branch;
 
+import antlr.ANTLRException;
+import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
@@ -38,6 +40,7 @@ import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -62,10 +65,6 @@ public class OrganizationChildTriggersProperty extends OrganizationFolderPropert
     @NonNull
     private final List<Trigger<?>> templates;
     /**
-     * {@code true} if we should enorce that the configured triggers are the only triggers.
-     */
-    private final boolean enforce;
-    /**
      * The lazily populated XML serialized form of the template triggers to assist in faster change detection.
      */
     @CheckForNull
@@ -75,21 +74,31 @@ public class OrganizationChildTriggersProperty extends OrganizationFolderPropert
      * Our constructor.
      *
      * @param templates the templates.
-     * @param enforce {@code true} to force the child triggers to align.
      */
     @DataBoundConstructor
-    public OrganizationChildTriggersProperty(List<Trigger<?>> templates, boolean enforce) {
+    public OrganizationChildTriggersProperty(List<Trigger<?>> templates) {
         this.templates = new ArrayList<>(Util.fixNull(templates));
-        this.enforce = enforce;
     }
 
     /**
-     * Returns {@code true} if this {@link OrganizationFolderProperty} will enforce the child triggers.
+     * Our constructor.
      *
-     * @return {@code true} if this {@link OrganizationFolderProperty} will enforce the child triggers.
+     * @param templates the templates.
      */
-    public boolean isEnforce() {
-        return enforce;
+    public OrganizationChildTriggersProperty(Trigger<?>... templates) {
+        this(Arrays.asList(templates));
+    }
+
+    /**
+     * Creates a new default instance of this property.
+     * @return a new default instance of this property.
+     */
+    public static OrganizationChildTriggersProperty newDefaultInstance() {
+        try {
+            return new OrganizationChildTriggersProperty(new PeriodicFolderTrigger("1d"));
+        } catch (ANTLRException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /**
@@ -151,22 +160,20 @@ public class OrganizationChildTriggersProperty extends OrganizationFolderPropert
         // triggers typically contain non-serialized state that is required to be retained
         // in order to ensure correct intervals
         Map<TriggerDescriptor, Trigger<?>> childTriggers = child.getTriggers();
-        Map<Trigger<?>, Boolean> remove = new IdentityHashMap<>(childTriggers.size());
-        List<Trigger<?>> add = new ArrayList<>();
-        if (enforce) {
-            childTriggers.forEach((d, t) -> remove.put(t, Boolean.TRUE));
-        }
+        Map<Trigger<?>, Boolean> toRemove = new IdentityHashMap<>(childTriggers.size());
+        List<Trigger<?>> toAddOrUpdate = new ArrayList<>();
+        childTriggers.forEach((d, t) -> toRemove.put(t, Boolean.TRUE));
         for (Trigger<?> template : templates) {
             Trigger<?> current = childTriggers.get(template.getDescriptor());
             if (current != null) {
-                remove.remove(current);
+                toRemove.remove(current);
                 if (!sameAsTemplate(template, current)) {
-                    add.add(newInstance(template));
+                    toAddOrUpdate.add(newInstance(template));
                 }
             }
         }
-        add.forEach(child::addTrigger);
-        remove.forEach((trigger, ignore) -> child.removeTrigger(trigger));
+        toAddOrUpdate.forEach(child::addTrigger);
+        toRemove.forEach((trigger, ignore) -> child.removeTrigger(trigger));
     }
 
     /**

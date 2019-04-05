@@ -184,10 +184,17 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 projectFactories.add(f);
             }
         }
+        PeriodicFolderTrigger template;
         try {
             addTrigger(new PeriodicFolderTrigger("1d"));
+            template = new PeriodicFolderTrigger("1d");
         } catch (ANTLRException x) {
             throw new IllegalStateException(x);
+        }
+        try {
+            addProperty(OrganizationChildTriggersProperty.newDefaultInstance());
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
         }
     }
 
@@ -209,6 +216,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
         if (!(getIcon() instanceof MetadataActionFolderIcon)) {
             setIcon(newDefaultFolderIcon());
+        }
+        if (getProperties().get(OrganizationChildTriggersProperty.class) == null) {
+            try {
+                addProperty(OrganizationChildTriggersProperty.newDefaultInstance());
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
         PropertyMigration.applyAll(this);
         if (state == null) {
@@ -1432,11 +1446,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 project.addProperty(new ProjectNameProperty(projectName));
                                 project.setOrphanedItemStrategy(getOrphanedItemStrategy());
                                 project.getSourcesList().addAll(createBranchSources());
-                                try {
-                                    project.addTrigger(new PeriodicFolderTrigger("1d"));
-                                } catch (ANTLRException x) {
-                                    throw new IllegalStateException(x);
-                                }
                                 for (AbstractFolderProperty<?> property: getProperties()) {
                                     if (property instanceof OrganizationFolderProperty) {
                                         ((OrganizationFolderProperty) property).applyDecoration(project, listener);

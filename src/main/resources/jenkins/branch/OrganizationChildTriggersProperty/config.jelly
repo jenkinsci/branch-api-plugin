@@ -26,9 +26,6 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
   <f:section title="${%Scan Child Triggers}">
-    <f:entry field="enforce" title="${%Child Trigger Owner}">
-      <f:booleanRadio/>
-    </f:entry>
     <f:descriptorList descriptors="${descriptor.triggerDescriptors}" field="templates"/>
   </f:section>
 </j:jelly>
