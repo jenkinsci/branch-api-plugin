@@ -170,6 +170,8 @@ public class OrganizationChildTriggersProperty extends OrganizationFolderPropert
                 if (!sameAsTemplate(template, current)) {
                     toAddOrUpdate.add(newInstance(template));
                 }
+            } else {
+                toAddOrUpdate.add(newInstance(template));
             }
         }
         toAddOrUpdate.forEach(child::addTrigger);

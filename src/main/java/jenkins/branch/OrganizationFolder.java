@@ -184,10 +184,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 projectFactories.add(f);
             }
         }
-        PeriodicFolderTrigger template;
         try {
             addTrigger(new PeriodicFolderTrigger("1d"));
-            template = new PeriodicFolderTrigger("1d");
         } catch (ANTLRException x) {
             throw new IllegalStateException(x);
         }
