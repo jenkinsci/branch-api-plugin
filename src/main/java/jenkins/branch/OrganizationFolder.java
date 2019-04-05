@@ -26,6 +26,7 @@ package jenkins.branch;
 
 import antlr.ANTLRException;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
+import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIcon;
 import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
@@ -1387,6 +1388,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                         existing.getProperties().remove(ProjectNameProperty.class);
                                         existing.addProperty(new ProjectNameProperty(projectName));
                                     }
+                                    for (AbstractFolderProperty<?> folderProperty : getProperties()) {
+                                        if (folderProperty instanceof OrganizationFolderProperty) {
+                                            ((OrganizationFolderProperty) folderProperty).applyDecoration(existing,
+                                                    listener);
+                                        }
+                                    }
                                 } finally {
                                     bc.commit();
                                 }
@@ -1429,6 +1436,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     project.addTrigger(new PeriodicFolderTrigger("1d"));
                                 } catch (ANTLRException x) {
                                     throw new IllegalStateException(x);
+                                }
+                                for (AbstractFolderProperty<?> property: getProperties()) {
+                                    if (property instanceof OrganizationFolderProperty) {
+                                        ((OrganizationFolderProperty) property).applyDecoration(project, listener);
+                                    }
                                 }
                             } finally {
                                 bc.commit();
