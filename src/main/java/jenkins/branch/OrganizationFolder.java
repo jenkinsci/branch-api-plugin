@@ -186,12 +186,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     @Override
     public void onCreatedFromScratch() {
         super.onCreatedFromScratch();
-        for (MultiBranchProjectFactoryDescriptor d : ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class)) {
-            MultiBranchProjectFactory f = d.newInstance();
-            if (f != null) {
-                projectFactories.add(f);
+
+        if( projectFactories.isEmpty() ) {
+            for (MultiBranchProjectFactoryDescriptor d : ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class)) {
+                MultiBranchProjectFactory f = d.newInstance();
+                if (f != null) {
+                    projectFactories.add(f);
+                }
             }
         }
+
         try {
             addTrigger(new PeriodicFolderTrigger("1d"));
         } catch (ANTLRException x) {
