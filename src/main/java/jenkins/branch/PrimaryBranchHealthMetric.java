@@ -95,7 +95,7 @@ public class PrimaryBranchHealthMetric extends FolderHealthMetric {
     /**
      * Our {@link Reporter}.
      */
-    private class ReporterImpl implements Reporter {
+    private static class ReporterImpl implements Reporter {
         /**
          * The primary instance reports.
          */
