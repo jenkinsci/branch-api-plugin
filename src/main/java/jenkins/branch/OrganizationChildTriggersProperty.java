@@ -57,7 +57,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * Configures the {@link Trigger}s for the {@link MultiBranchProject} children of an {@link OrganizationFolder}.
  *
- * @since 2.3.1
+ * @since 2.4.0
  */
 public class OrganizationChildTriggersProperty extends OrganizationFolderProperty<OrganizationFolder> {
     /**

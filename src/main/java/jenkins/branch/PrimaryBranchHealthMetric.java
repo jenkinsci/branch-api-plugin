@@ -42,7 +42,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * A {@link FolderHealthMetric} for {@link MultiBranchProject} instances that only reports the health of the primary
  * branch.
  *
- * @since 2.3.1
+ * @since 2.4.0
  */
 public class PrimaryBranchHealthMetric extends FolderHealthMetric {
 

@@ -25,7 +25,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * A property that sets the health metrics for immediate children of an {@link OrganizationFolder}.
  *
- * @since 2.3.1
+ * @since 2.4.0
  */
 public class OrganizationChildHealthMetricsProperty extends OrganizationFolderProperty<OrganizationFolder> {
     /**
