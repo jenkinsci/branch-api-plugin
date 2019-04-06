@@ -31,17 +31,18 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Items;
+import hudson.model.Saveable;
 import hudson.model.TaskListener;
 import hudson.triggers.SCMTrigger;
 import hudson.triggers.TimerTrigger;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
+import hudson.util.DescribableList;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,7 +108,7 @@ public class OrganizationChildTriggersProperty extends OrganizationFolderPropert
      * @return the current template triggers.
      */
     public List<Trigger<?>> getTemplates() {
-        return Collections.unmodifiableList(templates);
+        return new DescribableList<>(Saveable.NOOP, templates);
     }
 
     /**
