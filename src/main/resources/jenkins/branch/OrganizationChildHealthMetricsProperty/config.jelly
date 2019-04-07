@@ -26,6 +26,9 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
   <f:section title="${descriptor.displayName}">
+    <f:description>
+      ${%These are the health metrics that the children of this organization folder will report. Does not apply to grandchildren.}
+    </f:description>
     <f:advanced title="${%Health metrics}" align="left">
       <f:block>
         <f:hetero-list descriptors="${descriptor.healthMetricDescriptors}"

@@ -191,6 +191,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
         try {
             addProperty(OrganizationChildTriggersProperty.newDefaultInstance());
+            addProperty(new OrganizationChildOrphanedItemsProperty(getOrphanedItemStrategy()));
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -218,6 +219,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         if (getProperties().get(OrganizationChildTriggersProperty.class) == null) {
             try {
                 addProperty(OrganizationChildTriggersProperty.newDefaultInstance());
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        if (getProperties().get(OrganizationChildOrphanedItemsProperty.class) == null) {
+            try {
+                addProperty(new OrganizationChildOrphanedItemsProperty(getOrphanedItemStrategy()));
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
@@ -1392,7 +1400,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 BulkChange bc = new BulkChange(existing);
                                 try {
                                     existing.setSourcesList(createBranchSources());
-                                    existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
                                     factory.updateExistingProject(existing, attributes, listener);
                                     ProjectNameProperty property =
                                             existing.getProperties().get(ProjectNameProperty.class);
@@ -1442,7 +1449,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     project.setDisplayName(projectName);
                                 }
                                 project.addProperty(new ProjectNameProperty(projectName));
-                                project.setOrphanedItemStrategy(getOrphanedItemStrategy());
                                 project.getSourcesList().addAll(createBranchSources());
                                 for (AbstractFolderProperty<?> property: getProperties()) {
                                     if (property instanceof OrganizationFolderProperty) {
