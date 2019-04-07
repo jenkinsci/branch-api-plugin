@@ -175,7 +175,9 @@ public class OrganizationChildTriggersProperty extends OrganizationFolderPropert
                 toAddOrUpdate.add(newInstance(template));
             }
         }
-        toAddOrUpdate.forEach(child::addTrigger);
+        for (Trigger<?> t : toAddOrUpdate) {
+            child.addTrigger(t);
+        }
         toRemove.forEach((trigger, ignore) -> child.removeTrigger(trigger));
     }
 
