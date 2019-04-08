@@ -62,6 +62,11 @@ public class OrganizationChildHealthMetricsProperty extends OrganizationFolderPr
     @CheckForNull
     private transient Map<FolderHealthMetric, String> templateXML;
 
+    /**
+     * Constructor.
+     *
+     * @param templates the folder health metrics.
+     */
     @DataBoundConstructor
     public OrganizationChildHealthMetricsProperty(List<FolderHealthMetric> templates) {
         this.templates = new ArrayList<>(Util.fixNull(templates));

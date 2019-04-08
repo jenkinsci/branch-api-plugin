@@ -92,6 +92,7 @@ public class OrganizationChildTriggersProperty extends OrganizationFolderPropert
 
     /**
      * Creates a new default instance of this property.
+     *
      * @return a new default instance of this property.
      */
     public static OrganizationChildTriggersProperty newDefaultInstance() {

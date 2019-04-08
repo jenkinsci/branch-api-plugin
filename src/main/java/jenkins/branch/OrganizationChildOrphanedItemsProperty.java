@@ -24,20 +24,25 @@
 
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
 import com.cloudbees.hudson.plugins.folder.computed.OrphanedItemStrategy;
 import com.cloudbees.hudson.plugins.folder.computed.OrphanedItemStrategyDescriptor;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.model.ItemGroup;
 import hudson.model.Items;
 import hudson.model.TaskListener;
+import hudson.model.TopLevelItem;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -63,6 +68,15 @@ public class OrganizationChildOrphanedItemsProperty extends OrganizationFolderPr
     }
 
     /**
+     * Creates a new default instance of this property.
+     *
+     * @return a new default instance of this property.
+     */
+    public static OrganizationChildOrphanedItemsProperty newDefaultInstance() {
+        return new OrganizationChildOrphanedItemsProperty(new Inherit());
+    }
+
+    /**
      * Returns the strategy we enforce.
      *
      * @return the strategy we enforce.
@@ -77,6 +91,19 @@ public class OrganizationChildOrphanedItemsProperty extends OrganizationFolderPr
     @Override
     protected void decorate(@NonNull MultiBranchProject<?, ?> child, @NonNull TaskListener listener)
             throws IOException {
+        OrphanedItemStrategy strategy;
+        if (this.strategy instanceof Inherit) {
+            // special case
+            ItemGroup parent = child.getParent();
+            if (parent instanceof OrganizationFolder) {
+                strategy = ((OrganizationFolder) parent).getOrphanedItemStrategy();
+            } else {
+                // should never happen, if it does then no-op is safest
+                return;
+            }
+        } else {
+            strategy = this.strategy;
+        }
         if (!child.getOrphanedItemStrategy().getClass().equals(strategy.getClass())
                 || !Items.XSTREAM2.toXML(strategy).equals(Items.XSTREAM2.toXML(child.getOrphanedItemStrategy()))) {
             child.setOrphanedItemStrategy(
@@ -108,14 +135,63 @@ public class OrganizationChildOrphanedItemsProperty extends OrganizationFolderPr
         @Restricted(DoNotUse.class) // used by Jelly
         @NonNull
         public List<OrphanedItemStrategyDescriptor> getStrategyDescriptors() {
-            List<OrphanedItemStrategyDescriptor> result = new ArrayList<OrphanedItemStrategyDescriptor>();
-            for (OrphanedItemStrategyDescriptor descriptor : ExtensionList
-                    .lookup(OrphanedItemStrategyDescriptor.class)) {
-                if (descriptor.isApplicable(MultiBranchProject.class)) {
-                    result.add(descriptor);
+            List<OrphanedItemStrategyDescriptor> result = new ArrayList<>();
+            for (OrphanedItemStrategyDescriptor d : ExtensionList.lookup(OrphanedItemStrategyDescriptor.class)) {
+                if (d instanceof Inherit.DescriptorImpl) {
+                    result.add(0, d);
+                } else if (d.isApplicable(MultiBranchProject.class)) {
+                    result.add(d);
                 }
             }
             return result;
+        }
+    }
+
+    /**
+     * Special marker class to flag copying the parent strategy.
+     */
+    @Restricted(NoExternalUse.class)
+    public final static class Inherit extends OrphanedItemStrategy {
+
+        /**
+         * Our constructor.
+         */
+        @DataBoundConstructor
+        public Inherit() {
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public <I extends TopLevelItem> Collection<I> orphanedItems(ComputedFolder<I> owner, Collection<I> orphaned,
+                                                                    TaskListener listener)
+                throws IOException, InterruptedException {
+            return orphaned;
+        }
+
+        /**
+         * Our descriptor.
+         */
+        @Restricted(NoExternalUse.class)
+        @Extension
+        public final static class DescriptorImpl extends OrphanedItemStrategyDescriptor {
+            /**
+             * {@inheritDoc}
+             */
+            @Nonnull
+            @Override
+            public String getDisplayName() {
+                return Messages.OrganizationChildOrphanedItemsProperty_Inherit();
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public boolean isApplicable(Class<? extends ComputedFolder> folderType) {
+                return false;
+            }
         }
     }
 }

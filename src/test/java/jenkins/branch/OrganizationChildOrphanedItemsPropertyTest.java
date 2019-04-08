@@ -114,13 +114,7 @@ public class OrganizationChildOrphanedItemsPropertyTest {
             OrganizationChildOrphanedItemsProperty property =
                     prj.getProperties().get(OrganizationChildOrphanedItemsProperty.class);
             assertThat(property, notNullValue());
-            assertThat(property.getStrategy().getDescriptor(), is(prj.getOrphanedItemStrategy().getDescriptor()));
-            assertThat(property.getStrategy(), instanceOf(DefaultOrphanedItemStrategy.class));
-            DefaultOrphanedItemStrategy strategy = (DefaultOrphanedItemStrategy) property.getStrategy();
-            DefaultOrphanedItemStrategy expected = (DefaultOrphanedItemStrategy) prj.getOrphanedItemStrategy();
-            assertThat(strategy.isPruneDeadBranches(), is(expected.isPruneDeadBranches()));
-            assertThat(strategy.getDaysToKeep(), is(expected.getDaysToKeep()));
-            assertThat(strategy.getNumToKeep(), is(expected.getNumToKeep()));
+            assertThat(property.getStrategy(), instanceOf(OrganizationChildOrphanedItemsProperty.Inherit.class));
         }
     }
 
@@ -135,6 +129,30 @@ public class OrganizationChildOrphanedItemsPropertyTest {
             c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
             prj.getProperties().remove(OrganizationChildOrphanedItemsProperty.class);
             prj.addProperty(new OrganizationChildOrphanedItemsProperty(new DefaultOrphanedItemStrategy(true, 5, 7)));
+            prj.scheduleBuild2(0).getFuture().get();
+            r.waitUntilNoActivity();
+            BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
+            assertThat("We now have the child", foo, notNullValue());
+            assertThat(foo.getOrphanedItemStrategy(), instanceOf(DefaultOrphanedItemStrategy.class));
+            DefaultOrphanedItemStrategy strategy = (DefaultOrphanedItemStrategy) foo.getOrphanedItemStrategy();
+            assertThat(strategy.isPruneDeadBranches(), is(true));
+            assertThat(strategy.getDaysToKeep(), is(5));
+            assertThat(strategy.getNumToKeep(), is(7));
+        }
+    }
+
+    @Test
+    public void given__same_as_parent__when__scan__then__parent_strategy_applied() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            c.createRepository("foo");
+            c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            prj.setOrphanedItemStrategy(new DefaultOrphanedItemStrategy(true, 5, 7));
+            prj.getProperties().remove(OrganizationChildOrphanedItemsProperty.class);
+            prj.addProperty(OrganizationChildOrphanedItemsProperty.newDefaultInstance());
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");

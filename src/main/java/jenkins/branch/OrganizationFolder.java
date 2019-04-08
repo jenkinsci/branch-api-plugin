@@ -191,7 +191,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
         try {
             addProperty(OrganizationChildTriggersProperty.newDefaultInstance());
-            addProperty(new OrganizationChildOrphanedItemsProperty(getOrphanedItemStrategy()));
+            addProperty(OrganizationChildOrphanedItemsProperty.newDefaultInstance());
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
@@ -225,7 +225,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
         if (getProperties().get(OrganizationChildOrphanedItemsProperty.class) == null) {
             try {
-                addProperty(new OrganizationChildOrphanedItemsProperty(getOrphanedItemStrategy()));
+                addProperty(OrganizationChildOrphanedItemsProperty.newDefaultInstance());
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
