@@ -26,6 +26,7 @@ package jenkins.branch;
 
 import antlr.ANTLRException;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
+import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIcon;
 import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
@@ -188,6 +189,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         } catch (ANTLRException x) {
             throw new IllegalStateException(x);
         }
+        try {
+            addProperty(OrganizationChildTriggersProperty.newDefaultInstance());
+            addProperty(OrganizationChildOrphanedItemsProperty.newDefaultInstance());
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /**
@@ -208,6 +215,20 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
         if (!(getIcon() instanceof MetadataActionFolderIcon)) {
             setIcon(newDefaultFolderIcon());
+        }
+        if (getProperties().get(OrganizationChildTriggersProperty.class) == null) {
+            try {
+                addProperty(OrganizationChildTriggersProperty.newDefaultInstance());
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        if (getProperties().get(OrganizationChildOrphanedItemsProperty.class) == null) {
+            try {
+                addProperty(OrganizationChildOrphanedItemsProperty.newDefaultInstance());
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
         PropertyMigration.applyAll(this);
         if (state == null) {
@@ -1379,13 +1400,18 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 BulkChange bc = new BulkChange(existing);
                                 try {
                                     existing.setSourcesList(createBranchSources());
-                                    existing.setOrphanedItemStrategy(getOrphanedItemStrategy());
                                     factory.updateExistingProject(existing, attributes, listener);
                                     ProjectNameProperty property =
                                             existing.getProperties().get(ProjectNameProperty.class);
                                     if (property == null || !projectName.equals(property.getName())) {
                                         existing.getProperties().remove(ProjectNameProperty.class);
                                         existing.addProperty(new ProjectNameProperty(projectName));
+                                    }
+                                    for (AbstractFolderProperty<?> folderProperty : getProperties()) {
+                                        if (folderProperty instanceof OrganizationFolderProperty) {
+                                            ((OrganizationFolderProperty) folderProperty).applyDecoration(existing,
+                                                    listener);
+                                        }
                                     }
                                 } finally {
                                     bc.commit();
@@ -1423,12 +1449,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     project.setDisplayName(projectName);
                                 }
                                 project.addProperty(new ProjectNameProperty(projectName));
-                                project.setOrphanedItemStrategy(getOrphanedItemStrategy());
                                 project.getSourcesList().addAll(createBranchSources());
-                                try {
-                                    project.addTrigger(new PeriodicFolderTrigger("1d"));
-                                } catch (ANTLRException x) {
-                                    throw new IllegalStateException(x);
+                                for (AbstractFolderProperty<?> property: getProperties()) {
+                                    if (property instanceof OrganizationFolderProperty) {
+                                        ((OrganizationFolderProperty) property).applyDecoration(project, listener);
+                                    }
                                 }
                             } finally {
                                 bc.commit();
