@@ -642,7 +642,7 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision, TaskListener listener) {
+                                        SCMRevision prevRevision, TaskListener listener, SCMRevision lastSeenRevision) {
             return true;
         }
 
@@ -693,7 +693,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision prevRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, SCMRevision lastSeenRevision) {
             return head instanceof ChangeRequestSCMHead;
         }
 
@@ -708,7 +708,7 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision, @NonNull TaskListener listener) {
+                                        SCMRevision prevRevision, @NonNull TaskListener listener, SCMRevision lastSeenRevision) {
             if (head instanceof ChangeRequestSCMHead) {
                 try {
                     return currRevision.equals(source.getTrustedRevision(currRevision, listener));
@@ -1027,7 +1027,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision prevRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, SCMRevision lastSeenRevision) {
             return currRevision instanceof MockSCMRevision
                     && approved.contains(((MockSCMRevision) currRevision).getHash());
         }
@@ -1092,7 +1092,7 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision, @NonNull TaskListener listener) {
+                                        SCMRevision prevRevision, @NonNull TaskListener listener, SCMRevision lastSeenRevision) {
             if (currRevision instanceof ChangeRequestSCMRevision) {
                 ChangeRequestSCMRevision<?> currCR = (ChangeRequestSCMRevision<?>) currRevision;
                 if (prevRevision instanceof ChangeRequestSCMRevision) {
