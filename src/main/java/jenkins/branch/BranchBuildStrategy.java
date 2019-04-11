@@ -217,8 +217,6 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
         return automaticBuild(source, head, currRevision, prevRevision, listener, null);
     }
 
-
-
     /**
      * API: Should the specified {@link SCMRevision} of the {@link SCMHead} for the specified {@link SCMSource} be
      * triggered when the {@link SCMHead} has been detected as created / modified?

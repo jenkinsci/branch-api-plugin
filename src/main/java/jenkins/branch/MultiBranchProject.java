@@ -2072,7 +2072,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         try {
                             _factory.setLastSeenRevisionHash(project, revision);
                         } catch (IOException e) {
-                            printStackTrace(e, listener.error("Could not update last revision hash"));
+                            printStackTrace(e, listener.error("Could not update last seen revision hash"));
                         }
                     } else if (revision.isDeterministic()) {
                         SCMRevision prevRevision = _factory.getRevision(project);
@@ -2097,7 +2097,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             try {
                                 _factory.setLastSeenRevisionHash(project, revision);
                             } catch (IOException e) {
-                                printStackTrace(e, listener.error("Could not update last revision hash"));
+                                printStackTrace(e, listener.error("Could not update last seen revision hash"));
                             }
                         } else {
                             listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
@@ -2137,7 +2137,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 try {
                                     _factory.setLastSeenRevisionHash(project, revision);
                                 } catch (IOException e) {
-                                    printStackTrace(e, listener.error("Could not update last revision hash"));
+                                    printStackTrace(e, listener.error("Could not update last seen revision hash"));
                                 }
                             } else {
                                 listener.getLogger().format("No changes detected: %s%n", rawName);
@@ -2206,7 +2206,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 try {
                     _factory.setLastSeenRevisionHash(project, revision);
                 } catch (IOException e) {
-                    printStackTrace(e, listener.error("Could not update last revision hash"));
+                    printStackTrace(e, listener.error("Could not update last seen revision hash"));
                 }
             } finally {
                 observer.completed(encodedName);
