@@ -165,7 +165,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
                                              @NonNull SCMRevision currRevision,
                                              @CheckForNull SCMRevision prevRevision,
                                              @NonNull TaskListener listener,
-                                             @NonNull SCMRevision lastSeenRevision);
+                                             @CheckForNull SCMRevision lastSeenRevision);
 
     /**
      * API: Should the specified {@link SCMRevision} of the {@link SCMHead} for the specified {@link SCMSource} be
