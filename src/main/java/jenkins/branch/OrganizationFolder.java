@@ -533,10 +533,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
-     * {@inheritDoc}
+     * Get the term used in the UI to represent the souce for this kind of
+     * {@link Item}. Must start with a capital letter.
      */
-    @Override
-    public String getPronoun() {
+    public String getSourcePronoun() {
         Set<String> result = new TreeSet<>();
         for (SCMNavigator navigator: navigators) {
             String pronoun = Util.fixEmptyAndTrim(navigator.getPronoun());
@@ -544,7 +544,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 result.add(pronoun);
             }
         }
-        return result.isEmpty() ? super.getPronoun() : StringUtils.join(result, " / ");
+        return result.isEmpty() ? this.getPronoun() : StringUtils.join(result, " / ");
     }
 
     /**
@@ -922,7 +922,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Override
         public String getDisplayName() {
-            return Messages.OrganizationFolder_OrganizationScan_displayName(getParent().getPronoun());
+            return Messages.OrganizationFolder_OrganizationScan_displayName(((OrganizationFolder)getParent()).getSourcePronoun());
         }
 
         @Override
