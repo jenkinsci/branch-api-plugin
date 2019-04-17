@@ -302,10 +302,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * {@inheritDoc}
+     * Get the term used in the UI to represent the souce for this kind of
+     * {@link Item}. Must start with a capital letter.
      */
-    @Override
-    public String getPronoun() {
+    public String getSourcePronoun() {
         Set<String> result = new TreeSet<>();
         for (BranchSource source : sources) {
             String pronoun = Util.fixEmptyAndTrim(source.getSource().getPronoun());
@@ -313,7 +313,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 result.add(pronoun);
             }
         }
-        return result.isEmpty() ? super.getPronoun() : StringUtils.join(result, " / ");
+        return result.isEmpty() ? this.getPronoun() : StringUtils.join(result, " / ");
     }
 
     /**
@@ -993,7 +993,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          */
         @Override
         public String getDisplayName() {
-            return Messages.MultiBranchProject_BranchIndexing_displayName(getParent().getPronoun());
+            return Messages.MultiBranchProject_BranchIndexing_displayName(getParent().getSourcePronoun());
         }
 
         /**
