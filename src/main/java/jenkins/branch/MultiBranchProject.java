@@ -1570,6 +1570,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     try (StreamTaskListener listener = p.getComputation().createEventsListener();
                          ChildObserver childObserver = p.openEventsChildObserver()) {
                         try {
+                            assert childObserver != null;
                             listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                                     start, eventDescription, eventType, eventOrigin, eventTimestamp);
                             for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
