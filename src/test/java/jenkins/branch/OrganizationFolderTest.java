@@ -24,21 +24,35 @@
 
 package jenkins.branch;
 
-import hudson.model.ItemGroup;
-import hudson.model.Result;
-import hudson.model.TaskListener;
-import hudson.model.View;
-import jenkins.branch.harness.MultiBranchImpl;
-import jenkins.scm.api.SCMNavigator;
-import jenkins.scm.impl.SingleSCMNavigator;
-import hudson.scm.NullSCM;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
+import org.kohsuke.stapler.DataBoundConstructor;
+
+import hudson.ExtensionList;
+import hudson.model.ItemGroup;
+import hudson.model.Result;
+import hudson.model.TaskListener;
+import hudson.model.View;
+import hudson.scm.NullSCM;
+import jenkins.branch.harness.MultiBranchImpl;
+import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMSource;
+import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.SingleSCMSource;
 import jenkins.scm.impl.mock.MockSCM;
 import jenkins.scm.impl.mock.MockSCMController;
@@ -47,24 +61,12 @@ import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
-import org.junit.Test;
-
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.*;
-
-import org.junit.Rule;
-import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.TestExtension;
-import org.kohsuke.stapler.DataBoundConstructor;
 
 public class OrganizationFolderTest {
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
-    
+
     @Test
     public void configRoundTrip() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
@@ -138,6 +140,111 @@ public class OrganizationFolderTest {
         } finally {
             MockFactory.live = true;
         }
+    }
+
+    /**
+     * When an OrganizationFolder is created and provided with no {@link MultiBranchProjectFactory} implementations,
+     * it should automatically add the enabled-by-default factories for the current Jenkins instance
+     * when {@link OrganizationFolder#onCreatedFromScratch()} is called.
+     * @throws IOException
+     */
+    @Test
+    public void defaultFactoriesWhenNeeded() throws IOException {
+
+        // programmatically create an OrganizationFolder
+        OrganizationFolder newbie = new OrganizationFolder( r.jenkins, "newbie" );
+
+        // it should have no factories
+        assertEquals(
+            "A newly-created OrganizationFolder has no MultiBranchProjectFactories.",
+            0,
+            newbie.getProjectFactories().size() );
+
+        // these are all of the MultiBranchProjectFactory definitions.
+        ExtensionList<MultiBranchProjectFactoryDescriptor> factory_descriptors = r.jenkins.getExtensionList( MultiBranchProjectFactoryDescriptor.class );
+
+        // at some point after creating it, onCreatedFromScratch() would be called by Jenkins
+        newbie.onCreatedFromScratch();
+
+        // now, the folder should have all the default factories.
+        for( MultiBranchProjectFactoryDescriptor factory_descriptor : factory_descriptors ) {
+            if( factory_descriptor.newInstance() != null) {
+                // this factory is enabled by default, and should be present in the org folder
+
+                boolean default_factory_was_present = false;
+
+                for( MultiBranchProjectFactory org_factory : newbie.getProjectFactories() ) {
+                    if( org_factory.getDescriptor().getClass().equals( factory_descriptor.getClass() ) ) {
+
+                        // the factory that the org contained was one of the enabled-by-default factories.
+                        default_factory_was_present = true;
+                        break;
+                    }
+                }
+
+                assertTrue(
+                    "After #onCreatedFromScratch(), the enabled-by-default MultiBranchProjectFactory [" + factory_descriptor.getDisplayName()+ "] is present in an OrganizationFolder created with no initial factories.",
+                    default_factory_was_present );
+
+            }
+        }
+
+        // additionally, all of the Org Folder's factories should be enabled-by-default factories.
+        for( MultiBranchProjectFactory org_factory : newbie.getProjectFactories() ) {
+
+            boolean org_factory_is_default_factory = false;
+
+            for( MultiBranchProjectFactoryDescriptor factory_descriptor : factory_descriptors ) {
+
+                if( ( factory_descriptor.newInstance() != null  ) &&
+                    ( org_factory.getDescriptor().getClass().equals( factory_descriptor.getClass() ) ) )
+                {
+                    // this descriptor was enabled by default AND it matches the org's factory descriptor
+                    org_factory_is_default_factory = true;
+                    break;
+                }
+            }
+
+            assertTrue(
+                "After #onCreatedFromScratch() with no initial project factories, the OrganizationFolder MultiBranchProjectFactory [" + org_factory.getDescriptor().getDisplayName()+ "] is one of the enabled-by-default factories.",
+                org_factory_is_default_factory );
+        }
+    }
+
+    /**
+     * When an OrganizationFolder is created and provided with at least one {@link MultiBranchProjectFactory},
+     * it should not add any other factories when {@link OrganizationFolder#onCreatedFromScratch()} is called.
+     */
+    @Test
+    public void noDefaultFactoriesWhenNotNeeded() {
+
+        // programmatically create an OrganizationFolder
+        OrganizationFolder newbie = new OrganizationFolder( r.jenkins, "newbie" );
+
+        // it should have no factories
+        assertEquals(
+            "A newly-created OrganizationFolder has no MultiBranchProjectFactories.",
+            0,
+            newbie.getProjectFactories().size() );
+
+        // set exactly one non-default factory
+        newbie.getProjectFactories().clear();
+        MockFactory mock_factory = new MockFactory();
+        newbie.getProjectFactories().add( mock_factory );
+
+        // at some point after creating it, onCreatedFromScratch() would be called by Jenkins
+        newbie.onCreatedFromScratch();
+
+        assertEquals(
+            "An OrganizationFolder created with a non-default project factory should only have one factory after onCreatedFromScratch()",
+            1,
+            newbie.getProjectFactories().size() );
+
+        assertEquals(
+            "An OrganizationFolder created with a non-default project factory should only have that particular factory after onCreatedFromScratch()",
+            mock_factory.getDescriptor(),
+            newbie.getProjectFactories().get( 0 ).getDescriptor() ) ;
+
     }
 
     @TestExtension
