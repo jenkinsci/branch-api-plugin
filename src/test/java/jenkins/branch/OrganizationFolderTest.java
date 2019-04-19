@@ -27,15 +27,16 @@ package jenkins.branch;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.acegisecurity.Authentication;
+import org.acegisecurity.providers.TestingAuthenticationToken;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
@@ -43,12 +44,18 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
+import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
+import com.google.common.collect.ImmutableSet;
+
 import hudson.ExtensionList;
+import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.View;
 import hudson.scm.NullSCM;
+import hudson.security.Permission;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMSource;
@@ -244,6 +251,66 @@ public class OrganizationFolderTest {
             "An OrganizationFolder created with a non-default project factory should only have that particular factory after onCreatedFromScratch()",
             mock_factory.getDescriptor(),
             newbie.getProjectFactories().get( 0 ).getDescriptor() ) ;
+
+    }
+
+    @Test
+    public void modifyAclsWhenInComputedFolder() throws IOException, InterruptedException {
+
+        Set<Permission> suppressed_permissions =
+            ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
+
+        // we need a ComputedFolder to be the parent of our OrganizationFolder
+        ComputedFolder<OrganizationFolder> computed_folder = new ComputedFolder<OrganizationFolder>(r.jenkins, "top") {
+
+            @Override
+            protected void computeChildren(
+                ChildObserver<OrganizationFolder> observer,
+                TaskListener listener)
+                    throws IOException, InterruptedException
+            {
+                /*
+                 * doesn't look like we can actually compute children during a unit test.
+                 * Normally we'd want to create the OrganizationFolder here
+                 * to match the "real" Jenkins workflow as closely as possible
+                 */
+
+            }
+        };
+
+        OrganizationFolder org_folder = new OrganizationFolder( computed_folder, "org" );
+
+        // SYSTEM (the default authentication scope) can do everything, so we need to look like someone else.
+        Authentication some_user = new TestingAuthenticationToken( this, "testing", null );
+
+        // verify that all of of the suppressed permissions are actually suppressed!
+        for( Permission perm : suppressed_permissions ) {
+
+            assertFalse(
+                "OrganizationFolders in ComputedFolders should suppress the [" + perm.getId() + "] permission.",
+                org_folder.getACL().hasPermission( some_user, perm ) );
+        }
+
+    }
+
+    @Test
+    public void modifyAclsWhenNotInComputedFolder() throws IOException {
+
+        Set<Permission> suppressed_permissions =
+            ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
+
+        OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
+
+        // SYSTEM (the default authentication scope) can do everything, so we need to look like someone else.
+        Authentication some_user = new TestingAuthenticationToken( this, "testing", null );
+
+        // verify that none of the suppressed permissions are suppressed
+        for( Permission perm : suppressed_permissions ) {
+
+            assertTrue(
+                "Organization Folders in non-computed parents do not suppress the [" + perm.getId() + "] permission.",
+                top.getACL().hasPermission( some_user, perm ) );
+        }
 
     }
 
