@@ -35,7 +35,6 @@ import java.util.logging.Logger;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
-import jline.internal.Nullable;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.ProtectedExternally;
 
@@ -46,6 +45,9 @@ import org.kohsuke.accmod.restrictions.ProtectedExternally;
  * Methods marked as {@code SPI:} are intended to be implemented by implementers of {@link BranchBuildStrategy}.
  * Methods marked as {@code API:} are intended to be invoked consumers of {@link BranchBuildStrategy}.
  * A consumer invoking a {@code SPI:} method may get a {@link UnsupportedOperationException}.
+ * Methods marked as {@code SPI:} are only to be invoked through the API methods in order to allow safe evolution.
+ * Changing the API may require updating any SPI implementations that are also API consumers, specifically the Any,
+ * All and None implementations in basic-branch-build-strategies
  *
  * @since 2.0.0
  */
@@ -224,7 +226,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      * @param source       the {@link SCMSource}
      * @param head         the {@link SCMHead}
      * @param currRevision the {@link SCMRevision} that the head is now at
-     * @param lastBuiltRevision the {@link SCMRevision} that the head was last seen at or {@code null} if this is a newly
+     * @param lastBuiltRevision the {@link SCMRevision} that the build head was last seen at or {@code null} if this is a newly
      *                     discovered head. Care should be taken to consider the case of non
      *                     {@link SCMRevision#isDeterministic()} previous revisions as polling for changes will have
      *                     confirmed that there is a change between this and {@code currRevision} even if the two
@@ -232,7 +234,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      * @param lastSeenRevision the {@link SCMRevision} that the head is now at
      * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
      * {@link SCMHead} has been detected as created / modified.
-     * @since 2.1.3
+     * @since 2.4.2
      */
     @SuppressWarnings("deprecation")
     public final boolean automaticBuild(@NonNull SCMSource source,
@@ -243,7 +245,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
                                         @NonNull TaskListener listener) {
         if (Util.isOverridden(BranchBuildStrategy.class, getClass(), "isAutomaticBuild", SCMSource.class,
                 SCMHead.class, SCMRevision.class, SCMRevision.class, SCMRevision.class, TaskListener.class)) {
-            // modern implementation written to the 2.1.3+ spec
+            // modern implementation written to the 2.4.2+ spec
             return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener);
         }
         if (Util.isOverridden(BranchBuildStrategy.class, getClass(), "isAutomaticBuild", SCMSource.class,

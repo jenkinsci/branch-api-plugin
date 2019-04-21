@@ -672,3 +672,23 @@ The anticipated specializations are around the `SCMSource` types, but the API co
 This should be relatively similar to regular Jenkins extensions.
 For example, you should check that the configuration round trips via the UI, that the functionality gets applied in the correct circumstances, etc.
 
+==== Implementing `jenkins.branch.BranchBuildStrategy`
+
+// TODO This is just simple doc to document the different between lastBuiltRevision and lastSeenRevision, but it needs to be improved
+
+The `BranchBuildStrategy` is an extension point that allows controlling whether a specific `SCMHead` should be automatically built when it is discovered.
+
+It incorporates an API to expose the external code and a SPI (Service Provider Interface).
+
+ * SPI methods are intended to be implemented by implementers of `BranchBuildStrategy`.
+ * API methonds are intended to be invoked consumers of `BranchBuildStrategy`.
+ * SPI methonds are only to be invoked through the API methods in order to allow safe evolution.
+ * Changing the API may require updating any SPI implementations that are also API consumers, specifically the Any, All and None implementations in basic-branch-build-strategies-plugin
+
+
+The API and SPI provides you:
+
+* `currRevision` which provides the `SCMRevision` that the head is now at
+* `lastBuiltRevision` which provides the `SCMRevision` that the build head was last seen
+* `lastSeenRevision` which provides the `SCMRevision` that the head was last seen
+
