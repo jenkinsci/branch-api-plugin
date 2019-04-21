@@ -188,7 +188,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
      * @return the {@link SCMRevision} of the last seen.
      */
     @CheckForNull
-    public SCMRevision getLasSeenRevision(P project) {
+    public SCMRevision getLastSeenRevision(P project) {
         XmlFile file = new XmlFile(new File(project.getRootDir(), "scm-last-seen-revision-hash.xml"));
         try {
             return (SCMRevision) file.read();

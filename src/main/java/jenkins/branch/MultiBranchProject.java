@@ -2076,7 +2076,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                     } else if (revision.isDeterministic()) {
                         SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
-                        SCMRevision scmLastSeenRevision = _factory.getLasSeenRevision(project);
+                        SCMRevision scmLastSeenRevision = _factory.getLastSeenRevision(project);
                         if (!revision.equals(scmLastSeenRevision)) {
                             listener.getLogger()
                                     .format("Changes detected: %s (%s → %s)%n", rawName, scmLastSeenRevision, revision);
@@ -2120,7 +2120,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 needSave = true;
                                 // get the previous revision
                                 SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
-                                SCMRevision scmLastSeenRevision = _factory.getLasSeenRevision(project);
+                                SCMRevision scmLastSeenRevision = _factory.getLastSeenRevision(project);
                                 if (isAutomaticBuild(source, head, revision, scmLastBuiltRevision, scmLastSeenRevision, listener)) {
                                     scheduleBuild(
                                             _factory,
