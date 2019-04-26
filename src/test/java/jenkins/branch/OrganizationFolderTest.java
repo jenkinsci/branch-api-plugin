@@ -270,11 +270,16 @@ public class OrganizationFolderTest {
                     throws IOException, InterruptedException
             {
                 /*
-                 * doesn't look like we can actually compute children during a unit test.
-                 * Normally we'd want to create the OrganizationFolder here
-                 * to match the "real" Jenkins workflow as closely as possible
+                 * We don't actually need to compute children during a unit test.
+                 * We just need an OrganizationFolder to have this ComputedFolder
+                 * as its parent.
+                 *
+                 * Since item parents are set on the item when constructing it,
+                 * we can do that when we create the OrganizationFolder.
+                 *
+                 * Also, #scheduleBuild(...) to enqueue a computeChildren
+                 * doesn't work out-of-the-box in the current unit-test setup.
                  */
-
             }
         };
 
