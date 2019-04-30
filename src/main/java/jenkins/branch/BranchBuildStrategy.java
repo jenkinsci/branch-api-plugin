@@ -151,10 +151,9 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      * @param head         the {@link SCMHead}
      * @param currRevision the {@link SCMRevision} that the build head is now at
      * @param lastBuiltRevision the {@link SCMRevision} that the build head was last seen at or {@code null} if this is a newly
-     *                     discovered head. Care should be taken to consider the case of non
-     *                     {@link SCMRevision#isDeterministic()} previous revisions as polling for changes will have
-     *                     confirmed that there is a change between this and {@code currRevision} even if the two
-     *                     are equal.
+     *                     discovered head. It replaces prevRevision from the previous SPI version. Care should be taken to consider
+     *                     the case of non {@link SCMRevision#isDeterministic()} previous revisions as polling for changes will have
+     *                     confirmed that there is a change between this and {@code currRevision} even if the two are equal.
      * @param lastSeenRevision the {@link SCMRevision} that the head was last seen
      * @param listener     the {@link TaskListener} that can be used for outputting any rational for the decision
      * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
