@@ -769,7 +769,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     @Override
     public ACL getACL() {
         final ACL acl = super.getACL();
-        if (getParent() instanceof OrganizationFolder) {
+        if (getParent() instanceof ComputedFolder<?>) {
             return new ACL() {
                 @Override
                 public boolean hasPermission(Authentication a, Permission permission) {
