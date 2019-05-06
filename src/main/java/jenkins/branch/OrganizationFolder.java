@@ -36,7 +36,6 @@ import com.cloudbees.hudson.plugins.folder.computed.EventOutputStreams;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
-import com.google.common.collect.ImmutableSet;
 import com.thoughtworks.xstream.XStreamException;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
@@ -65,6 +64,7 @@ import hudson.util.StreamTaskListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -682,7 +682,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     private static final Set<Permission> SUPPRESSED_PERMISSIONS =
-                ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
+        Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE)));
 
     /**
      * Our descriptor

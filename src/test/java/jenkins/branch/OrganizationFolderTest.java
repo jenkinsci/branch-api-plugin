@@ -26,7 +26,6 @@ package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
-import com.google.common.collect.ImmutableSet;
 import hudson.ExtensionList;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
@@ -36,7 +35,9 @@ import hudson.model.View;
 import hudson.scm.NullSCM;
 import hudson.security.Permission;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -255,7 +256,8 @@ public class OrganizationFolderTest {
     public void modifyAclsWhenInComputedFolder() throws IOException, InterruptedException {
 
         Set<Permission> suppressed_permissions =
-            ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+                Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE)));
 
         // we need a ComputedFolder to be the parent of our OrganizationFolder
         ComputedFolder<OrganizationFolder> computed_folder = new ComputedFolder<OrganizationFolder>(r.jenkins, "top") {
@@ -299,7 +301,8 @@ public class OrganizationFolderTest {
     public void modifyAclsWhenNotInComputedFolder() throws IOException {
 
         Set<Permission> suppressed_permissions =
-            ImmutableSet.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+                Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE)));
 
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
 
