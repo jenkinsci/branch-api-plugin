@@ -182,6 +182,35 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
+     * Gets the {@link SCMRevision} that the project was last seen for.
+     *
+     * @param project the project.
+     * @return the {@link SCMRevision} of the last seen.
+     */
+    @CheckForNull
+    public SCMRevision getLastSeenRevision(P project) {
+        XmlFile file = new XmlFile(new File(project.getRootDir(), "scm-last-seen-revision-hash.xml"));
+        try {
+            return (SCMRevision) file.read();
+        } catch (IOException e) {
+            // ignore
+        }
+        return null;
+    }
+
+    /**
+     * Sets the {@link SCMRevision} that the project was last seen
+     *
+     * @param project  the project.
+     * @param revision the {@link SCMRevision} of the last build.
+     * @throws IOException if there was an issue persisting the details.
+     */
+    public void setLastSeenRevisionHash(P project, SCMRevision revision) throws IOException {
+        XmlFile file = new XmlFile(new File(project.getRootDir(), "scm-last-seen-revision-hash.xml"));
+        file.write(revision);
+    }
+
+    /**
      * Decorates the project in with all the {@link JobDecorator} instances.
      * NOTE: This method should suppress saving the project and only affect the in-memory state.
      * NOTE: Override if the default strategy is not appropriate for the specific project type.

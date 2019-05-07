@@ -646,7 +646,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
     }
 
-    private void scheduleBuild(final P item, TaskListener listener, String name, Cause[] causes, Action... actions) {
+    private void scheduleBuild(BranchProjectFactory<P, R> factory, final P item, SCMRevision revision, TaskListener listener, String name, Cause[] causes, Action... actions) {
         if (!isBuildable()) {
             listener.getLogger().printf("Did not schedule build for branch: %s (%s is disabled)%n",
                     name, getDisplayName());
@@ -683,6 +683,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         if (ParameterizedJobMixIn.scheduleBuild2(item, 0, _actions) != null) {
             listener.getLogger().println("Scheduled build for branch: " + name);
+            try {
+                factory.setRevisionHash(item, revision);
+            } catch (IOException e) {
+                printStackTrace(e, listener.error("Could not update last revision hash"));
+            }
         } else {
             listener.getLogger().println("Did not schedule build for branch: " + name);
         }
@@ -2053,9 +2058,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         // the previous "revision" for this head is not a revision for the current source
                         // either because the head was removed and then recreated, or because the head
                         // was taken over by a different source, thus the previous revision is null
-                        if (isAutomaticBuild(source, head, revision, null, listener)) {
+                        if (isAutomaticBuild(source, head, revision, null, null, listener)) {
                             scheduleBuild(
+                                    _factory,
                                     project,
+                                    revision,
                                     listener,
                                     rawName,
                                     causeFactory.create(source),
@@ -2065,19 +2072,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             listener.getLogger().format("No automatic builds for %s%n", rawName);
                         }
                         try {
-                            _factory.setRevisionHash(project, revision);
+                            _factory.setLastSeenRevisionHash(project, revision);
                         } catch (IOException e) {
-                            printStackTrace(e, listener.error("Could not update last revision hash"));
+                            printStackTrace(e, listener.error("Could not update last seen revision hash"));
                         }
                     } else if (revision.isDeterministic()) {
-                        SCMRevision prevRevision = _factory.getRevision(project);
-                        if (!revision.equals(prevRevision)) {
+                        SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
+                        SCMRevision scmLastSeenRevision = _factory.getLastSeenRevision(project);
+                        if (!revision.equals(scmLastSeenRevision)) {
                             listener.getLogger()
-                                    .format("Changes detected: %s (%s → %s)%n", rawName, prevRevision, revision);
+                                    .format("Changes detected: %s (%s → %s)%n", rawName, scmLastSeenRevision, revision);
                             needSave = true;
-                            if (isAutomaticBuild(source, head, revision, prevRevision, listener)) {
+                            if (isAutomaticBuild(source, head, revision, scmLastBuiltRevision, scmLastSeenRevision, listener)) {
                                 scheduleBuild(
+                                        _factory,
                                         project,
+                                        revision,
                                         listener,
                                         rawName,
                                         causeFactory.create(source),
@@ -2087,9 +2097,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 listener.getLogger().format("No automatic builds for %s%n", rawName);
                             }
                             try {
-                                _factory.setRevisionHash(project, revision);
+                                _factory.setLastSeenRevisionHash(project, revision);
                             } catch (IOException e) {
-                                printStackTrace(e, listener.error("Could not update last revision hash"));
+                                printStackTrace(e, listener.error("Could not update last seen revision hash"));
                             }
                         } else {
                             listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
@@ -2111,10 +2121,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 listener.getLogger().format("Changes detected: %s%n", rawName);
                                 needSave = true;
                                 // get the previous revision
-                                SCMRevision prevRevision = _factory.getRevision(project);
-                                if (isAutomaticBuild(source, head, revision, prevRevision, listener)) {
+                                SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
+                                SCMRevision scmLastSeenRevision = _factory.getLastSeenRevision(project);
+                                if (isAutomaticBuild(source, head, revision, scmLastBuiltRevision, scmLastSeenRevision, listener)) {
                                     scheduleBuild(
+                                            _factory,
                                             project,
+                                            revision,
                                             listener,
                                             rawName,
                                             causeFactory.create(source),
@@ -2124,9 +2137,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     listener.getLogger().format("No automatic builds for %s%n", rawName);
                                 }
                                 try {
-                                    _factory.setRevisionHash(project, revision);
+                                    _factory.setLastSeenRevisionHash(project, revision);
                                 } catch (IOException e) {
-                                    printStackTrace(e, listener.error("Could not update last revision hash"));
+                                    printStackTrace(e, listener.error("Could not update last seen revision hash"));
                                 }
                             } else {
                                 listener.getLogger().format("No changes detected: %s%n", rawName);
@@ -2179,9 +2192,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 _factory.decorate(project);
                 // ok it is now up to the observer to ensure it does the actual save.
                 observer.created(project);
-                if (isAutomaticBuild(source, head, revision, null, listener)) {
+                if (isAutomaticBuild(source, head, revision, null, null, listener)) {
                     scheduleBuild(
+                            _factory,
                             project,
+                            revision,
                             listener,
                             rawName,
                             causeFactory.create(source),
@@ -2191,9 +2206,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     listener.getLogger().format("No automatic builds for %s%n", rawName);
                 }
                 try {
-                    _factory.setRevisionHash(project, revision);
+                    _factory.setLastSeenRevisionHash(project, revision);
                 } catch (IOException e) {
-                    printStackTrace(e, listener.error("Could not update last revision hash"));
+                    printStackTrace(e, listener.error("Could not update last seen revision hash"));
                 }
             } finally {
                 observer.completed(encodedName);
@@ -2205,13 +2220,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * Tests if the specified {@link SCMHead} should be automatically built when discovered / modified.
      * @param source the source.
      * @param head the head.
-     * @param currRevision the revision.
+     * @param currRevision the current built revision.
+     * @param lastBuiltRevision the previous built revision
+     * @param listener the {@link TaskListener}
+     * @param lastSeenRevision the last seen revision
      * @return {@code true} if the head should be automatically built when discovered / modified.
      */
     private boolean isAutomaticBuild(@NonNull SCMSource source,
                                      @NonNull SCMHead head,
                                      @NonNull SCMRevision currRevision,
-                                     @CheckForNull SCMRevision prevRevision,
+                                     @CheckForNull SCMRevision lastBuiltRevision,
+                                     @CheckForNull SCMRevision lastSeenRevision,
                                      @NonNull TaskListener listener) {
         BranchSource branchSource = null;
         for (BranchSource s: sources) {
@@ -2230,7 +2249,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return !(head instanceof TagSCMHead);
         } else {
             for (BranchBuildStrategy s: buildStrategies) {
-                if (s.automaticBuild(source, head, currRevision, prevRevision, listener)) {
+                if (s.automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener)) {
                     return true;
                 }
             }

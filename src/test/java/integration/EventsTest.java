@@ -113,6 +113,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assume.assumeThat;
 import org.junit.Ignore;
@@ -642,7 +645,8 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision, TaskListener listener) {
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
+                                        TaskListener listener) {
             return true;
         }
 
@@ -692,7 +696,7 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision,
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
                                         @NonNull TaskListener listener) {
             return head instanceof ChangeRequestSCMHead;
         }
@@ -708,7 +712,8 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision, @NonNull TaskListener listener) {
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
+                                        @NonNull TaskListener listener) {
             if (head instanceof ChangeRequestSCMHead) {
                 try {
                     return currRevision.equals(source.getTrustedRevision(currRevision, listener));
@@ -1026,7 +1031,7 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision,
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
                                         @NonNull TaskListener listener) {
             return currRevision instanceof MockSCMRevision
                     && approved.contains(((MockSCMRevision) currRevision).getHash());
@@ -1092,12 +1097,13 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision prevRevision, @NonNull TaskListener listener) {
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
+                                        @NonNull TaskListener listener) {
             if (currRevision instanceof ChangeRequestSCMRevision) {
                 ChangeRequestSCMRevision<?> currCR = (ChangeRequestSCMRevision<?>) currRevision;
-                if (prevRevision instanceof ChangeRequestSCMRevision) {
+                if (lastBuiltRevision instanceof ChangeRequestSCMRevision) {
                     // if we have a previous, only build if the change is affecting the head not the target
-                    return !currCR.equivalent((ChangeRequestSCMRevision<?>) prevRevision);
+                    return !currCR.equivalent((ChangeRequestSCMRevision<?>) lastBuiltRevision);
                 } else {
                     // we don't have a previous, so build
                     return true;
@@ -2754,6 +2760,115 @@ public class EventsTest {
                     is("bar:id"));
             r.waitUntilNoActivity();
             assertThat("The feature branch was rebuilt", feature.getLastBuild().getNumber(), is(2));
+        }
+    }
+
+    @Test
+    public void given_multibranch_when_not_build_is_skipped_then_lastSeenRevision_is_equal_to_lastBuiltRevision() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
+            prj.setCriteria(null);
+            prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            FreeStyleProject master = prj.getItem("master");
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertEquals(prj.getProjectFactory().getLastSeenRevision(master), prj.getProjectFactory().getRevision(master));
+            c.addFile("foo", "master", "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(2));
+            assertEquals(prj.getProjectFactory().getLastSeenRevision(master), prj.getProjectFactory().getRevision(master));
+        }
+    }
+
+    @Test
+    public void given_multibranch_when_first_build_is_skipped_then_lastSeenRevision_is_different_to_lastBuiltRevision() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
+            source.setBuildStrategies(Collections.<BranchBuildStrategy>singletonList(new SkipInitialBuildStrategyImpl()));
+            prj.getSourcesList().add(source);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            FreeStyleProject master = prj.getItem("master");
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), nullValue());
+            assertNotNull(prj.getProjectFactory().getLastSeenRevision(master));
+            assertNull(prj.getProjectFactory().getRevision(master));
+            c.addFile("foo", "master", "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+            assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
+            assertNotNull(prj.getProjectFactory().getLastSeenRevision(master));
+            assertNotNull(prj.getProjectFactory().getRevision(master));
+            assertThat(prj.getProjectFactory().getRevision(master), is(prj.getProjectFactory().getLastSeenRevision(master)));
+        }
+    }
+
+    public static class SkipInitialBuildStrategyImpl extends BranchBuildStrategy {
+        @Override
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
+                                        TaskListener listener) {
+           if (lastSeenRevision != null) {
+               return true;
+           }
+           return false;
+        }
+
+        @TestExtension(
+                "given_multibranch_when_first_build_is_skipped_then_lastSeenRevision_is_different_to_lastBuiltRevision")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
+
+        }
+    }
+
+    @Test
+    public void given_multibranch_when__build_is_skipped_then_lastBuiltRevision_is_null() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
+            source.setBuildStrategies(Collections.<BranchBuildStrategy>singletonList(new SkipIAllBuildStrategyImpl()));
+            prj.getSourcesList().add(source);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            FreeStyleProject master = prj.getItem("master");
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), nullValue());
+            SCMRevision scmLastSeenRevision1 = prj.getProjectFactory().getLastSeenRevision(master);
+            assertNotNull(scmLastSeenRevision1);
+            assertNull(prj.getProjectFactory().getRevision(master));
+            c.addFile("foo", "master", "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), nullValue());
+            SCMRevision scmLastSeenRevision2 = prj.getProjectFactory().getLastSeenRevision(master);
+            assertNotNull(scmLastSeenRevision2);
+            assertNull(prj.getProjectFactory().getRevision(master));
+            assertThat(scmLastSeenRevision1, not(scmLastSeenRevision2));
+        }
+    }
+
+    public static class SkipIAllBuildStrategyImpl extends BranchBuildStrategy {
+        @Override
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
+                                        TaskListener listener) {
+            return false;
+        }
+
+        @TestExtension(
+                "given_multibranch_when__build_is_skipped_then_lastBuiltRevision_is_null")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
+
         }
     }
 
