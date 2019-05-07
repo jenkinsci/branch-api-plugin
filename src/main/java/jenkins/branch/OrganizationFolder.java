@@ -57,11 +57,14 @@ import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
 import hudson.model.listeners.SaveableListener;
+import hudson.security.ACL;
+import hudson.security.Permission;
 import hudson.util.DescribableList;
 import hudson.util.StreamTaskListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -96,6 +99,7 @@ import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
 import org.acegisecurity.AccessDeniedException;
+import org.acegisecurity.Authentication;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -178,12 +182,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     @Override
     public void onCreatedFromScratch() {
         super.onCreatedFromScratch();
-        for (MultiBranchProjectFactoryDescriptor d : ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class)) {
-            MultiBranchProjectFactory f = d.newInstance();
-            if (f != null) {
-                projectFactories.add(f);
+
+        if( projectFactories.isEmpty() ) {
+            for (MultiBranchProjectFactoryDescriptor d : ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class)) {
+                MultiBranchProjectFactory f = d.newInstance();
+                if (f != null) {
+                    projectFactories.add(f);
+                }
             }
         }
+
         try {
             addTrigger(new PeriodicFolderTrigger("1d"));
         } catch (ANTLRException x) {
@@ -650,6 +658,34 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ACL getACL() {
+        final ACL acl = super.getACL();
+        if (getParent() instanceof ComputedFolder<?>) {
+            return new ACL() {
+                @Override
+                public boolean hasPermission(Authentication a, Permission permission) {
+                    if (ACL.SYSTEM.equals(a)) {
+                        return true;
+                    } else if (SUPPRESSED_PERMISSIONS.contains(permission)) {
+                        return false;
+                    } else {
+                        return acl.hasPermission(a, permission);
+                    }
+                }
+            };
+        } else {
+            return acl;
+        }
+    }
+
+    private static final Set<Permission> SUPPRESSED_PERMISSIONS =
+        Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE)));
+
+    /**
      * Our descriptor
      */
     @Extension
@@ -686,7 +722,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          *
          * @return A string with the category identifier. {@code TopLevelItemDescriptor#getCategoryId()}
          */
-        //@Override TODO once baseline is 2.x
+        @Override
         @NonNull
         public String getCategoryId() {
             return "nested-projects";
@@ -697,7 +733,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          *
          * @return A string with the description. {@code TopLevelItemDescriptor#getDescription()}.
          */
-        //@Override TODO once baseline is 2.x
+        @Override
         @NonNull
         public String getDescription() {
             if (Jenkins.getActiveInstance().getInitLevel().compareTo(InitMilestone.EXTENSIONS_AUGMENTED) > 0) {
@@ -716,7 +752,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             );
         }
 
-        //@Override TODO once baseline is 2.x
+        @Override
         public String getIconFilePathPattern() {
             List<SCMNavigatorDescriptor> descriptors =
                     remove(ExtensionList.lookup(SCMNavigatorDescriptor.class),
