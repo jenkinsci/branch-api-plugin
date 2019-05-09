@@ -70,7 +70,7 @@
     <jenkins.version>2.138</jenkins.version>
     <java.level>8</java.level>
     <scm-api.version>2.4.1</scm-api.version>
-    <git-plugin.version>4.0.0-rc</git-plugin.version>
+    <git-plugin.version>3.10.0</git-plugin.version>
   </properties>
 
   <repositories>
@@ -102,7 +102,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>structs</artifactId>
-      <version>1.10</version>
+      <version>1.18</version>
     </dependency>
     <!-- jenkins dependencies -->
     <!-- test dependencies -->
@@ -163,7 +163,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>junit</artifactId>
-      <version>1.6</version>
+      <version>1.27</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
