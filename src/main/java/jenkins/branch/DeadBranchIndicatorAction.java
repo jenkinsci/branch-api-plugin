@@ -25,7 +25,10 @@ package jenkins.branch;
 
 import hudson.Extension;
 import hudson.model.Action;
+import hudson.model.BallColor;
+import hudson.model.InvisibleAction;
 import hudson.model.Job;
+import hudson.model.Result;
 import hudson.model.Run;
 import jenkins.model.TransientActionFactory;
 
@@ -37,23 +40,10 @@ import java.util.Collections;
 /**
  * An action that puts some css on job and run pages for jobs representing {@link Branch.Dead}.
  */
-public class DeadBranchIndicatorAction implements Action {
-    @CheckForNull
-    @Override
-    public String getIconFileName() {
-        return null;
-    }
+public class DeadBranchIndicatorAction extends InvisibleAction {
 
-    @CheckForNull
-    @Override
-    public String getDisplayName() {
-        return null;
-    }
-
-    @CheckForNull
-    @Override
-    public String getUrlName() {
-        return null;
+    public String getDisabledColor() {
+        return BallColor.DISABLED.getHtmlBaseColor();
     }
 
     @Extension

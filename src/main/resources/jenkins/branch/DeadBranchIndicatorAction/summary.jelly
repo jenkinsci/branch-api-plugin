@@ -26,20 +26,9 @@ THE SOFTWARE.
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
          xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
     <j:set var="disabledColor" value="${it.disabledColor}"/>
+    <!--TODO build-link i.e. the links to the builds on the job page doesn't take effect-->
     <style type="text/css">
-        .pane.build-name a {
-            text-decoration: line-through;
-            color: ${disabledColor};
-        }
-        .pane.build-name a:visited {
-            text-decoration: line-through;
-            color: ${disabledColor};
-        }
-        .pane.build-name a:active {
-            text-decoration: line-through;
-            color: ${disabledColor};
-        }
-        h1.job-index-headline {
+        h1.build-caption {
             text-decoration: line-through;
             color: ${disabledColor};
         }
