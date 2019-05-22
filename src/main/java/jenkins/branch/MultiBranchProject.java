@@ -2079,7 +2079,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     } else if (revision.isDeterministic()) {
                         SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
                         SCMRevision scmLastSeenRevision = _factory.getLastSeenRevision(project);
-                        if (!revision.equals(scmLastSeenRevision)) {
+                        if (scmLastSeenRevision == null && scmLastBuiltRevision != null) {
+                            scmLastSeenRevision = scmLastBuiltRevision;
+                            try {
+                                _factory.setLastSeenRevisionHash(project, revision);
+                            } catch (IOException e) {
+                                printStackTrace(e, listener.error("Could not update last seen revision hash"));
+                            }
+                        }
+                        if (!revision.equals(scmLastBuiltRevision)) {
                             listener.getLogger()
                                     .format("Changes detected: %s (%s → %s)%n", rawName, scmLastSeenRevision, revision);
                             needSave = true;
