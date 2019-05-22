@@ -2087,7 +2087,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 printStackTrace(e, listener.error("Could not update last seen revision hash"));
                             }
                         }
-                        if (!revision.equals(scmLastSeenRevision)) {
+                        if (!revision.equals(scmLastBuiltRevision)) {
                             listener.getLogger()
                                     .format("Changes detected: %s (%s → %s)%n", rawName, scmLastSeenRevision, revision);
                             needSave = true;
