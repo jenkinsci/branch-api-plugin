@@ -2002,11 +2002,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         // either because the head was removed and then recreated, or because the head
                         // was taken over by a different source, thus the previous revision is null
                         doAutomaticBuilds(head, revision, rawName, project, revisionActions, null, null);
-                    } else if (revision.isDeterministic()) {
+                    } else {
+                        // get the previous revision
                         SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
-                        SCMRevision scmLastSeenRevision = getLastSeenRevision(project, scmLastBuiltRevision);
-                        if (!revision.equals(scmLastBuiltRevision)) {
+
+                        if (isChangesDetected(revision, project, scmLastBuiltRevision)) {
                             needSave = true;
+                            // get the previous seen revision
+                            SCMRevision scmLastSeenRevision = getLastSeenRevision(project, scmLastBuiltRevision);
 
                             listener.getLogger()
                                     .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
@@ -2014,32 +2017,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
                         } else {
                             listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
-                        }
-                    } else {
-                        // TODO check if we should compare the revisions anyway...
-                        // the revisions may not be deterministic, as in two checkouts of the same revision
-                        // may result in additional changes (looking at you CVS) but that doesn't mean
-                        // that the revisions are not capable of checking for differences, e.g. if
-                        // rev1 == 2017-12-13 and rev2 == 2017-12-12 these could show as non-equal while both
-                        // being non-deterministic (because they just specify the day not the timestamp within
-                        // the day.
-
-                        // fall back to polling when we have a non-deterministic revision/hash.
-                        SCMTriggerItem scmProject = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
-                        if (scmProject != null) {
-                            PollingResult pollingResult = scmProject.poll(listener);
-                            if (pollingResult.hasChanges()) {
-                                needSave = true;
-                                // get the previous revision
-                                SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
-                                SCMRevision scmLastSeenRevision = getLastSeenRevision(project, scmLastBuiltRevision);
-
-                                listener.getLogger().format("Changes detected: %s%n", rawName);
-                                doAutomaticBuilds(head, revision, rawName, project, revisionActions, scmLastBuiltRevision, scmLastSeenRevision);
-
-                            } else {
-                                listener.getLogger().format("No changes detected: %s%n", rawName);
-                            }
                         }
 
                     }
@@ -2093,6 +2070,34 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             } finally {
                 observer.completed(encodedName);
             }
+        }
+
+        private boolean isChangesDetected(@NonNull SCMRevision revision, P project, SCMRevision scmLastBuiltRevision) {
+            boolean changesDetected = false;
+
+            if (revision.isDeterministic()) {
+                if (!revision.equals(scmLastBuiltRevision)) {
+                    changesDetected = true;
+                }
+            } else {
+                // TODO check if we should compare the revisions anyway...
+                // the revisions may not be deterministic, as in two checkouts of the same revision
+                // may result in additional changes (looking at you CVS) but that doesn't mean
+                // that the revisions are not capable of checking for differences, e.g. if
+                // rev1 == 2017-12-13 and rev2 == 2017-12-12 these could show as non-equal while both
+                // being non-deterministic (because they just specify the day not the timestamp within
+                // the day.
+
+                // fall back to polling when we have a non-deterministic revision/hash.
+                SCMTriggerItem scmProject = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
+                if (scmProject != null) {
+                    PollingResult pollingResult = scmProject.poll(listener);
+                    if (pollingResult.hasChanges()) {
+                        changesDetected = true;
+                    }
+                }
+            }
+            return changesDetected;
         }
 
         private Action[] getRevisionActions(@NonNull SCMRevision revision, String rawName) {
