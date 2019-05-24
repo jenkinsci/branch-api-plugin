@@ -1972,15 +1972,170 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             String encodedName = branch.getEncodedName();
             P project = observer.shouldUpdate(encodedName);
             try {
-                Branch origBranch;
-                if (project == null) {
-                    origBranch = null;
-                } else {
-                    if (!_factory.isProject(project)) {
-                        listener.getLogger().println("Detected unsupported subitem "
-                                + ModelHyperlinkNote.encodeTo(project) + ", skipping");
+                Branch origBranch = getOrigBranch(project);
+                setBranchActions(head, branch, origBranch);
+                Action[] revisionActions = getRevisionActions(revision, rawName);
+                if (project != null) {
+                    if (origBranch == null) {
                         return;
                     }
+                    observeExisting(head, revision, branch, rawName, project, origBranch, revisionActions);
+                } else {
+                    observeNew(head, revision, branch, rawName, encodedName, revisionActions);
+                }
+            } finally {
+                observer.completed(encodedName);
+            }
+        }
+
+        private void observeExisting(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull Branch branch, String rawName, P project, Branch origBranch, Action[] revisionActions) {
+            boolean rebuild = (origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead))
+                    || !(source.getId().equals(origBranch.getSourceId()));
+            boolean needSave = !branch.equals(origBranch)
+                    || !branch.getActions().equals(origBranch.getActions())
+                    || !Util.getDigestOf(Items.XSTREAM2.toXML(branch.getScm()))
+                    .equals(Util.getDigestOf(Items.XSTREAM2.toXML(origBranch.getScm())));
+            _factory.decorate(_factory.setBranch(project, branch));
+            if (rebuild) {
+                needSave = true;
+                listener.getLogger().format(
+                        "%s reopened: %s (%s)%n",
+                        StringUtils.defaultIfEmpty(head.getPronoun(), "Branch"),
+                        rawName,
+                        revision
+                );
+                // the previous "revision" for this head is not a revision for the current source
+                // either because the head was removed and then recreated, or because the head
+                // was taken over by a different source, thus the previous revision is null
+                doAutomaticBuilds(head, revision, rawName, project, revisionActions, null, null);
+            } else {
+                // get the previous revision
+                SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
+
+                if (changesDetected(revision, project, scmLastBuiltRevision)) {
+                    listener.getLogger()
+                            .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
+
+                    needSave = true;
+                    // get the previous seen revision
+                    SCMRevision scmLastSeenRevision = lastSeenRevisionOrDefault(project, scmLastBuiltRevision);
+                    doAutomaticBuilds(head, revision, rawName, project, revisionActions, scmLastBuiltRevision, scmLastSeenRevision);
+
+                } else {
+                    listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
+                }
+
+            }
+
+            try {
+                if (needSave) {
+                    project.save();
+                }
+            } catch (IOException e) {
+                printStackTrace(e, listener.error("Could not save changes to " + rawName));
+            }
+        }
+
+        private void observeNew(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull Branch branch, String rawName, String encodedName, Action[] revisionActions) {
+            P project;
+            if (!observer.mayCreate(encodedName)) {
+                listener.getLogger().println("Ignoring duplicate branch project " + rawName);
+                return;
+            }
+            try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
+                    MultiBranchProject.this, encodedName, branch.getName()
+            )) {
+                if (getItem(encodedName) != null) {
+                    throw new IllegalStateException(
+                            "JENKINS-42511: attempted to redundantly create " + encodedName + " in "
+                                    + MultiBranchProject.this);
+                }
+                project = _factory.newInstance(branch);
+            }
+            if (!project.getName().equals(encodedName)) {
+                throw new IllegalStateException(
+                        "Name of created project " + project + " did not match expected " + encodedName);
+            }
+            // HACK ALERT
+            // ==========
+            // We don't want to trigger a save, so we will do some trickery to ensure that observer.created(project)
+            // performs the save
+            BulkChange bc = new BulkChange(project);
+            try {
+                if (project.getDisplayNameOrNull() == null && !rawName.equals(encodedName)) {
+                    project.setDisplayName(rawName);
+                }
+            } catch (IOException e) {
+                // ignore even if it does happen we didn't want a save
+            } finally {
+                bc.abort();
+            }
+            // decorate contract is to ensure it dowes not trigger a save
+            _factory.decorate(project);
+            // ok it is now up to the observer to ensure it does the actual save.
+            observer.created(project);
+            doAutomaticBuilds(head, revision, rawName, project, revisionActions, null, null);
+        }
+
+        private boolean changesDetected(@NonNull SCMRevision revision, @NonNull P project, SCMRevision scmLastBuiltRevision) {
+            boolean changesDetected = false;
+
+            if (revision.isDeterministic()) {
+                if (!revision.equals(scmLastBuiltRevision)) {
+                    changesDetected = true;
+                }
+            } else {
+                // TODO check if we should compare the revisions anyway...
+                // the revisions may not be deterministic, as in two checkouts of the same revision
+                // may result in additional changes (looking at you CVS) but that doesn't mean
+                // that the revisions are not capable of checking for differences, e.g. if
+                // rev1 == 2017-12-13 and rev2 == 2017-12-12 these could show as non-equal while both
+                // being non-deterministic (because they just specify the day not the timestamp within
+                // the day.
+
+                // fall back to polling when we have a non-deterministic revision/hash.
+                SCMTriggerItem scmProject = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
+                if (scmProject != null) {
+                    PollingResult pollingResult = scmProject.poll(listener);
+                    if (pollingResult.hasChanges()) {
+                        changesDetected = true;
+                    }
+                }
+            }
+            return changesDetected;
+        }
+
+        private Action[] getRevisionActions(@NonNull SCMRevision revision, String rawName) {
+            Action[] revisionActions = new Action[0];
+            try {
+                List<Action> actions = source.fetchActions(revision, event, listener);
+                revisionActions = actions.toArray(new Action[actions.size()]);
+            } catch (IOException | InterruptedException e) {
+                printStackTrace(e, listener.error("Could not fetch metadata for revision %s of branch %s",
+                        revision, rawName));
+            }
+            return revisionActions;
+        }
+
+        private void setBranchActions(@NonNull SCMHead head, @NonNull Branch branch, @CheckForNull Branch origBranch) {
+            try {
+                branch.setActions(source.fetchActions(head, event, listener));
+            } catch (IOException | InterruptedException e) {
+                printStackTrace(e, listener.error("Could not fetch metadata of branch %s", branch.getName()));
+                if (origBranch != null) {
+                    // we didn't fetch them so replicate previous actions
+                    branch.setActions(origBranch.getActions());
+                }
+            }
+        }
+
+        private Branch getOrigBranch(P project) {
+            Branch origBranch = null;
+            if (project != null) {
+                if (!_factory.isProject(project)) {
+                    listener.getLogger().println("Detected unsupported subitem "
+                            + ModelHyperlinkNote.encodeTo(project) + ", skipping");
+                } else {
                     origBranch = _factory.getBranch(project);
                     if (!(origBranch instanceof Branch.Dead)) {
                         if (!source.getId().equals(origBranch.getSourceId())) {
@@ -2003,7 +2158,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                         "Ignoring " + ModelHyperlinkNote.encodeTo(project) + " from source #"
                                                 + ourPriority + " as source #" +
                                                 oldPriority + " owns the branch name");
-                                return;
+                                origBranch = null;
                             } else {
                                 if (oldPriority == Integer.MAX_VALUE) {
                                     listener.getLogger().println(
@@ -2020,253 +2175,85 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                     }
                 }
-                Action[] revisionActions = new Action[0];
-                boolean headActionsFetched = false;
-                try {
-                    branch.setActions(source.fetchActions(head, event, listener));
-                    headActionsFetched = true;
-                } catch (IOException | InterruptedException e) {
-                    printStackTrace(e, listener.error("Could not fetch metadata of branch %s", rawName));
-                }
-                try {
-                    List<Action> actions = source.fetchActions(revision, event, listener);
-                    revisionActions = actions.toArray(new Action[0]);
-                } catch (IOException | InterruptedException e) {
-                    printStackTrace(e, listener.error("Could not fetch metadata for revision %s of branch %s",
-                            revision, rawName));
-                }
-                if (project != null) {
-                    boolean rebuild = (origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead))
-                            || !(source.getId().equals(origBranch.getSourceId()));
-                    if (!headActionsFetched) {
-                        // we didn't fetch them so replicate previous actions
-                        branch.setActions(origBranch.getActions());
-                    }
-                    boolean needSave = !branch.equals(origBranch)
-                            || !branch.getActions().equals(origBranch.getActions())
-                            || !Util.getDigestOf(Items.XSTREAM2.toXML(branch.getScm()))
-                            .equals(Util.getDigestOf(Items.XSTREAM2.toXML(origBranch.getScm())));
-                    _factory.decorate(_factory.setBranch(project, branch));
-                    if (rebuild) {
-                        listener.getLogger().format(
-                                "%s reopened: %s (%s)%n",
-                                StringUtils.defaultIfEmpty(head.getPronoun(), "Branch"),
-                                rawName,
-                                revision
-                        );
-                        needSave = true;
-                        // the previous "revision" for this head is not a revision for the current source
-                        // either because the head was removed and then recreated, or because the head
-                        // was taken over by a different source, thus the previous revision is null
-                        if (isAutomaticBuild(source, head, revision, null, null, listener)) {
-                            scheduleBuild(
-                                    _factory,
-                                    project,
-                                    revision,
-                                    listener,
-                                    rawName,
-                                    causeFactory.create(source),
-                                    revisionActions
-                            );
-                        } else {
-                            listener.getLogger().format("No automatic builds for %s%n", rawName);
-                        }
-                        try {
-                            _factory.setLastSeenRevisionHash(project, revision);
-                        } catch (IOException e) {
-                            printStackTrace(e, listener.error("Could not update last seen revision hash"));
-                        }
-                    } else if (revision.isDeterministic()) {
-                        SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
-                        SCMRevision scmLastSeenRevision = _factory.getLastSeenRevision(project);
-                        if (scmLastSeenRevision == null && scmLastBuiltRevision != null) {
-                            scmLastSeenRevision = scmLastBuiltRevision;
-                            try {
-                                _factory.setLastSeenRevisionHash(project, revision);
-                            } catch (IOException e) {
-                                printStackTrace(e, listener.error("Could not update last seen revision hash"));
-                            }
-                        }
-                        if (!revision.equals(scmLastBuiltRevision)) {
-                            listener.getLogger()
-                                    .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
-                            needSave = true;
-                            if (isAutomaticBuild(source, head, revision, scmLastBuiltRevision, scmLastSeenRevision, listener)) {
-                                scheduleBuild(
-                                        _factory,
-                                        project,
-                                        revision,
-                                        listener,
-                                        rawName,
-                                        causeFactory.create(source),
-                                        revisionActions
-                                );
-                            } else {
-                                listener.getLogger().format("No automatic builds for %s%n", rawName);
-                            }
-                            try {
-                                _factory.setLastSeenRevisionHash(project, revision);
-                            } catch (IOException e) {
-                                printStackTrace(e, listener.error("Could not update last seen revision hash"));
-                            }
-                        } else {
-                            listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
-                        }
-                    } else {
-                        // TODO check if we should compare the revisions anyway...
-                        // the revisions may not be deterministic, as in two checkouts of the same revision
-                        // may result in additional changes (looking at you CVS) but that doesn't mean
-                        // that the revisions are not capable of checking for differences, e.g. if
-                        // rev1 == 2017-12-13 and rev2 == 2017-12-12 these could show as non-equal while both
-                        // being non-deterministic (because they just specify the day not the timestamp within
-                        // the day.
+            }
+            return origBranch;
+        }
 
-                        // fall back to polling when we have a non-deterministic revision/hash.
-                        SCMTriggerItem scmProject = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
-                        if (scmProject != null) {
-                            PollingResult pollingResult = scmProject.poll(listener);
-                            if (pollingResult.hasChanges()) {
-                                listener.getLogger().format("Changes detected: %s%n", rawName);
-                                needSave = true;
-                                // get the previous revision
-                                SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
-                                SCMRevision scmLastSeenRevision = _factory.getLastSeenRevision(project);
-                                if (isAutomaticBuild(source, head, revision, scmLastBuiltRevision, scmLastSeenRevision, listener)) {
-                                    scheduleBuild(
-                                            _factory,
-                                            project,
-                                            revision,
-                                            listener,
-                                            rawName,
-                                            causeFactory.create(source),
-                                            revisionActions
-                                    );
-                                } else {
-                                    listener.getLogger().format("No automatic builds for %s%n", rawName);
-                                }
-                                try {
-                                    _factory.setLastSeenRevisionHash(project, revision);
-                                } catch (IOException e) {
-                                    printStackTrace(e, listener.error("Could not update last seen revision hash"));
-                                }
-                            } else {
-                                listener.getLogger().format("No changes detected: %s%n", rawName);
-                            }
-                        }
-                    }
-
-                    try {
-                        if (needSave) {
-                            project.save();
-                        }
-                    } catch (IOException e) {
-                        printStackTrace(e, listener.error("Could not save changes to " + rawName));
-                    }
-                    return;
-                }
-                if (!observer.mayCreate(encodedName)) {
-                    listener.getLogger().println("Ignoring duplicate branch project " + rawName);
-                    return;
-                }
-                try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                        MultiBranchProject.this, encodedName, branch.getName()
-                )) {
-                    if (getItem(encodedName) != null) {
-                        throw new IllegalStateException(
-                                "JENKINS-42511: attempted to redundantly create " + encodedName + " in "
-                                        + MultiBranchProject.this);
-                    }
-                    project = _factory.newInstance(branch);
-                }
-                if (!project.getName().equals(encodedName)) {
-                    throw new IllegalStateException(
-                            "Name of created project " + project + " did not match expected " + encodedName);
-                }
-                // HACK ALERT
-                // ==========
-                // We don't want to trigger a save, so we will do some trickery to ensure that observer.created(project)
-                // performs the save
-                BulkChange bc = new BulkChange(project);
+        private SCMRevision lastSeenRevisionOrDefault(@NonNull P project, SCMRevision scmLastBuiltRevision) {
+            SCMRevision scmLastSeenRevision = _factory.getLastSeenRevision(project);
+            if (scmLastSeenRevision == null && scmLastBuiltRevision != null) {
+                scmLastSeenRevision = scmLastBuiltRevision;
                 try {
-                    if (project.getDisplayNameOrNull() == null && !rawName.equals(encodedName)) {
-                        project.setDisplayName(rawName);
-                    }
-                } catch (IOException e) {
-                    // ignore even if it does happen we didn't want a save
-                } finally {
-                    bc.abort();
-                }
-                // decorate contract is to ensure it dowes not trigger a save
-                _factory.decorate(project);
-                // ok it is now up to the observer to ensure it does the actual save.
-                observer.created(project);
-                if (isAutomaticBuild(source, head, revision, null, null, listener)) {
-                    scheduleBuild(
-                            _factory,
-                            project,
-                            revision,
-                            listener,
-                            rawName,
-                            causeFactory.create(source),
-                            revisionActions
-                    );
-                } else {
-                    listener.getLogger().format("No automatic builds for %s%n", rawName);
-                }
-                try {
-                    _factory.setLastSeenRevisionHash(project, revision);
+                    _factory.setLastSeenRevisionHash(project, scmLastBuiltRevision);
                 } catch (IOException e) {
                     printStackTrace(e, listener.error("Could not update last seen revision hash"));
                 }
-            } finally {
-                observer.completed(encodedName);
             }
+            return scmLastSeenRevision;
         }
-    }
 
-    /**
-     * Tests if the specified {@link SCMHead} should be automatically built when discovered / modified.
-     * @param source the source.
-     * @param head the head.
-     * @param currRevision the current built revision.
-     * @param lastBuiltRevision the previous built revision
-     * @param listener the {@link TaskListener}
-     * @param lastSeenRevision the last seen revision
-     * @return {@code true} if the head should be automatically built when discovered / modified.
-     */
-    private boolean isAutomaticBuild(@NonNull SCMSource source,
-                                     @NonNull SCMHead head,
-                                     @NonNull SCMRevision currRevision,
-                                     @CheckForNull SCMRevision lastBuiltRevision,
-                                     @CheckForNull SCMRevision lastSeenRevision,
-                                     @NonNull TaskListener listener) {
-        BranchSource branchSource = null;
-        for (BranchSource s: sources) {
-            if (s.getSource().getId().equals(source.getId())) {
-                branchSource = s;
-                break;
+        private void doAutomaticBuilds(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull String rawName, @NonNull P project, Action[] revisionActions, SCMRevision scmLastBuiltRevision, SCMRevision scmLastSeenRevision) {
+            if (isAutomaticBuild(head, revision, scmLastBuiltRevision, scmLastSeenRevision)) {
+                scheduleBuild(
+                        _factory,
+                        project,
+                        revision,
+                        listener,
+                        rawName,
+                        causeFactory.create(source),
+                        revisionActions
+                );
+            } else {
+                listener.getLogger().format("No automatic build triggered for %s%n", rawName);
+            }
+            try {
+                _factory.setLastSeenRevisionHash(project, revision);
+            } catch (IOException e) {
+                printStackTrace(e, listener.error("Could not update last seen revision hash"));
             }
         }
-        if (branchSource == null) {
-            // no match, means no build
-            return false;
-        }
-        List<BranchBuildStrategy> buildStrategies = branchSource.getBuildStrategies();
-        if (buildStrategies.isEmpty()) {
-            // we will use default behaviour, build anything but tags
-            return !(head instanceof TagSCMHead);
-        } else {
-            for (BranchBuildStrategy s: buildStrategies) {
-                if (s.automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener)) {
-                    return true;
+
+        /**
+         * Tests if the specified {@link SCMHead} should be automatically built when discovered / modified.
+         * @param head the head.
+         * @param currRevision the current built revision.
+         * @param lastBuiltRevision the previous built revision
+         * @param lastSeenRevision the last seen revision
+         * @return {@code true} if the head should be automatically built when discovered / modified.
+         */
+        private boolean isAutomaticBuild(@NonNull SCMHead head,
+                                         @NonNull SCMRevision currRevision,
+                                         @CheckForNull SCMRevision lastBuiltRevision,
+                                         @CheckForNull SCMRevision lastSeenRevision) {
+            BranchSource branchSource = null;
+            for (BranchSource s: MultiBranchProject.this.sources) {
+                if (s.getSource().getId().equals(source.getId())) {
+                    branchSource = s;
+                    break;
                 }
             }
-            return false;
+            if (branchSource == null) {
+                // no match, means no build
+                return false;
+            }
+            List<BranchBuildStrategy> buildStrategies = branchSource.getBuildStrategies();
+            if (buildStrategies.isEmpty()) {
+                // we will use default behaviour, build anything but tags
+                return !(head instanceof TagSCMHead);
+            } else {
+                for (BranchBuildStrategy s: buildStrategies) {
+                    if (s.automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
         }
     }
 
     /**
-     * Adds the {@link MultiBranchProject.State#sourceActions} to {@link MultiBranchProject#getAllActions()}.
+     * Adds the {@link MultiBranchProject.State#sourceActions} to
+     * {@link MultiBranchProject#getAllActions()}.
      *
      * @since 2.0
      */
