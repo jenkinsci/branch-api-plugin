@@ -1433,72 +1433,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         existing = observer.shouldUpdate(folderName);
                         try {
                             if (existing != null) {
-                                BulkChange bc = new BulkChange(existing);
-                                try {
-                                    existing.setSourcesList(createBranchSources());
-                                    factory.updateExistingProject(existing, attributes, listener);
-                                    ProjectNameProperty property =
-                                            existing.getProperties().get(ProjectNameProperty.class);
-                                    if (property == null || !projectName.equals(property.getName())) {
-                                        existing.getProperties().remove(ProjectNameProperty.class);
-                                        existing.addProperty(new ProjectNameProperty(projectName));
-                                    }
-                                    for (AbstractFolderProperty<?> folderProperty : getProperties()) {
-                                        if (folderProperty instanceof OrganizationFolderProperty) {
-                                            ((OrganizationFolderProperty) folderProperty).applyDecoration(existing,
-                                                    listener);
-                                        }
-                                    }
-                                } finally {
-                                    bc.commit();
-                                }
-                                existing.fireSCMSourceAfterSave(existing.getSCMSources());
-                                if (isBuildable() && existing.isBuildable()
-                                        && (!wasBuildable || wasDisabled || existing.updateDigests())) {
-                                    // if the digests changed or this is now buildable where previously it was not
-                                    // schedule the build
-                                    existing.scheduleBuild(cause());
-                                }
-                                return;
-                            }
-                            if (!observer.mayCreate(folderName)) {
-                                listener.getLogger()
-                                        .println("Ignoring duplicate child " + projectName + " named " + folderName);
-                                return;
-                            }
-                            MultiBranchProject<?, ?> project;
-                            try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                                    OrganizationFolder.this, folderName, projectName
-                            )) {
-                                if (getItem(folderName) != null) {
-                                    throw new IllegalStateException(
-                                            "JENKINS-42511: attempted to redundantly create " + folderName + " in "
-                                                    + OrganizationFolder.this);
-                                }
-                                project = factory.createNewProject(
-                                        OrganizationFolder.this, folderName, sources, attributes, listener
-                                );
-                            }
-                            BulkChange bc = new BulkChange(project);
-                            try {
-                                if (!projectName.equals(folderName)) {
-                                    project.setDisplayName(projectName);
-                                }
-                                project.addProperty(new ProjectNameProperty(projectName));
-                                project.getSourcesList().addAll(createBranchSources());
-                                for (AbstractFolderProperty<?> property: getProperties()) {
-                                    if (property instanceof OrganizationFolderProperty) {
-                                        ((OrganizationFolderProperty) property).applyDecoration(project, listener);
-                                    }
-                                }
-                            } finally {
-                                bc.commit();
-                            }
-                            observer.created(project);
-                            project.fireSCMSourceAfterSave(project.getSCMSources());
-                            if (isBuildable() && project.isBuildable()) {
-                                // schedule the build
-                                project.scheduleBuild(cause());
+                                completeExisting(factory, attributes, existing, wasBuildable, wasDisabled);
+                            } else {
+                                completeNew(factory, attributes, folderName);
                             }
                         } finally {
                             observer.completed(folderName);
@@ -1509,6 +1446,78 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         x.printStackTrace(listener.error("Failed to create or update a subproject " + projectName));
                     }
                 }
+
+                private void completeExisting(MultiBranchProjectFactory factory, Map<String, Object> attributes, MultiBranchProject<?, ?> existing, boolean wasBuildable, boolean wasDisabled) throws IOException, InterruptedException {
+                    BulkChange bc = new BulkChange(existing);
+                    try {
+                        existing.setSourcesList(createBranchSources());
+                        factory.updateExistingProject(existing, attributes, listener);
+                        ProjectNameProperty property =
+                                existing.getProperties().get(ProjectNameProperty.class);
+                        if (property == null || !projectName.equals(property.getName())) {
+                            existing.getProperties().remove(ProjectNameProperty.class);
+                            existing.addProperty(new ProjectNameProperty(projectName));
+                        }
+                        for (AbstractFolderProperty<?> folderProperty : getProperties()) {
+                            if (folderProperty instanceof OrganizationFolderProperty) {
+                                ((OrganizationFolderProperty) folderProperty).applyDecoration(existing,
+                                        listener);
+                            }
+                        }
+                    } finally {
+                        bc.commit();
+                    }
+                    existing.fireSCMSourceAfterSave(existing.getSCMSources());
+                    if (isBuildable() && existing.isBuildable()
+                            && (!wasBuildable || wasDisabled || existing.updateDigests())) {
+                        // if the digests changed or this is now buildable where previously it was not
+                        // schedule the build
+                        existing.scheduleBuild(cause());
+                    }
+                }
+
+                private void completeNew(MultiBranchProjectFactory factory, Map<String, Object> attributes, String folderName) throws IOException, InterruptedException {
+                    if (!observer.mayCreate(folderName)) {
+                        listener.getLogger()
+                                .println("Ignoring duplicate child " + projectName + " named " + folderName);
+                        return;
+                    }
+                    MultiBranchProject<?, ?> project;
+                    try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
+                            OrganizationFolder.this, folderName, projectName
+                    )) {
+                        if (getItem(folderName) != null) {
+                            throw new IllegalStateException(
+                                    "JENKINS-42511: attempted to redundantly create " + folderName + " in "
+                                            + OrganizationFolder.this);
+                        }
+                        project = factory.createNewProject(
+                                OrganizationFolder.this, folderName, sources, attributes, listener
+                        );
+                    }
+                    BulkChange bc = new BulkChange(project);
+                    try {
+                        if (!projectName.equals(folderName)) {
+                            project.setDisplayName(projectName);
+                        }
+                        project.addProperty(new ProjectNameProperty(projectName));
+                        project.getSourcesList().addAll(createBranchSources());
+                        for (AbstractFolderProperty<?> property: getProperties()) {
+                            if (property instanceof OrganizationFolderProperty) {
+                                ((OrganizationFolderProperty) property).applyDecoration(project, listener);
+                            }
+                        }
+                    } finally {
+                        bc.commit();
+                    }
+                    observer.created(project);
+                    project.fireSCMSourceAfterSave(project.getSCMSources());
+                    if (isBuildable() && project.isBuildable()) {
+                        // schedule the build
+                        project.scheduleBuild(cause());
+                    }
+                }
+
             };
         }
 

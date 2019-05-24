@@ -1979,7 +1979,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     if (origBranch == null) {
                         return;
                     }
-                    observeProject(head, revision, branch, rawName, project, origBranch, revisionActions);
+                    observeExisting(head, revision, branch, rawName, project, origBranch, revisionActions);
                 } else {
                     observeNew(head, revision, branch, rawName, encodedName, revisionActions);
                 }
@@ -1988,7 +1988,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
 
-        private void observeProject(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull Branch branch, String rawName, P project, Branch origBranch, Action[] revisionActions) {
+        private void observeExisting(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull Branch branch, String rawName, P project, Branch origBranch, Action[] revisionActions) {
             boolean rebuild = (origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead))
                     || !(source.getId().equals(origBranch.getSourceId()));
             boolean needSave = !branch.equals(origBranch)
