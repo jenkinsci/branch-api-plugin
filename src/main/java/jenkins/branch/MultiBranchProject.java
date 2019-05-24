@@ -1972,14 +1972,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             String encodedName = branch.getEncodedName();
             P project = observer.shouldUpdate(encodedName);
             try {
-                Branch origBranch = getOrigBranch(project);;
-                boolean headActionsFetched = isHeadActionsFetched(head, branch, rawName);
+                Branch origBranch = getOrigBranch(project);
+                setBranchActions(head, branch, origBranch);
                 Action[] revisionActions = getRevisionActions(revision, rawName);
                 if (project != null) {
                     if (origBranch == null) {
                         return;
                     }
-                    observeProject(head, revision, branch, rawName, project, origBranch, headActionsFetched, revisionActions);
+                    observeProject(head, revision, branch, rawName, project, origBranch, revisionActions);
                 } else {
                     observeNew(head, revision, branch, rawName, encodedName, revisionActions);
                 }
@@ -1988,13 +1988,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
 
-        private void observeProject(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull Branch branch, String rawName, P project, Branch origBranch, boolean headActionsFetched, Action[] revisionActions) {
+        private void observeProject(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull Branch branch, String rawName, P project, Branch origBranch, Action[] revisionActions) {
             boolean rebuild = (origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead))
                     || !(source.getId().equals(origBranch.getSourceId()));
-            if (!headActionsFetched) {
-                // we didn't fetch them so replicate previous actions
-                branch.setActions(origBranch.getActions());
-            }
             boolean needSave = !branch.equals(origBranch)
                     || !branch.getActions().equals(origBranch.getActions())
                     || !Util.getDigestOf(Items.XSTREAM2.toXML(branch.getScm()))
@@ -2016,13 +2012,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 // get the previous revision
                 SCMRevision scmLastBuiltRevision = _factory.getRevision(project);
 
-                if (isChangesDetected(revision, project, scmLastBuiltRevision)) {
+                if (changesDetected(revision, project, scmLastBuiltRevision)) {
+                    listener.getLogger()
+                            .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
+
                     needSave = true;
                     // get the previous seen revision
                     SCMRevision scmLastSeenRevision = lastSeenRevisionOrDefault(project, scmLastBuiltRevision);
-
-                    listener.getLogger()
-                            .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
                     doAutomaticBuilds(head, revision, rawName, project, revisionActions, scmLastBuiltRevision, scmLastSeenRevision);
 
                 } else {
@@ -2081,7 +2077,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             doAutomaticBuilds(head, revision, rawName, project, revisionActions, null, null);
         }
 
-        private boolean isChangesDetected(@NonNull SCMRevision revision, @NonNull P project, SCMRevision scmLastBuiltRevision) {
+        private boolean changesDetected(@NonNull SCMRevision revision, @NonNull P project, SCMRevision scmLastBuiltRevision) {
             boolean changesDetected = false;
 
             if (revision.isDeterministic()) {
@@ -2113,7 +2109,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             Action[] revisionActions = new Action[0];
             try {
                 List<Action> actions = source.fetchActions(revision, event, listener);
-                revisionActions = actions.toArray(new Action[0]);
+                revisionActions = actions.toArray(new Action[actions.size()]);
             } catch (IOException | InterruptedException e) {
                 printStackTrace(e, listener.error("Could not fetch metadata for revision %s of branch %s",
                         revision, rawName));
@@ -2121,15 +2117,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return revisionActions;
         }
 
-        private boolean isHeadActionsFetched(@NonNull SCMHead head, @NonNull Branch branch, String rawName) {
-            boolean headActionsFetched = false;
+        private void setBranchActions(@NonNull SCMHead head, @NonNull Branch branch, @CheckForNull Branch origBranch) {
             try {
                 branch.setActions(source.fetchActions(head, event, listener));
-                headActionsFetched = true;
             } catch (IOException | InterruptedException e) {
-                printStackTrace(e, listener.error("Could not fetch metadata of branch %s", rawName));
+                printStackTrace(e, listener.error("Could not fetch metadata of branch %s", branch.getName()));
+                if (origBranch != null) {
+                    // we didn't fetch them so replicate previous actions
+                    branch.setActions(origBranch.getActions());
+                }
             }
-            return headActionsFetched;
         }
 
         private Branch getOrigBranch(P project) {
