@@ -2089,7 +2089,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                         if (!revision.equals(scmLastBuiltRevision)) {
                             listener.getLogger()
-                                    .format("Changes detected: %s (%s → %s)%n", rawName, scmLastSeenRevision, revision);
+                                    .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
                             needSave = true;
                             if (isAutomaticBuild(source, head, revision, scmLastBuiltRevision, scmLastSeenRevision, listener)) {
                                 scheduleBuild(
