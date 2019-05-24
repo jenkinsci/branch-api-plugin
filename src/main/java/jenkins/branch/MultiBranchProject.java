@@ -2019,7 +2019,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 if (isChangesDetected(revision, project, scmLastBuiltRevision)) {
                     needSave = true;
                     // get the previous seen revision
-                    SCMRevision scmLastSeenRevision = getLastSeenRevision(project, scmLastBuiltRevision);
+                    SCMRevision scmLastSeenRevision = lastSeenRevisionOrDefault(project, scmLastBuiltRevision);
 
                     listener.getLogger()
                             .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
@@ -2182,7 +2182,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return origBranch;
         }
 
-        private SCMRevision getLastSeenRevision(@NonNull P project, SCMRevision scmLastBuiltRevision) {
+        private SCMRevision lastSeenRevisionOrDefault(@NonNull P project, SCMRevision scmLastBuiltRevision) {
             SCMRevision scmLastSeenRevision = _factory.getLastSeenRevision(project);
             if (scmLastSeenRevision == null && scmLastBuiltRevision != null) {
                 scmLastSeenRevision = scmLastBuiltRevision;
