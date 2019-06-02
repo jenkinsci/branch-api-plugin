@@ -59,6 +59,7 @@ public class OrganizationChildOrphanedItemsProperty extends OrganizationFolderPr
 
     /**
      * Our constructor.
+     * @param strategy the OrphanedItemStrategy to be applied to this property
      */
     @DataBoundConstructor
     public OrganizationChildOrphanedItemsProperty(OrphanedItemStrategy strategy) {

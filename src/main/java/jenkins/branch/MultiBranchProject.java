@@ -304,6 +304,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Get the term used in the UI to represent the souce for this kind of
      * {@link Item}. Must start with a capital letter.
+     * @return term used in the UI to represent the source
      */
     public String getSourcePronoun() {
         Set<String> result = new TreeSet<>();
