@@ -76,6 +76,8 @@ public class RateLimitBranchProperty extends BranchProperty {
      */
     private static Map<String, Long> createDurations() {
         Map<String, Long> result = new LinkedHashMap<>();
+        result.put("second", TimeUnit.SECONDS.toMillis(1));
+        result.put("minute", TimeUnit.MINUTES.toMillis(1));
         result.put("hour", TimeUnit.HOURS.toMillis(1));
         result.put("day", TimeUnit.DAYS.toMillis(1));
         result.put("week", TimeUnit.DAYS.toMillis(7));
