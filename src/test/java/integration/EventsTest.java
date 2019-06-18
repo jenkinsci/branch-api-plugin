@@ -2513,7 +2513,7 @@ public class EventsTest {
 
             c.cloneBranch("bar", "master", "feature");
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "bar", "feature", "junkHash"));
-            assertThat("Feature branch not takenover by lower priority source",
+            assertThat("Feature branch not taken over by lower priority source",
                     prj.getProjectFactory().getBranch(feature).getSourceId(),
                     is("foo:id"));
             r.waitUntilNoActivity();
@@ -2708,7 +2708,7 @@ public class EventsTest {
 
             c.addFile("bar", "feature", "change", "marker.txt", "ignore this".getBytes());
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", "feature", "junkHash"));
-            assertThat("Feature branch not takenover by lower priority source",
+            assertThat("Feature branch not taken over by lower priority source",
                     prj.getProjectFactory().getBranch(feature).getSourceId(),
                     is("foo:id"));
             r.waitUntilNoActivity();

@@ -4,15 +4,15 @@ This document provides the guidelines for a correct optimal implementation of th
 
 This document is structured as follows:
 
-* The first section provides some background and history
+* The first section provides some background and history.
 
 * The second section describes the use-case that the Branch API is designed to solve.
 
-* The subsequent sections provides an overview of the extension points provided by the Branch API.
+* The subsequent sections provide an overview of the extension points provided by the Branch API.
 
 === Background
 
-The first known usage of the phrase Continuous Integration was in 1994 by Grady Booch in  Object-Oriented Analysis and Design with Applications (2nd edition).
+The first known usage of the phrase Continuous Integration was in 1994 by Grady Booch in Object-Oriented Analysis and Design with Applications (2nd edition).
 It took until 2001 for CruiseControl to be released as the first easily available continuous integration server.
 The Jenkins project's history dates back to 2004.
 
@@ -20,7 +20,7 @@ At that time, Continuous Integration had a primary focus on a small number of cr
 
 The major source control systems in use at the time, tended to have relatively heavyweight processes around the creation of branches, but more critically, tended to have poor merge strategies.
 
-If you are developing a system for Continuous Integration at that time, it makes sense to focus on the small number of important branches and focus the Continuous Integration resources on those important branches.
+If you were developing a system for Continuous Integration at that time, it made sense to focus on the small number of important branches and focus the Continuous Integration resources on those important branches.
 
 Since that time, however, two technological changes have changed the status quo:
 
@@ -29,7 +29,7 @@ Since that time, however, two technological changes have changed the status quo:
 
 Git is not the only distributed version control system, but the advent of Git with its superior merge strategies, has caused a pressure on existing version control systems and resulted in:
 
-* Merging between branches is usually a lot easier requiring less manual interventions;
+* Merging between branches is usually a lot easier requiring less manual interventions
 * Creation of branches is a lot more lightweight
 
 The cloud makes it easier to access computing resources flexibly on demand.
@@ -250,7 +250,7 @@ public class MyMultiBranchProject extends MultiBranchProject<MyBranchJob, MyBran
 }
 ----
 
-Namly we just have two pieces of information to resolve:
+Namely we just have two pieces of information to resolve:
 
 . How do we identify source branches that this project type applies to.
 You can use a fixed criteria or you could make the criteria configurable through an extension point.
@@ -455,7 +455,7 @@ The core tests for Branch API should cover most of the major functionality, thus
 
 * _(If your multi-branch project factory has user configurable options)_
 +
-_Given_ an organization folder configured with your multi-branch project factory, _when_ the user reconfigures your multi-branch project factory, _then_ then existing mult-branch projects are updated to reflect the new multi-branch project factory configuration.
+_Given_ an organization folder configured with your multi-branch project factory, _when_ the user reconfigures your multi-branch project factory, _then_ then existing multi-branch projects are updated to reflect the new multi-branch project factory configuration.
 
 === Enabling users to customize specific branches in a multi-branch project
 
@@ -605,7 +605,7 @@ public class MyBranchProperty extends BranchProperty {
 
     // getters for all the fields
 
-    // @DataBoundSetter setters for all the optional fieleds
+    // @DataBoundSetter setters for all the optional fields
 
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
@@ -662,7 +662,7 @@ The contract consists of a single method: `getPropertiesFor(_head_)`.
 The considerations apply to the descriptor that controls where your strategy implementation is available, being the intersection of the `isApplicable(_scmSourceDescriptor_)` and `isApplicable(_project_)` methods.
 
 For example, you may want to implement a property strategy that only makes sense for `SCMSource` implementations that could return change requests and consequently returns specific branch properties for those sources.
-If your implementation further has an "automatic" set of branch properties that are to be applied and those properties only are appropriate for pipeline branch projects, then your  branch property strategy is only relevant to pipeline multibranch projects configured with a SCMSource that could produce change requests.
+If your implementation further has an "automatic" set of branch properties that are to be applied and those properties only are appropriate for pipeline branch projects, then your branch property strategy is only relevant to pipeline multibranch projects configured with a SCMSource that could produce change requests.
 
 Whether such specialization makes sense is not something we can anticipate from the Branch API.
 The anticipated specializations are around the `SCMSource` types, but the API contract includes the `isApplicable(_project_)` methods as a form of future-proofing.
@@ -681,10 +681,9 @@ The `BranchBuildStrategy` is an extension point that allows controlling whether 
 It incorporates an API to expose the external code and a SPI (Service Provider Interface).
 
  * SPI methods are intended to be implemented by implementers of `BranchBuildStrategy`.
- * API methonds are intended to be invoked consumers of `BranchBuildStrategy`.
- * SPI methonds are only to be invoked through the API methods in order to allow safe evolution.
+ * API methods are intended to be invoked consumers of `BranchBuildStrategy`.
+ * SPI methods are only to be invoked through the API methods in order to allow safe evolution.
  * Changing the API may require updating any SPI implementations that are also API consumers, specifically the Any, All and None implementations in basic-branch-build-strategies-plugin
-
 
 The API and SPI provides you:
 

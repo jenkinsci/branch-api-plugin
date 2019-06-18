@@ -202,7 +202,7 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
             Collections.sort(result, new Comparator<PropertyMigration<?, ?>>() {
                 @Override
                 public int compare(PropertyMigration<?, ?> o1, PropertyMigration<?, ?> o2) {
-                    // just want a depterministic sort
+                    // just want a deterministic sort
                     return o1.getClass().getName().compareTo(o2.getClass().getName());
                 }
             });
