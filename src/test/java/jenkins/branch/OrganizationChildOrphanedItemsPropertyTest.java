@@ -103,7 +103,7 @@ public class OrganizationChildOrphanedItemsPropertyTest {
     }
 
     @Test
-    public void given__orgFolder__when__created__then__proprerty_is_same_as_folder() throws Exception {
+    public void given__orgFolder__when__created__then__property_is_same_as_folder() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));

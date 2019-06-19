@@ -21,7 +21,7 @@ Some examples:
 +
 --
 * https://wiki.jenkins-ci.org/display/JENKINS/GitHub+Branch+Source+Plugin[GitHub Branch Source Plugin] -- provides both `SCMSource` and `SCMNavigator`
-* https://wiki.jenkins-ci.org/display/JENKINS/Bitbucket+Branch+Source+Plugin[Bitbucker Branch Source Plugin] -- provides both `SCMSource` and `SCMNavigator`
+* https://wiki.jenkins-ci.org/display/JENKINS/Bitbucket+Branch+Source+Plugin[Bitbucket Branch Source Plugin] -- provides both `SCMSource` and `SCMNavigator`
 * https://wiki.jenkins-ci.org/display/JENKINS/Mercurial+Plugin[Mercurial Plugin] -- provides `SCMSource` only
 * https://wiki.jenkins-ci.org/display/JENKINS/Git+Plugin[Git Plugin] -- provides `SCMSource` only
 * https://wiki.jenkins-ci.org/display/JENKINS/Subversion+Plugin[Subversion Plugin] -- provides `SCMSource` only
@@ -66,7 +66,7 @@ The _Name_, _Display Name_ and _Description_ fields are common with all Jenkins 
 
 The _Branch Sources_ section is where you configure the `SCMSource` implementation(s) from your SCM API provider plugin to identify the repository / repositories that will be indexed to identify branches to build.
 
-Branch sources are an order list of `SCMSource` implementations and the associated property strategy to apply to branches from that source.
+Branch sources are an ordered list of `SCMSource` implementations and the associated property strategy to apply to branches from that source.
 If two branch sources report a branch with the same name, the first branch source in the ordered list wins.
 
 .Two branch sources. The Git branch source will have higher priority over the GitHub branch source as the Git source is above the GitHub source.
@@ -77,7 +77,7 @@ You can use the handles to drag and drop the sources to put them in the order th
 The _Build Configuration_ section may or may not be present -- this depends on whether the multi-branch project type allows configuration of the way the per-branch projects are detected and configured.
 For example, the pipeline multibranch project allows jobs to be created using a strategy that:
 
-* provides a single fixed fixed pipeline definition for all branches that contain a user configured marker file.
+* provides a single fixed pipeline definition for all branches that contain a user configured marker file.
 
 * provides a pipeline definition from the branch itself for all branches that contain a file called `Jenkinsfile`.
 
@@ -94,7 +94,7 @@ TIP: Individual orphaned items can be manually deleted proactively ahead of the 
 The _Health metrics_ section allows configuration of how the health metrics of this folder are reported to higher levels.
 See the https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Folders+Plugin[Folders Plugin] documentation for details of this.
 
-Finally the _Properties_ section includes both generic folder properties and properties specific to this type of multi-branch project
+Finally the _Properties_ section includes both generic folder properties and properties specific to this type of multi-branch project.
 
 === Organization folders
 

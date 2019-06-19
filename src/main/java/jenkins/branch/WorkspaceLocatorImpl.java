@@ -233,7 +233,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         return map;
     }
 
-    // Workaround spotbugs false-positive redunant null checking for try blocks in java 11
+    // Workaround spotbugs false-positive redundant null checking for try blocks in java 11
     // https://github.com/spotbugs/spotbugs/issues/756
     @NonNull
     private static InputStream readFilePath(@NonNull FilePath index) throws IOException, InterruptedException {

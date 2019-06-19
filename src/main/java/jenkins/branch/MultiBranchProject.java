@@ -302,7 +302,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * Get the term used in the UI to represent the souce for this kind of
+     * Get the term used in the UI to represent the source for this kind of
      * {@link Item}. Must start with a capital letter.
      */
     public String getSourcePronoun() {
@@ -2070,7 +2070,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             } finally {
                 bc.abort();
             }
-            // decorate contract is to ensure it dowes not trigger a save
+            // decorate contract is to ensure it does not trigger a save
             _factory.decorate(project);
             // ok it is now up to the observer to ensure it does the actual save.
             observer.created(project);
