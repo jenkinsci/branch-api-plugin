@@ -543,6 +543,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * Get the term used in the UI to represent the source for this kind of
      * {@link Item}. Must start with a capital letter.
+     * @return term used in the UI to represent the souce
      */
     public String getSourcePronoun() {
         Set<String> result = new TreeSet<>();

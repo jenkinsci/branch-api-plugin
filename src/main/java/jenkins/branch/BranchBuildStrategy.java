@@ -205,6 +205,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      *                     {@link SCMRevision#isDeterministic()} previous revisions as polling for changes will have
      *                     confirmed that there is a change between this and {@code currRevision} even if the two
      *                     are equal.
+     * @param listener     the TaskListener to be used
      * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
      * {@link SCMHead} has been detected as created / modified.
      * @since 2.1.3
@@ -231,6 +232,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      *                     confirmed that there is a change between this and {@code currRevision} even if the two
      *                     are equal.
      * @param lastSeenRevision the {@link SCMRevision} that the head was last seen
+     * @param listener     the TaskListener to be used
      * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
      * {@link SCMHead} has been detected as created / modified.
      * @since 2.4.2
