@@ -229,7 +229,7 @@ public class WorkspaceLocatorImplTest {
         s.toComputer().getLogText().writeLogTo(0, System.out);
     }
 
-    @Issue("JENKINS-2111")
+    @Issue({"JENKINS-2111", "JENKINS-58177"})
     @Test
     public void uniquification() throws Exception {
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
@@ -238,6 +238,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("ch_to_fit_in_a_short_path_at_all", r.buildAndAssertSuccess(r.createFreeStyleProject("way too much to fit in a short path at all")).getWorkspace().getName());
         assertEquals("_to_fit_in_a_short_path_at_all_2", r.buildAndAssertSuccess(r.createFreeStyleProject("really way too much to fit in a short path at all")).getWorkspace().getName());
         assertEquals("_to_fit_in_a_short_path_at_all_3", r.buildAndAssertSuccess(r.createFreeStyleProject("way, way, way too much to fit in a short path at all")).getWorkspace().getName());
+        assertEquals("_-__that_would_start_with_hyphen", r.buildAndAssertSuccess(r.createFreeStyleProject("mnemonic--__that_would_start_with_hyphen")).getWorkspace().getName());
         r.jenkins.getRootPath().child("workspace/" + WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
     }
 
@@ -267,10 +268,10 @@ public class WorkspaceLocatorImplTest {
     @Test
     public void collisions() throws Exception {
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
-        FilePath firstWs = r.buildAndAssertSuccess(r.createFreeStyleProject("first-project-with-a-rather-long-name")).getWorkspace();
-        assertEquals("-project-with-a-rather-long-name", firstWs.getName());
+        FilePath firstWs = r.buildAndAssertSuccess(r.createFreeStyleProject("first_project-with-a-rather-long-name")).getWorkspace();
+        assertEquals("_project-with-a-rather-long-name", firstWs.getName());
         firstWs.deleteRecursive();
-        assertEquals("roject-with-a-rather-long-name_2", r.buildAndAssertSuccess(r.createFreeStyleProject("second-project-with-a-rather-long-name")).getWorkspace().getName());
+        assertEquals("roject-with-a-rather-long-name_2", r.buildAndAssertSuccess(r.createFreeStyleProject("second_project-with-a-rather-long-name")).getWorkspace().getName());
     }
 
     @Issue({"JENKINS-54654", "JENKINS-54968"})

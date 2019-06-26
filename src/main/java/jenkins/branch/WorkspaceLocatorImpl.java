@@ -191,6 +191,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 String mnemonic = mnemonicOf(fullName);
                 for (int i = 1; ; i++) {
                     path = StringUtils.right(i > 1 ? mnemonic + "_" + i : mnemonic, MAX_LENGTH);
+                    path = replaceLeadingHyphen(path);
                     if (index.values().contains(path)) {
                         LOGGER.log(Level.FINER, "index collision on {0} for {1} on {2}", new Object[] {path, item, node});
                     } else {
@@ -298,6 +299,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     private static String mnemonicOf(String name) {
         // Do not need the complexity of NameMangler here, since we uniquify as needed.
         return name.replaceAll("(%[0-9A-F]{2}|[^a-zA-Z0-9-_.])+", "_");
+    }
+
+    private static String replaceLeadingHyphen(String name) {
+        //On linux - or -- (hyphen) are interpreted as an option passed to commands and require special handling. So a leading - is replaced with _.
+        return name.replaceAll("^-", "_");
     }
 
     @Deprecated
