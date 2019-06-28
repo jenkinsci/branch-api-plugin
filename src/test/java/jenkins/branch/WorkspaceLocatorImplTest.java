@@ -268,10 +268,10 @@ public class WorkspaceLocatorImplTest {
     @Test
     public void collisions() throws Exception {
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
-        FilePath firstWs = r.buildAndAssertSuccess(r.createFreeStyleProject("first_project-with-a-rather-long-name")).getWorkspace();
+        FilePath firstWs = r.buildAndAssertSuccess(r.createFreeStyleProject("first-project-with-a-rather-long-name")).getWorkspace();
         assertEquals("_project-with-a-rather-long-name", firstWs.getName());
         firstWs.deleteRecursive();
-        assertEquals("roject-with-a-rather-long-name_2", r.buildAndAssertSuccess(r.createFreeStyleProject("second_project-with-a-rather-long-name")).getWorkspace().getName());
+        assertEquals("roject-with-a-rather-long-name_2", r.buildAndAssertSuccess(r.createFreeStyleProject("second-project-with-a-rather-long-name")).getWorkspace().getName());
     }
 
     @Issue({"JENKINS-54654", "JENKINS-54968"})
