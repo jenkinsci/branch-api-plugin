@@ -40,6 +40,7 @@ import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.model.TopLevelItem;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.util.ListBoxModel;
 import integration.harness.BasicMultiBranchProject;
 import java.io.IOException;
 import java.util.Collections;
@@ -65,6 +66,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class RateLimitBranchPropertyTest {
@@ -116,7 +118,14 @@ public class RateLimitBranchPropertyTest {
     public void getDurationName() throws Exception {
         assertThat(new RateLimitBranchProperty(10, "hour", false).getDurationName(), is("hour"));
         assertThat(new RateLimitBranchProperty(10, "year", false).getDurationName(), is("year"));
+        assertThat(new RateLimitBranchProperty(10, "minute", false).getDurationName(), is("minute"));
+        assertThat(new RateLimitBranchProperty(10, "second", false).getDurationName(), is("second"));
+    }
 
+    @Test
+    public void checkDurationNameExists() throws Exception {
+        ListBoxModel items = r.jenkins.getDescriptorByType(RateLimitBranchProperty.JobPropertyImpl.DescriptorImpl.class).doFillDurationNameItems();
+        assertEquals(items.size(), 7);
     }
 
     @Test
