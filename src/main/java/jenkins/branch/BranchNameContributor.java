@@ -32,12 +32,13 @@ import hudson.model.Job;
 import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.Date;
-import jenkins.scm.api.SCMHeadOrigin;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMHeadOrigin;
 import jenkins.scm.api.metadata.ContributorMetadataAction;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead2;
+import jenkins.scm.api.mixin.ChangeRequestSCMHead3;
 import jenkins.scm.api.mixin.TagSCMHead;
 
 /**
@@ -67,6 +68,9 @@ public class BranchNameContributor extends EnvironmentContributor {
                     envs.putIfNotNull("CHANGE_TARGET", target.getName());
                     if (head instanceof ChangeRequestSCMHead2) {
                         envs.putIfNotNull("CHANGE_BRANCH", ((ChangeRequestSCMHead2) head).getOriginName());
+                    }
+                    if (head instanceof ChangeRequestSCMHead3) {
+                        envs.putIfNotNull("CHANGE_BRANCH_COMMIT_ID", ((ChangeRequestSCMHead3) head).getSourceCommitId());
                     }
                     SCMHeadOrigin origin = head.getOrigin();
                     if (origin instanceof SCMHeadOrigin.Fork) {

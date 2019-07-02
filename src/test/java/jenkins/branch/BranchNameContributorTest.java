@@ -122,6 +122,7 @@ public class BranchNameContributorTest {
                     is("CHANGE_TITLE"),
                     is("CHANGE_URL"),
                     is("CHANGE_BRANCH"),
+                    is("CHANGE_BRANCH_COMMIT_ID"),
                     is("CHANGE_AUTHOR"),
                     is("CHANGE_AUTHOR_EMAIL"),
                     is("CHANGE_AUTHOR_DISPLAY_NAME")
@@ -130,6 +131,7 @@ public class BranchNameContributorTest {
             assertThat(env.get("CHANGE_ID"), is(cr1Num.toString()));
             assertThat(env.get("CHANGE_TARGET"), is("master"));
             assertThat(env.get("CHANGE_BRANCH"), is("CR-" + cr1Num));
+            assertThat(env.get("CHANGE_BRANCH_COMMIT_ID"), is("sha" + cr1Num));
             assertThat(env.get("CHANGE_TITLE"), is("Change request #" + cr1Num));
             assertThat(env.get("CHANGE_URL"), is("http://changes.example.com/" + cr1Num));
             assertThat(env.get("CHANGE_AUTHOR"), is("bob"));
@@ -145,6 +147,7 @@ public class BranchNameContributorTest {
                     is("CHANGE_TITLE"),
                     is("CHANGE_URL"),
                     is("CHANGE_BRANCH"),
+                    is("CHANGE_BRANCH_COMMIT_ID"),
                     is("CHANGE_FORK"),
                     is("CHANGE_AUTHOR"),
                     is("CHANGE_AUTHOR_EMAIL"),
@@ -154,6 +157,7 @@ public class BranchNameContributorTest {
             assertThat(env.get("CHANGE_ID"), is(cr2Num.toString()));
             assertThat(env.get("CHANGE_TARGET"), is("master"));
             assertThat(env.get("CHANGE_BRANCH"), is("CR-" + cr2Num));
+            assertThat(env.get("CHANGE_BRANCH_COMMIT_ID"), is("sha" + cr2Num));
             assertThat(env.get("CHANGE_FORK"), is("fork"));
             assertThat(env.get("CHANGE_TITLE"), is("Change request #" + cr2Num));
             assertThat(env.get("CHANGE_URL"), is("http://changes.example.com/" + cr2Num));
