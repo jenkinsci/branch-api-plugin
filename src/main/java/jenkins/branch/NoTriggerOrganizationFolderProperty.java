@@ -80,7 +80,7 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
         public FormValidation doCheckBranches(@QueryParameter String value) {
             try {
                 Pattern.compile(value);
-                return FormValidation.warning(Messages.NoTriggerOrganizationFolderProperty_PropertyMigration());
+                return FormValidation.warning(Messages.NoTriggerOrganizationFolderProperty_PropertyDeprecation());
             } catch (PatternSyntaxException x) {
                 return FormValidation.error(x.getMessage());
             }
@@ -144,7 +144,7 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
 
         @Override
         public Localizable getDescription() {
-            return Messages._NoTriggerOrganizationFolderProperty_PropertyMigration();
+            return Messages._NoTriggerOrganizationFolderProperty_PropertyMigrationWarning();
         }
     }
 }
