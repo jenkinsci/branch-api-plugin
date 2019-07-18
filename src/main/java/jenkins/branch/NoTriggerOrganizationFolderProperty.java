@@ -80,7 +80,7 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
         public FormValidation doCheckBranches(@QueryParameter String value) {
             try {
                 Pattern.compile(value);
-                return FormValidation.warning(Messages.NoTriggerOrganizationFolderProperty_PropertyDeprecation());
+                return FormValidation.ok();
             } catch (PatternSyntaxException x) {
                 return FormValidation.error(x.getMessage());
             }
@@ -145,6 +145,14 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
         @Override
         public Localizable getDescription() {
             return Messages._NoTriggerOrganizationFolderProperty_PropertyMigrationWarning();
+        }
+
+        @Override
+        public boolean isEnabled() {
+            // Disabled due to impact discussed in https://issues.jenkins-ci.org/browse/JENKINS-54864.
+            // Could be reenabled if we add some kind of guided migration that clearly explains what
+            // manual changes might be required by the user.
+            return false;
         }
     }
 }
