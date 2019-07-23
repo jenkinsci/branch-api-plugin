@@ -41,9 +41,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * Suppresses builds due to either {@link BranchIndexingCause} or {@link BranchEventCause}.
  * The purpose of this property is to prevent triggering builds resulting from the <em>detection</em>
  * of changes in the underlying SCM.
- * @deprecated Replaced by a named branch build strategy in the <code>basic-branch-build-strategies</code> plugin.
  */
-@Deprecated
 @Restricted(NoExternalUse.class)
 public class NoTriggerBranchProperty extends BranchProperty {
 
@@ -57,11 +55,6 @@ public class NoTriggerBranchProperty extends BranchProperty {
 
     @Extension
     public static class DescriptorImpl extends BranchPropertyDescriptor {
-        @Override
-        protected boolean isApplicable(@NonNull MultiBranchProjectDescriptor projectDescriptor) {
-            return super.isApplicable(projectDescriptor) && NoTriggerOrganizationFolderProperty.legacyCodeActive();
-        }
-
         @Override
         public String getDisplayName() {
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();
