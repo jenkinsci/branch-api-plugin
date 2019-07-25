@@ -24,11 +24,9 @@
 
 package jenkins.branch;
 
-import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
 import hudson.Extension;
-import hudson.ExtensionList;
 import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
@@ -46,9 +44,7 @@ import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Defines {@link NoTriggerBranchProperty} on selected branches.
- * @deprecated Replaced by a named branch build strategy in the <code>basic-branch-build-strategies</code> plugin.
  */
-@Deprecated
 //@Restricted(NoExternalUse.class)
 public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<OrganizationFolder> {
 
@@ -72,26 +68,15 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();
         }
 
-        @Override
-        public boolean isApplicable(Class<? extends AbstractFolder> containerType) {
-            return super.isApplicable(containerType) && legacyCodeActive();
-        }
-
         public FormValidation doCheckBranches(@QueryParameter String value) {
             try {
                 Pattern.compile(value);
-                return FormValidation.warning(Messages.NoTriggerOrganizationFolderProperty_PropertyMigration());
+                return FormValidation.ok();
             } catch (PatternSyntaxException x) {
                 return FormValidation.error(x.getMessage());
             }
         }
 
-    }
-
-    static boolean legacyCodeActive() {
-        PropertyMigrationImpl migration =
-                ExtensionList.lookup(PropertyMigration.class).get(PropertyMigrationImpl.class);
-        return migration == null || !migration.canApply();
     }
 
     @Extension
@@ -144,7 +129,15 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
 
         @Override
         public Localizable getDescription() {
-            return Messages._NoTriggerOrganizationFolderProperty_PropertyMigration();
+            return Messages._NoTriggerOrganizationFolderProperty_PropertyMigrationWarning();
+        }
+
+        @Override
+        public boolean isEnabled() {
+            // Disabled due to impact discussed in https://issues.jenkins-ci.org/browse/JENKINS-54864.
+            // Could be reenabled if we add some kind of guided migration that clearly explains what
+            // manual changes might be required by the user.
+            return false;
         }
     }
 }
