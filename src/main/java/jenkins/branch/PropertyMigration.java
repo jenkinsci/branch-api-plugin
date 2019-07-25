@@ -59,6 +59,17 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
         return false;
     }
 
+    /**
+     * Whether this {@link PropertyMigration} is enabled. If it is enabled, and a corresponding {@link Migrator}
+     * extension is available, the migration will be applied automatically. If it is enabled, and no corresponding
+     * {@link Migrator} extension is available, then an admin monitor will be shown suggested that the user install
+     * or update a plugin that provides the migration. If it is disabled, then neither of these things will happen.
+     * @return true if this {@link PropertyMigration} is enabled, false if it is disabled.
+     */
+    protected boolean isEnabled() {
+        return true;
+    }
+
     public final String getPluginName() {
         return pluginName;
     }
@@ -147,7 +158,7 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
         DescribableList<AbstractFolderProperty<?>, AbstractFolderPropertyDescriptor> properties =
                 folder.getProperties();
         for (PropertyMigration<?, ?> migration : ExtensionList.lookup(PropertyMigration.class)) {
-            if (migration.folderClass.isInstance(folder) && properties.get(migration.propertyClass) != null) {
+            if (migration.isEnabled() && migration.folderClass.isInstance(folder) && properties.get(migration.propertyClass) != null) {
                 if (migration.canApply()) {
                     migration.apply(folder);
                 } else {
