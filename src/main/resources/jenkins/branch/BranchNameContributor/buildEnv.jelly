@@ -49,4 +49,10 @@ THE SOFTWARE.
     <t:buildEnvVar name="CHANGE_TARGET">
         <j:out value="${%blurb.CHANGE_TARGET}"/>
     </t:buildEnvVar>
+    <t:buildEnvVar name="CHANGE_BRANCH">
+        <j:out value="${%blurb.CHANGE_BRANCH}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="CHANGE_FORK">
+        <j:out value="${%blurb.CHANGE_FORK}"/>
+    </t:buildEnvVar>
 </j:jelly>
