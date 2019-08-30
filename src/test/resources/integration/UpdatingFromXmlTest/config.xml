@@ -1,0 +1,43 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<integration.harness.BasicMultiBranchProject>
+    <properties/>
+    <folderViews class="jenkins.branch.MultiBranchProjectViewHolder">
+        <owner class="integration.harness.BasicMultiBranchProject" reference="../.."/>
+    </folderViews>
+    <healthMetrics>
+        <com.cloudbees.hudson.plugins.folder.health.WorstChildHealthMetric>
+            <nonRecursive>false</nonRecursive>
+        </com.cloudbees.hudson.plugins.folder.health.WorstChildHealthMetric>
+    </healthMetrics>
+    <icon class="jenkins.branch.MetadataActionFolderIcon">
+        <owner class="integration.harness.BasicMultiBranchProject" reference="../.."/>
+    </icon>
+    <orphanedItemStrategy class="com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy">
+        <pruneDeadBranches>true</pruneDeadBranches>
+        <daysToKeep>-1</daysToKeep>
+        <numToKeep>-1</numToKeep>
+    </orphanedItemStrategy>
+    <triggers/>
+    <disabled>false</disabled>
+    <sources class="jenkins.branch.MultiBranchProject$BranchSourceList">
+        <data>
+            <jenkins.branch.BranchSource>
+                <source class="jenkins.scm.impl.mock.MockSCMSource">
+                    <controllerId>fixme</controllerId>
+                    <repository>foo</repository>
+                    <traits>
+                        <jenkins.scm.impl.mock.MockSCMDiscoverBranches/>
+                        <jenkins.scm.impl.mock.MockSCMDiscoverTags/>
+                        <jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests>
+                            <strategies class="enum-set" enum-type="jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy">HEAD</strategies>
+                        </jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests>
+                    </traits>
+                </source>
+            </jenkins.branch.BranchSource>
+        </data>
+        <owner class="integration.harness.BasicMultiBranchProject" reference="../.."/>
+    </sources>
+    <factory class="integration.harness.BasicBranchProjectFactory">
+        <owner class="integration.harness.BasicMultiBranchProject" reference="../.."/>
+    </factory>
+</integration.harness.BasicMultiBranchProject>
