@@ -215,29 +215,6 @@ public final class NameEncoder {
                     }
                     break;
             }
-            switch (c) {
-                case '/':
-                    buf.append("%2F");
-                    break;
-                case '?':
-                    buf.append("%3F");
-                    break;
-                case '#':
-                    buf.append("%23");
-                    break;
-                case '[':
-                    buf.append("%5B");
-                    break;
-                case ']':
-                    buf.append("%5D");
-                    break;
-                case '\\':
-                    buf.append("%5C");
-                    break;
-                default:
-                    buf.append(c);
-                    break;
-            }
         }
         return buf.toString();
     }
