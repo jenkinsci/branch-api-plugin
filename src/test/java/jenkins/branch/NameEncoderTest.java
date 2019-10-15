@@ -27,17 +27,113 @@ package jenkins.branch;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 public class NameEncoderTest {
 
-    @Test public void smokes() throws Exception {
+    @Test
+    public void smokes() throws Exception {
         assertRoundTrip("test");
         assertRoundTrip(".");
         assertRoundTrip("..");
         assertRoundTrip("test/foo");
         assertRoundTrip("test%bar");
         assertRoundTrip("test #1");
+    }
+
+    @Test
+    public void safeNames() {
+        assertRoundTrip("foo");
+        assertRoundTrip("foo-bar");
+        assertRoundTrip("foo bar");
+        assertRoundTrip("foo/bar");
+        assertRoundTrip("foo\\bar");
+    }
+
+    @Test
+    public void reservedNames() {
+        assertRoundTrip(".");
+        assertRoundTrip("..");
+        assertRoundTrip("con");
+        assertRoundTrip("prn");
+        assertRoundTrip("aux");
+        assertRoundTrip("nul");
+        assertRoundTrip("com1");
+        assertRoundTrip("com2");
+        assertRoundTrip("com3");
+        assertRoundTrip("com4");
+        assertRoundTrip("com5");
+        assertRoundTrip("com6");
+        assertRoundTrip("com7");
+        assertRoundTrip("com8");
+        assertRoundTrip("com9");
+        assertRoundTrip("lpt1");
+        assertRoundTrip("lpt2");
+        assertRoundTrip("lpt3");
+        assertRoundTrip("lpt4");
+        assertRoundTrip("lpt5");
+        assertRoundTrip("lpt6");
+        assertRoundTrip("lpt7");
+        assertRoundTrip("lpt8");
+        assertRoundTrip("lpt9");
+    }
+
+    @Test
+    public void slashNames() {
+        assertRoundTrip("foo/bar");
+        assertRoundTrip("foo/bar/fu manchu");
+        assertRoundTrip("foo/bar/fu manchu/1");
+        assertRoundTrip("foo/bar/fu manchu/12");
+        assertRoundTrip("foo/bar/fu manchu/123");
+        assertRoundTrip("foo/bar/fu manchu/1234");
+        assertRoundTrip("foo/bar/fu manchu/12345");
+        assertRoundTrip("foo/bar/fu manchu/123456");
+        assertRoundTrip("foo/bar/fu manchu/1234567");
+        assertRoundTrip("foo/bar/fu manchu/12345678");
+        assertRoundTrip("foo/bar/fu manchu/123456789");
+        assertRoundTrip("foo/bar/fu manchu/1234567890");
+        assertRoundTrip("foo/bar/fu manchu/1234567890a");
+        assertRoundTrip("foo/bar/fu manchu/1234567890ab");
+        assertRoundTrip("foo/bar/fu manchu/1234567890abc");
+        assertRoundTrip("foo/bar/fu manchu/1234567890abce");
+        assertRoundTrip("foo/bar/fu manchu/1234567890abcef");
+        assertRoundTrip("foo/bar/fu manchu/1234567890abcefg");
+    }
+
+    @Test
+    public void longNames() {
+        assertRoundTrip("cafebabedeadbeefcafebabedeadbeef");
+        assertRoundTrip("cafebabedeadbeefcafebabedeadbeefcafebabedeadbeef");
+        assertRoundTrip("cafebabedeadbeefcafebabeDeadbeefcafebabedeadbeef");
+        assertRoundTrip("cafebabedeadbeefcafebabedeadbeef1");
+        assertRoundTrip("cafebabedeadbeefcafebabedeadbeef2");
+    }
+
+    @Test
+    public void nonSafeNames() {
+        assertRoundTrip("Is maith liom criospaí");
+        assertRoundTrip("Ich liebe Fußball");
+        assertRoundTrip("我喜欢披萨");
+        assertRoundTrip("特征/新");
+        assertRoundTrip("특색/새로운");
+        assertRoundTrip("gné/nua");
+        assertRoundTrip("característica/nuevo");
+        assertRoundTrip("особенность/новый");
+    }
+
+    @Test
+    public void spain() {
+        assertRoundTrip("Espana");
+        assertRoundTrip("España");
+        assertRoundTrip("Espa\u006e\u0303a");
+    }
+
+    @Test
+    public void ireland() {
+        assertRoundTrip("Eireann");
+        assertRoundTrip("Éireann");
+        assertRoundTrip("E\u0301ireann");
     }
 
     private static void assertRoundTrip(String name) {
