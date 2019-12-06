@@ -17,12 +17,9 @@ Dec 06, 2019
 Jul 25, 2019
 
 -   [JENKINS-54864](https://issues.jenkins-ci.org/browse/JENKINS-54864) -
-    Getting issue details... STATUS  Undeprecate the "Automatic branch
-    project triggering" property for organization folders and disable
-    the automated migration that replaced it with a "Named Branch" build
-    strategy from Basic Branch Build Strategies Plugin starting in
-    version 2.1.0 of this plugin because the migration caused an
-    undesirable change in behavior in some cases.
+    Undeprecate the "Automatic branch project triggering" property for organization folders and disable the automated
+    migration that replaced it with a "Named Branch" build strategy from Basic Branch Build Strategies Plugin starting
+    in version 2.1.0 of this plugin because the migration caused an undesirable change in behavior in some cases.
 
 ## 2.5.3 
 
@@ -44,8 +41,8 @@ May 24, 2019
 May 22, 2019
 
 -   [JENKINS-57588](https://issues.jenkins-ci.org/browse/JENKINS-57588) -
-    Getting issue details... STATUS  Prevent job storm on upgrade from
-    2.4.x and earlier ([PR\#152](https://github.com/jenkinsci/branch-api-plugin/pull/152))
+    Prevent job storm on upgrade from 2.4.x and earlier
+    ([PR\#152](https://github.com/jenkinsci/branch-api-plugin/pull/152))
 
 ## 2.5.0
 May 21, 2019
@@ -53,34 +50,28 @@ May 21, 2019
 -   [PR\#145](https://github.com/jenkinsci/branch-api-plugin/pull/145)
     - Support for programmatically generating OrganizationFolders
 -   [JENKINS-54992](https://issues.jenkins-ci.org/browse/JENKINS-54992) -
-    Getting issue details... STATUS  Replaced misleading job pronoun on
-    Delete action with base Job pronoun
+    Replaced misleading job pronoun on Delete action with base Job pronoun
     ([PR\#150](https://github.com/jenkinsci/branch-api-plugin/pull/150))
 -   Java 11 readiness: build both on JDK8 and JDK11
     ([PR\#148](https://github.com/jenkinsci/branch-api-plugin/pull/148))
 -   [JENKINS-38552](https://issues.jenkins-ci.org/browse/JENKINS-38552) -
-    Getting issue details... STATUS  Use a lastSeenRevision + lastBuilt
+    Use a lastSeenRevision + lastBuilt
     ([PR\#149](https://github.com/jenkinsci/branch-api-plugin/pull/149))
 -   [JENKINS-55597](https://issues.jenkins-ci.org/browse/JENKINS-55597) -
-    Getting issue details... STATUS  Handle IOException in onOnline when
-    failing to delete workspace, to prevent a node disconnection
+    Handle IOException in onOnline when failing to delete workspace, to prevent a node disconnection
     ([PR\#142](https://github.com/jenkinsci/branch-api-plugin/pull/142))
 -   [JENKINS-49729](https://issues.jenkins-ci.org/browse/JENKINS-49729) -
-    Getting issue details... STATUS  Indicate dead branch on job and run
-    pages ([PR\#151](https://github.com/jenkinsci/branch-api-plugin/pull/151))
+    Indicate dead branch on job and run pages ([PR\#151](https://github.com/jenkinsci/branch-api-plugin/pull/151))
 
 ## 2.4.0
 Apr 8, 2019
 
 -   [JENKINS-56903](https://issues.jenkins-ci.org/browse/JENKINS-56903) -
-    Getting issue details... STATUS  Add a health reporting metric for
-    multibranch projects that only reports the health of the "primary"
-    branch (as reported by the SCM)
+    Add a health reporting metric for multibranch projects that only reports the health of the "primary" branch (as
+    reported by the SCM)
 -   [JENKINS-56917](https://issues.jenkins-ci.org/browse/JENKINS-56917) -
-    Getting issue details... STATUS  Adds an extension point for
-    organization folders that enabled the customization of the children
-    of the organization folder on every organization folder scan. There
-    are three implementations provided:  
+    Adds an extension point for organization folders that enabled the customization of the children of the organization
+    folder on every organization folder scan. There are three implementations provided:
     -   Child Health metrics which allows controlling the health metrics
         that the child multibranch projects will use. Previous behaviour
         was to always configure just the default health metrics relevant
@@ -107,7 +98,6 @@ Apr 4, 2019
 
 -   Set the revision even if the build does not happen. Enabling  
     [JENKINS-38552](https://issues.jenkins-ci.org/browse/JENKINS-38552) -
-    Getting issue details... STATUS
 -   Migrated Chinese localization into localization-zh-cn
 -   Updated some test dependencies
 
@@ -115,9 +105,7 @@ Apr 4, 2019
 Mar 21, 2019
 
 -   [JENKINS-56658](https://issues.jenkins-ci.org/browse/JENKINS-56658) -
-    Getting issue details... STATUS  Changed API for BranchBuildStrategy
-    to provide strategies with access to the task listener.  
-    Impact assessment:
+    Changed API for BranchBuildStrategy to provide strategies with access to the task listener. Impact assessment:
     -   Change is binary compatible. At run-time plugins implementing
         the older API will be transparently detected and the legacy API
         methods invoked as appropriate. 
@@ -126,41 +114,35 @@ Mar 21, 2019
         when they update their compile time dependency on branch-api to
         2.2.0
 -   [JENKINS-54968](https://issues.jenkins-ci.org/browse/JENKINS-54968) -
-    Getting issue details... STATUS  “path sanitization ineffective when
-    using legacy Workspace Root Directory” ending in slash 
+    “path sanitization ineffective when using legacy Workspace Root Directory” ending in slash 
 
 ## 2.1.2
 Dec 6, 2018
 
 -   [JENKINS-54654](https://issues.jenkins-ci.org/browse/JENKINS-54654) -
-    Getting issue details... STATUS
 
 ## 2.1.1
 Nov 19, 2018
 
 -   [JENKINS-54640](https://issues.jenkins-ci.org/browse/JENKINS-54640) -
-    Getting issue details... STATUS Index collision check was not
-    working
+    Index collision check was not working
 
 ## 2.1.0
 Nov 16, 2018
 
 -   [JENKINS-47859](https://issues.jenkins-ci.org/browse/JENKINS-47859) -
-    Getting issue details... STATUS  Migrate "Automatic branch project
-    triggering » Branch names to build automatically" hack to the branch
+    Migrate "Automatic branch project triggering » Branch names to build automatically" hack to the branch
     build strategy implementation
 
 ## 2.0.21
 Nov 9, 2018
 
--   [JENKINS-2111](https://issues.jenkins-ci.org/browse/JENKINS-2111) -
-    Getting issue details... STATUS [JENKINS-34564](https://issues.jenkins-ci.org/browse/JENKINS-34564) -
-    Getting issue details... STATUS [JENKINS-30148](https://issues.jenkins-ci.org/browse/JENKINS-30148) -
-    Getting issue details... STATUS [JENKINS-38706](https://issues.jenkins-ci.org/browse/JENKINS-38706) -
-    Getting issue details... STATUS [JENKINS-22240](https://issues.jenkins-ci.org/browse/JENKINS-22240) -
-    Getting issue details... STATUS Managed workspace indices
--   [JENKINS-50561](https://issues.jenkins-ci.org/browse/JENKINS-50561) -
-    Getting issue details... STATUS  Added rateLimitBuilds symbol
+-   [JENKINS-2111](https://issues.jenkins-ci.org/browse/JENKINS-2111),
+    [JENKINS-34564](https://issues.jenkins-ci.org/browse/JENKINS-34564),
+    [JENKINS-30148](https://issues.jenkins-ci.org/browse/JENKINS-30148),
+    [JENKINS-38706](https://issues.jenkins-ci.org/browse/JENKINS-38706),
+    [JENKINS-22240](https://issues.jenkins-ci.org/browse/JENKINS-22240) - Managed workspace indices
+-   [JENKINS-50561](https://issues.jenkins-ci.org/browse/JENKINS-50561) - Added rateLimitBuilds symbol
 -   Code cleanup
 
 ## 2.0.20.1
@@ -171,8 +153,7 @@ Nov 15, 2018
 ## 2.0.20
 Apr 20, 2018
 
--   [JENKINS-50777](https://issues.jenkins-ci.org/browse/JENKINS-50777) -
-    Getting issue details... STATUS
+-   [JENKINS-50777](https://issues.jenkins-ci.org/browse/JENKINS-50777)
 
 ## 2.0.19
 Apr 5, 2018
@@ -182,8 +163,7 @@ Apr 5, 2018
 ## 2.0.18
 Jan 10, 2018
 
--   [JENKINS-48890](https://issues.jenkins-ci.org/browse/JENKINS-48890) -
-    Getting issue details... STATUS
+-   [JENKINS-48890](https://issues.jenkins-ci.org/browse/JENKINS-48890)
 
 ## 2.0.17
 Jan 2, 2018
