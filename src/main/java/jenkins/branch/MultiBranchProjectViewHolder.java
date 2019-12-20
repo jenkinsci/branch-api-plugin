@@ -93,7 +93,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
     @NonNull
     @Override
     public synchronized List<View> getViews() {
-        if (owner.getItems().isEmpty()) {
+        if (!owner.hasVisibleItems()) {
             // when there are no branches nor pull requests to show, switch to the special welcome view
             return Collections.singletonList(owner.getWelcomeView());
         }
@@ -123,7 +123,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      */
     @Override
     public synchronized String getPrimaryView() {
-        if (owner.getItems().isEmpty()) {
+        if (!owner.hasVisibleItems()) {
             // when there are no branches nor pull requests to show, switch to the special welcome view
             return BaseEmptyView.VIEW_NAME;
         }
