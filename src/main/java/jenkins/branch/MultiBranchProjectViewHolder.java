@@ -74,7 +74,6 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
     /**
      * The primary view name.
      */
-    @GuardedBy("this")
     private transient String primaryView = null;
 
     /**
@@ -97,20 +96,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
             // when there are no branches nor pull requests to show, switch to the special welcome view
             return Collections.singletonList(owner.getWelcomeView());
         }
-        if (views == null) {
-            synchronized(this) {
-                if (views == null) {
-                    List<View> views = new ArrayList<>();
-                    for (SCMHeadCategory c : SCMHeadCategory.collectAndSimplify(owner.getSCMSources()).values()) {
-                        views.add(new ViewImpl(owner, c));
-                        if (c.isUncategorized()) {
-                            primaryView = c.getName();
-                        }
-                    }
-                    this.views = views;
-                }
-            }
-        }
+        ensureViews();
         return views;
     }
 
@@ -131,9 +117,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
             // when there are no branches nor pull requests to show, switch to the special welcome view
             return BaseEmptyView.VIEW_NAME;
         }
-        if (primaryView == null) {
-            getViews(); // will set primaryView for us
-        }
+        ensureViews();
         return primaryView;
     }
 
@@ -143,6 +127,26 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
     @Override
     public void setPrimaryView(@CheckForNull String name) {
         // ignore
+    }
+
+    /**
+     * Initialize views and primaryView
+     */
+    private void ensureViews() {
+        if (views == null) {
+            synchronized(this) {
+                if (views == null) {
+                    List<View> views = new ArrayList<>();
+                    for (SCMHeadCategory c : SCMHeadCategory.collectAndSimplify(owner.getSCMSources()).values()) {
+                        views.add(new ViewImpl(owner, c));
+                        if (c.isUncategorized()) {
+                            primaryView = c.getName();
+                        }
+                    }
+                    this.views = views;
+                }
+            }
+        }
     }
 
     /**
