@@ -27,6 +27,7 @@ package jenkins.branch;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.ListView;
@@ -69,10 +70,12 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
     /**
      * The list of {@link View}s.
      */
+    @GuardedBy("this")
     private transient volatile List<View> views = null;
     /**
      * The primary view name.
      */
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "Only need to synchronize initialization")
     private transient String primaryView = null;
 
     /**
