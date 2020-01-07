@@ -70,7 +70,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      * The list of {@link View}s.
      */
     @GuardedBy("this")
-    private transient List<View> views = null;
+    private transient volatile List<View> views = null;
     /**
      * The primary view name.
      */
@@ -92,20 +92,24 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      */
     @NonNull
     @Override
-    public synchronized List<View> getViews() {
+    public List<View> getViews() {
         if (owner.getItems().isEmpty()) {
             // when there are no branches nor pull requests to show, switch to the special welcome view
             return Collections.singletonList(owner.getWelcomeView());
         }
         if (views == null) {
-            List<View> views = new ArrayList<>();
-            for (SCMHeadCategory c : SCMHeadCategory.collectAndSimplify(owner.getSCMSources()).values()) {
-                views.add(new ViewImpl(owner, c));
-                if (c.isUncategorized()) {
-                    primaryView = c.getName();
+            synchronized(this) {
+                if (views == null) {
+                    List<View> views = new ArrayList<>();
+                    for (SCMHeadCategory c : SCMHeadCategory.collectAndSimplify(owner.getSCMSources()).values()) {
+                        views.add(new ViewImpl(owner, c));
+                        if (c.isUncategorized()) {
+                            primaryView = c.getName();
+                        }
+                    }
+                    this.views = views;
                 }
             }
-            this.views = views;
         }
         return views;
     }
@@ -122,7 +126,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      * {@inheritDoc}
      */
     @Override
-    public synchronized String getPrimaryView() {
+    public String getPrimaryView() {
         if (owner.getItems().isEmpty()) {
             // when there are no branches nor pull requests to show, switch to the special welcome view
             return BaseEmptyView.VIEW_NAME;
