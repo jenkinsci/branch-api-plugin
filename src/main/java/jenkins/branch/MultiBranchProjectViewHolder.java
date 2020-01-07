@@ -69,7 +69,6 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
     /**
      * The list of {@link View}s.
      */
-    @GuardedBy("this")
     private transient volatile List<View> views = null;
     /**
      * The primary view name.
