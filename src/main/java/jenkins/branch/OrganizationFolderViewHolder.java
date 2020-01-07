@@ -27,6 +27,7 @@ package jenkins.branch;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.ListView;
 import hudson.model.View;
@@ -68,11 +69,11 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
      * The list of {@link View}s.
      */
     @GuardedBy("this")
-    private transient List<View> views = null;
+    private transient volatile List<View> views = null;
     /**
      * The primary view name.
      */
-    @GuardedBy("this")
+    @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification = "Only need to synchronize initialization")
     private transient String primaryView = null;
 
     /**
@@ -90,17 +91,8 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
      */
     @NonNull
     @Override
-    public synchronized List<View> getViews() {
-        if (views == null) {
-            List<View> views = new ArrayList<>();
-            for (SCMSourceCategory c : SCMSourceCategory.collectAndSimplify(owner.getNavigators()).values()) {
-                views.add(new ViewImpl(owner, c));
-                if (c.isUncategorized()) {
-                    primaryView = c.getName();
-                }
-            }
-            this.views = views;
-        }
+    public List<View> getViews() {
+        ensureViews();
         return views;
     }
 
@@ -116,11 +108,29 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
      * {@inheritDoc}
      */
     @Override
-    public synchronized String getPrimaryView() {
-        if (primaryView == null) {
-            getViews(); // will set primaryView for us
-        }
+    public String getPrimaryView() {
+        ensureViews();
         return primaryView;
+    }
+
+    /**
+     * Initialize views and primaryView
+     */
+    private void ensureViews() {
+        if (views == null) {
+            synchronized(this) {
+                if (views == null) {
+                    List<View> views = new ArrayList<>();
+                    for (SCMSourceCategory c : SCMSourceCategory.collectAndSimplify(owner.getNavigators()).values()) {
+                        views.add(new ViewImpl(owner, c));
+                        if (c.isUncategorized()) {
+                            primaryView = c.getName();
+                        }
+                    }
+                    this.views = views;
+                }
+            }
+        }
     }
 
     /**
