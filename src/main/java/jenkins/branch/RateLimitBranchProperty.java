@@ -200,7 +200,7 @@ public class RateLimitBranchProperty extends BranchProperty {
          */
         @SuppressWarnings("unused") // by stapler
         public ListBoxModel doFillDurationNameItems() {
-            return Jenkins.getActiveInstance().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
+            return Jenkins.get().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
                     .doFillDurationNameItems();
         }
 
@@ -212,7 +212,7 @@ public class RateLimitBranchProperty extends BranchProperty {
          * @return the form validation.
          */
         public FormValidation doCheckCount(@QueryParameter int value, @QueryParameter String durationName) {
-            return Jenkins.getActiveInstance().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
+            return Jenkins.get().getDescriptorByType(JobPropertyImpl.DescriptorImpl.class)
                     .doCheckCount(value, durationName);
         }
     }
@@ -529,7 +529,7 @@ public class RateLimitBranchProperty extends BranchProperty {
                         }
                     }
                     // ensure items leave the queue in the order they were scheduled
-                    List<Queue.Item> items = Jenkins.getActiveInstance().getQueue().getItems(item.task);
+                    List<Queue.Item> items = Jenkins.get().getQueue().getItems(item.task);
                     if (items.size() == 1 && item == items.get(0)) {
                         return null;
                     }

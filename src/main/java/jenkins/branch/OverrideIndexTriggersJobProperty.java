@@ -79,7 +79,7 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
     @Extension
     public static class Dispatcher extends Queue.QueueDecisionHandler {
 
-        @SuppressWarnings({"unchecked", "rawtypes"}) // untypable
+        @SuppressWarnings("rawtypes") // untypable
         @Override
         public boolean shouldSchedule(Queue.Task p, List<Action> actions) {
             for (Action action : actions) {

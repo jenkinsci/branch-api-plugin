@@ -597,7 +597,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 try {
                     sourceActions.put(source.getId(), source.fetchActions(null, listener));
                 } catch (IOException | InterruptedException | RuntimeException e) {
-                    printStackTrace(e, listener.error("[%tc] Could not update folder level actions from source %s",
+                    Functions.printStackTrace(e, listener.error("[%tc] Could not update folder level actions from source %s",
                             System.currentTimeMillis(), source.getId()));
                     throw e;
                 }
@@ -618,7 +618,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     try {
                         bc.commit();
                     } catch (IOException | RuntimeException e) {
-                        printStackTrace(e, listener.error("[%tc] Could not persist folder level actions",
+                        Functions.printStackTrace(e, listener.error("[%tc] Could not persist folder level actions",
                                 System.currentTimeMillis()));
                         throw e;
                     }
@@ -626,7 +626,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         try {
                             save();
                         } catch (IOException | RuntimeException e) {
-                            printStackTrace(e, listener.error(
+                            Functions.printStackTrace(e, listener.error(
                                     "[%tc] Could not persist folder level configuration changes",
                                     System.currentTimeMillis()));
                             throw e;
@@ -641,7 +641,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     source.fetch(new SCMHeadObserverImpl(source, observer, listener, _factory,
                             new IndexingCauseFactory(), null), listener);
                 } catch (IOException | InterruptedException | RuntimeException e) {
-                    printStackTrace(e, listener.error("[%tc] Could not fetch branches from source %s",
+                    Functions.printStackTrace(e, listener.error("[%tc] Could not fetch branches from source %s",
                             System.currentTimeMillis(), source.getId()));
                     throw e;
                 }
@@ -693,7 +693,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             try {
                 factory.setRevisionHash(item, revision);
             } catch (IOException e) {
-                printStackTrace(e, listener.error("Could not update last revision hash"));
+                Functions.printStackTrace(e, listener.error("Could not update last revision hash"));
             }
         } else {
             listener.getLogger().println("Did not schedule build for branch: " + name);
@@ -1115,7 +1115,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         private final EventOutputStreams globalEvents = createGlobalEvents();
 
         private EventOutputStreams createGlobalEvents() {
-            File logsDir = new File(Jenkins.getActiveInstance().getRootDir(), "logs");
+            File logsDir = new File(Jenkins.get().getRootDir(), "logs");
             if (!logsDir.isDirectory() && !logsDir.mkdirs()) {
                 LOGGER.log(Level.WARNING, "Could not create logs directory: {0}", logsDir);
             }
@@ -1198,7 +1198,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         );
                     }
                 } catch (InterruptedException e) {
-                    printStackTrace(e, global.error("[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
+                    Functions.printStackTrace(e, global.error("[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
                             System.currentTimeMillis(), eventDescription, eventType, eventOrigin, eventTimestamp));
                 }
                 global.getLogger()
@@ -1214,7 +1214,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                       String eventType, String eventOrigin, long eventTimestamp, int matchCount)
                 throws IOException, InterruptedException {
             Set<String> sourceIds = new HashSet<>();
-            for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
+            for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
                 if (!p.isBuildable()) {
                     LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
@@ -1358,9 +1358,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 }
                             }
                         } catch (IOException e) {
-                            printStackTrace(e, listener.error(e.getMessage()));
+                            Functions.printStackTrace(e, listener.error(e.getMessage()));
                         } catch (InterruptedException e) {
-                            printStackTrace(e, listener.error(e.getMessage()));
+                            Functions.printStackTrace(e, listener.error(e.getMessage()));
                             throw e;
                         } finally {
                             long end = System.currentTimeMillis();
@@ -1370,10 +1370,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                             Util.getTimeSpanString(end - start));
                         }
                     } catch (IOException e) {
-                        printStackTrace(e, global.error("[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
+                        Functions.printStackTrace(e, global.error("[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp));
                     } catch (InterruptedException e) {
-                        printStackTrace(e, global.error("[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
+                        Functions.printStackTrace(e, global.error("[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp));
                         throw e;
                     }
@@ -1389,7 +1389,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             Set<String> candidateNames = new HashSet<>();
             Map<SCMSource, Map<SCMHead,SCMRevision>> revisionMaps = new IdentityHashMap<>();
             Set<Job<?, ?>> jobs = new HashSet<>();
-            for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
+            for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
                 if (!p.isBuildable()) {
                     LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
@@ -1626,9 +1626,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 j.save();
                             }
                         } catch (IOException e) {
-                            printStackTrace(e, listener.error(e.getMessage()));
+                            Functions.printStackTrace(e, listener.error(e.getMessage()));
                         } catch (InterruptedException e) {
-                            printStackTrace(e, listener.error(e.getMessage()));
+                            Functions.printStackTrace(e, listener.error(e.getMessage()));
                             throw e;
                         } finally {
                             long end = System.currentTimeMillis();
@@ -1638,12 +1638,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                             Util.getTimeSpanString(end - start));
                         }
                     } catch (IOException e) {
-                        printStackTrace(e, global.error(
+                        Functions.printStackTrace(e, global.error(
                                 "[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
                                 eventOrigin, eventTimestamp));
                     } catch (InterruptedException e) {
-                        printStackTrace(e, global.error(
+                        Functions.printStackTrace(e, global.error(
                                 "[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
                                 eventOrigin, eventTimestamp));
@@ -1694,9 +1694,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     }
                                 }
                             } catch (IOException e) {
-                                printStackTrace(e, listener.error(e.getMessage()));
+                                Functions.printStackTrace(e, listener.error(e.getMessage()));
                             } catch (InterruptedException e) {
-                                printStackTrace(e, listener.error(e.getMessage()));
+                                Functions.printStackTrace(e, listener.error(e.getMessage()));
                                 throw e;
                             } finally {
                                 long end = System.currentTimeMillis();
@@ -1706,13 +1706,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                         Util.getTimeSpanString(end - start));
                             }
                         } catch (IOException e) {
-                            printStackTrace(e, global.error(
+                            Functions.printStackTrace(e, global.error(
                                     "[%tc] %s encountered an error while processing %s %s event from %s with "
                                             + "timestamp %tc",
                                     System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
                                     eventOrigin, eventTimestamp));
                         } catch (InterruptedException e) {
-                            printStackTrace(e, global.error(
+                            Functions.printStackTrace(e, global.error(
                                     "[%tc] %s was interrupted while processing %s %s event from %s with "
                                             + "timestamp %tc",
                                     System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
@@ -1741,7 +1741,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 if (SCMEvent.Type.UPDATED == event.getType()) {
                     // we are only interested in updates as they would trigger the actions being updated
                     try {
-                        for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance()
+                        for (MultiBranchProject<?, ?> p : Jenkins.get()
                                 .getAllItems(MultiBranchProject.class)) {
                             if (!p.isBuildable()) {
                                 if (LOGGER.isLoggable(Level.FINER)) {
@@ -1775,7 +1775,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                             try {
                                                 newActions = source.fetchActions(event, listener);
                                             } catch (IOException e) {
-                                                printStackTrace(e,
+                                                Functions.printStackTrace(e,
                                                         listener.error("Could not refresh actions for source %s",
                                                                 source.getId()
                                                         ));
@@ -1810,20 +1810,20 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                             }
                                         }
                                     } catch (IOException e) {
-                                        printStackTrace(e, listener.error(e.getMessage()));
+                                        Functions.printStackTrace(e, listener.error(e.getMessage()));
                                     } catch (InterruptedException e) {
-                                        printStackTrace(e, listener.error(e.getMessage()));
+                                        Functions.printStackTrace(e, listener.error(e.getMessage()));
                                         throw e;
                                     }
                                 } catch (IOException e) {
-                                    printStackTrace(e, global.error(
+                                    Functions.printStackTrace(e, global.error(
                                             "[%tc] %s encountered an error while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
                                             eventDescription, event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
-                                    printStackTrace(e, global.error(
+                                    Functions.printStackTrace(e, global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
@@ -1834,7 +1834,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             }
                         }
                     } catch (InterruptedException e) {
-                        printStackTrace(e, global.error(
+                        Functions.printStackTrace(e, global.error(
                                 "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), eventDescription, event.getType().name(),
                                 event.getOrigin(), event.getTimestamp()));
@@ -2039,7 +2039,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     project.save();
                 }
             } catch (IOException e) {
-                printStackTrace(e, listener.error("Could not save changes to " + rawName));
+                Functions.printStackTrace(e, listener.error("Could not save changes to " + rawName));
             }
         }
 
@@ -2118,7 +2118,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 List<Action> actions = source.fetchActions(revision, event, listener);
                 revisionActions = actions.toArray(new Action[actions.size()]);
             } catch (IOException | InterruptedException e) {
-                printStackTrace(e, listener.error("Could not fetch metadata for revision %s of branch %s",
+                Functions.printStackTrace(e, listener.error("Could not fetch metadata for revision %s of branch %s",
                         revision, rawName));
             }
             return revisionActions;
@@ -2128,7 +2128,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             try {
                 branch.setActions(source.fetchActions(head, event, listener));
             } catch (IOException | InterruptedException e) {
-                printStackTrace(e, listener.error("Could not fetch metadata of branch %s", branch.getName()));
+                Functions.printStackTrace(e, listener.error("Could not fetch metadata of branch %s", branch.getName()));
                 if (origBranch != null) {
                     // we didn't fetch them so replicate previous actions
                     branch.setActions(origBranch.getActions());
@@ -2193,7 +2193,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 try {
                     _factory.setLastSeenRevisionHash(project, scmLastBuiltRevision);
                 } catch (IOException e) {
-                    printStackTrace(e, listener.error("Could not update last seen revision hash"));
+                    Functions.printStackTrace(e, listener.error("Could not update last seen revision hash"));
                 }
             }
             return scmLastSeenRevision;
@@ -2216,7 +2216,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             try {
                 _factory.setLastSeenRevisionHash(project, revision);
             } catch (IOException e) {
-                printStackTrace(e, listener.error("Could not update last seen revision hash"));
+                Functions.printStackTrace(e, listener.error("Could not update last seen revision hash"));
             }
         }
 
@@ -2374,10 +2374,4 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
     }
-
-    // TODO pending method in Functions in 2.43+
-    static void printStackTrace(@CheckForNull Throwable t, @NonNull PrintWriter pw) {
-        pw.println(Functions.printThrowable(t).trim());
-    }
-
 }

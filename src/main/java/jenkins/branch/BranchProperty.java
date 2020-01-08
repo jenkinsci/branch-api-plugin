@@ -56,7 +56,7 @@ public abstract class BranchProperty extends AbstractDescribableImpl<BranchPrope
      * {@link AbstractProject} and {@link AbstractBuild}.
      */
     @CheckForNull
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings("rawtypes")
     @Deprecated
     public final ProjectDecorator decorator(AbstractProject project) {
         return decorator(project.getClass());

@@ -43,7 +43,7 @@ public class BaseEmptyView extends View {
     @Override
     public boolean isDefault() {
         // TODO might be better for the base implementation in View to be written this way rather than using ==
-        return equals(getOwnerPrimaryView());
+        return equals(owner.getPrimaryView());
     }
 
     /**
