@@ -533,6 +533,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             synchronized (node) {
                 Map<String, String> index = load(workspace);
                 boolean modified = false;
+                int failures = 0;
                 try (ACLContext as = ACL.as(ACL.SYSTEM)) {
                     Iterator<Map.Entry<String, String>> it = index.entrySet().iterator();
                     while (it.hasNext()) {
@@ -551,9 +552,14 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                                     } catch (IOException x) {
                                         LOGGER.log(Level.WARNING, "could not delete workspace " + child, x);
                                         listener.getLogger().println("could not delete workspace " + child + " , wrong file ownership? Review exception in jenkins log and manually remove the directory");
+                                        failures++;
                                     }
                                 }
                             }
+                        }
+                        if (failures >= 3) {
+                            LOGGER.warning("Multiple failures when cleaning up workspaces on " + node.getDisplayName() + " aborting cleanup...");
+                            break;
                         }
                     }
                 }
