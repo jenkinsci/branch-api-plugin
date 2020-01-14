@@ -600,7 +600,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      */
     @Override
     public View getPrimaryView() {
-        if (getItems().isEmpty()) {
+        if (!hasVisibleItems()) {
             return getWelcomeView();
         }
         return super.getPrimaryView();
