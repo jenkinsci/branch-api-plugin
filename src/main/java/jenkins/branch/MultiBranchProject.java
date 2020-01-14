@@ -563,19 +563,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * Check if there are any visible items in this project
-     * @return true if there are visible items false otherwise
-     */
-    public boolean hasVisibleItems() {
-        for (P item : items.values()) {
-            if (item.hasPermission(Item.READ)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
