@@ -148,7 +148,6 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      *
      * @return the {@link #clazz}
      */
-    @SuppressWarnings("unchecked")
     @NonNull
     public Class<? extends MultiBranchProject> getClazz() {
         return clazz.asSubclass(MultiBranchProject.class);

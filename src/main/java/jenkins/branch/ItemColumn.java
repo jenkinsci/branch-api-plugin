@@ -31,6 +31,7 @@ import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import hudson.views.JobColumn;
 import hudson.views.ListViewColumn;
 import hudson.views.ListViewColumnDescriptor;
@@ -73,6 +74,7 @@ public class ItemColumn extends ListViewColumn {
      * @param item the item.
      * @return {@code true} if and only if the item is orphaned.
      */
+    @SuppressWarnings("rawtypes")
     public boolean isOrphaned(Object item) {
         if (item instanceof Job) {
             Job job = (Job) item;
@@ -85,8 +87,7 @@ public class ItemColumn extends ListViewColumn {
         if (item instanceof MultiBranchProject) {
             MultiBranchProject<?,?> project = (MultiBranchProject<?,?>) item;
             BranchProjectFactory factory = project.getProjectFactory();
-            SecurityContext ctx = ACL.impersonate(ACL.SYSTEM);
-            try {
+            try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
                 for (Job c: project.getItems()) {
                     if (factory.isProject(c) && !(factory.getBranch(c) instanceof Branch.Dead)) {
                         // if we have at least one not-dead branch then the project is alive
@@ -95,8 +96,6 @@ public class ItemColumn extends ListViewColumn {
                 }
                 // if we have no child projects or all child projects are dead, then the project is dead
                 return true;
-            } finally {
-                SecurityContextHolder.setContext(ctx);
             }
         }
         return false;
