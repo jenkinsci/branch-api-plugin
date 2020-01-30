@@ -27,6 +27,7 @@ package jenkins.branch;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.ListView;
@@ -70,12 +71,12 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      * The list of {@link View}s.
      */
     @GuardedBy("this")
-    private transient List<View> views = null;
+    private transient volatile List<View> views = null;
     /**
      * The primary view name.
      */
     @GuardedBy("this")
-    private transient String primaryView = null;
+    private transient volatile String primaryView = null;
 
     /**
      * Constructor.
@@ -92,21 +93,12 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      */
     @NonNull
     @Override
-    public synchronized List<View> getViews() {
+    public List<View> getViews() {
         if (owner.getItems().isEmpty()) {
             // when there are no branches nor pull requests to show, switch to the special welcome view
             return Collections.singletonList(owner.getWelcomeView());
         }
-        if (views == null) {
-            List<View> views = new ArrayList<>();
-            for (SCMHeadCategory c : SCMHeadCategory.collectAndSimplify(owner.getSCMSources()).values()) {
-                views.add(new ViewImpl(owner, c));
-                if (c.isUncategorized()) {
-                    primaryView = c.getName();
-                }
-            }
-            this.views = views;
-        }
+        ensureViews();
         return views;
     }
 
@@ -122,14 +114,12 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      * {@inheritDoc}
      */
     @Override
-    public synchronized String getPrimaryView() {
+    public String getPrimaryView() {
         if (owner.getItems().isEmpty()) {
             // when there are no branches nor pull requests to show, switch to the special welcome view
             return BaseEmptyView.VIEW_NAME;
         }
-        if (primaryView == null) {
-            getViews(); // will set primaryView for us
-        }
+        ensureViews();
         return primaryView;
     }
 
@@ -139,6 +129,26 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
     @Override
     public void setPrimaryView(@CheckForNull String name) {
         // ignore
+    }
+
+    /**
+     * Initialize views and primaryView
+     */
+    private void ensureViews() {
+        if (views == null) {
+            synchronized(this) {
+                if (views == null) {
+                    List<View> views = new ArrayList<>();
+                    for (SCMHeadCategory c : SCMHeadCategory.collectAndSimplify(owner.getSCMSources()).values()) {
+                        views.add(new ViewImpl(owner, c));
+                        if (c.isUncategorized()) {
+                            primaryView = c.getName();
+                        }
+                    }
+                    this.views = views;
+                }
+            }
+        }
     }
 
     /**
