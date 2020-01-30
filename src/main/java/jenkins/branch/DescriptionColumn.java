@@ -92,7 +92,7 @@ public class DescriptionColumn extends ListViewColumn {
         }
         if (job instanceof Job) {
             // when the description comes from the job configuration, assume user provided and use markup formatter
-            return Jenkins.getActiveInstance().getMarkupFormatter().translate(((Job) job).getDescription());
+            return Jenkins.get().getMarkupFormatter().translate(((Job) job).getDescription());
         } else {
             return "";
         }

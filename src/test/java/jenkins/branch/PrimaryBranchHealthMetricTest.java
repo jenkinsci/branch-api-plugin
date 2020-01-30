@@ -3,7 +3,6 @@ package jenkins.branch;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.FreeStyleProject;
-import hudson.model.HealthReport;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProject;
 import java.util.Collections;
@@ -16,7 +15,6 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;

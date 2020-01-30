@@ -68,7 +68,6 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @throws InterruptedException if interrupted.
      * @throws IOException if there was an IO error.
      */
-    @SuppressWarnings("deprecation")
     public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name,
                               @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String, Object> attributes,
                               @NonNull TaskListener listener) throws IOException, InterruptedException {
@@ -123,7 +122,6 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
      * @throws IOException if there was an IO error.
      */
     @NonNull
-    @SuppressWarnings("deprecation")
     public MultiBranchProject<?, ?> createNewProject(@NonNull ItemGroup<?> parent, @NonNull String name,
                                                      @NonNull List<? extends SCMSource> scmSources,
                                                      @NonNull Map<String, Object> attributes,

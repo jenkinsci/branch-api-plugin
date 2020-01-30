@@ -30,8 +30,6 @@ import hudson.BulkChange;
 import hudson.Functions;
 import hudson.model.TaskListener;
 import java.io.IOException;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * A {@link AbstractFolderProperty} that is specific to {@link OrganizationFolder}s.

@@ -340,7 +340,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 return;
             }
             TopLevelItem tli = (TopLevelItem) item;
-            Jenkins jenkins = Jenkins.getActiveInstance();
+            Jenkins jenkins = Jenkins.get();
             Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
             for (Node node : jenkins.getNodes()) {
                 Computer.threadPoolForRemoting.submit(new CleanupTask(tli, node));

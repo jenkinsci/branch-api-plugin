@@ -116,6 +116,8 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.export.Exported;
 
+import static hudson.Functions.printStackTrace;
+
 /**
  * Abstract base class for multiple-branch based projects.
  *
@@ -1115,7 +1117,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         private final EventOutputStreams globalEvents = createGlobalEvents();
 
         private EventOutputStreams createGlobalEvents() {
-            File logsDir = new File(Jenkins.getActiveInstance().getRootDir(), "logs");
+            File logsDir = new File(Jenkins.get().getRootDir(), "logs");
             if (!logsDir.isDirectory() && !logsDir.mkdirs()) {
                 LOGGER.log(Level.WARNING, "Could not create logs directory: {0}", logsDir);
             }
@@ -1214,7 +1216,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                       String eventType, String eventOrigin, long eventTimestamp, int matchCount)
                 throws IOException, InterruptedException {
             Set<String> sourceIds = new HashSet<>();
-            for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
+            for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
                 if (!p.isBuildable()) {
                     LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
@@ -1389,7 +1391,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             Set<String> candidateNames = new HashSet<>();
             Map<SCMSource, Map<SCMHead,SCMRevision>> revisionMaps = new IdentityHashMap<>();
             Set<Job<?, ?>> jobs = new HashSet<>();
-            for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance().getAllItems(MultiBranchProject.class)) {
+            for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
                 if (!p.isBuildable()) {
                     LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
@@ -1741,7 +1743,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 if (SCMEvent.Type.UPDATED == event.getType()) {
                     // we are only interested in updates as they would trigger the actions being updated
                     try {
-                        for (MultiBranchProject<?, ?> p : Jenkins.getActiveInstance()
+                        for (MultiBranchProject<?, ?> p : Jenkins.get()
                                 .getAllItems(MultiBranchProject.class)) {
                             if (!p.isBuildable()) {
                                 if (LOGGER.isLoggable(Level.FINER)) {
@@ -2374,10 +2376,4 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
     }
-
-    // TODO pending method in Functions in 2.43+
-    static void printStackTrace(@CheckForNull Throwable t, @NonNull PrintWriter pw) {
-        pw.println(Functions.printThrowable(t).trim());
-    }
-
 }

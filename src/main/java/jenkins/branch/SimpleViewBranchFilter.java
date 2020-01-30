@@ -25,10 +25,10 @@ public abstract class SimpleViewBranchFilter extends ViewJobFilter {
     /**
      * {@inheritDoc}
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
     public final List<TopLevelItem> filter(List<TopLevelItem> added, List<TopLevelItem> all, View filteringView) {
-        ItemGroup<? extends TopLevelItem> itemGroup = filteringView.getOwnerItemGroup();
+        ItemGroup<? extends TopLevelItem> itemGroup = filteringView.getOwner().getItemGroup();
         if (itemGroup instanceof MultiBranchProject) {
             // fast path
             MultiBranchProject project = (MultiBranchProject) itemGroup;
