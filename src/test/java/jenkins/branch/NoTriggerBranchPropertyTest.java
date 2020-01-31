@@ -33,8 +33,13 @@ import hudson.model.queue.QueueTaskFuture;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.plugins.git.traits.BranchDiscoveryTrait;
+
 import org.junit.Test;
 import static org.junit.Assert.*;
+
+import java.util.Collections;
+
 import org.junit.Rule;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -59,7 +64,9 @@ public class NoTriggerBranchPropertyTest {
         sampleRepo.git("add", "server");
         sampleRepo.git("commit", "--all", "--message=release");
         MultiBranchImpl stuff = r.jenkins.createProject(MultiBranchImpl.class, "stuff");
-        BranchSource branchSource = new BranchSource(new GitSCMSource(sampleRepo.toString()));
+        GitSCMSource source = new GitSCMSource(sampleRepo.toString());
+        source.setTraits(Collections.singletonList(new BranchDiscoveryTrait()));
+        BranchSource branchSource = new BranchSource(source);
         branchSource.setStrategy(new NamedExceptionsBranchPropertyStrategy(new BranchProperty[0], new NamedExceptionsBranchPropertyStrategy.Named[] {
             new NamedExceptionsBranchPropertyStrategy.Named("release*", new BranchProperty[] {new NoTriggerBranchProperty()})
         }));

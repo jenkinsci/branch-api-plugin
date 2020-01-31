@@ -31,6 +31,7 @@ import java.util.Collections;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.plugins.git.traits.BranchDiscoveryTrait;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMNavigator;
 import static org.junit.Assert.assertEquals;
@@ -67,7 +68,9 @@ public class NoTriggerOrganizationFolderPropertyTest {
         assertEquals(".*", prop.getBranches());
         top.getProperties().replace(new NoTriggerOrganizationFolderProperty("(?!release.*).*"));
         top.getProjectFactories().add(new OrganizationFolderTest.MockFactory());
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new GitSCMSource(sampleRepo.toString()))));
+        GitSCMSource source = new GitSCMSource(sampleRepo.toString());
+        source.setTraits(Collections.singletonList(new BranchDiscoveryTrait()));
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.singletonList(source)));
         r.configRoundtrip(top);
         prop = top.getProperties().get(NoTriggerOrganizationFolderProperty.class);
         assertNotNull(prop);
