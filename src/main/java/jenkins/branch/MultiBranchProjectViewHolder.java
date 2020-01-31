@@ -27,7 +27,6 @@ package jenkins.branch;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.ListView;
@@ -37,6 +36,7 @@ import hudson.model.ViewGroup;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.util.DescribableList;
+import hudson.views.DefaultViewsTabBar;
 import hudson.views.JobColumn;
 import hudson.views.ListViewColumn;
 import hudson.views.StatusColumn;
@@ -166,7 +166,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
     @Override
     public ViewsTabBar getTabBar() {
         if (tabBar == null) {
-            tabBar = new LocalizedViewsTabBar();
+            tabBar = new DefaultViewsTabBar();
         }
         return tabBar;
     }
