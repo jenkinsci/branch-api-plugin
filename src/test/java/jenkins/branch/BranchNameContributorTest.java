@@ -25,9 +25,7 @@
 package jenkins.branch;
 
 import hudson.EnvVars;
-import hudson.model.Computer;
 import hudson.model.EnvironmentContributor;
-import hudson.model.Executor;
 import hudson.model.FreeStyleProject;
 import hudson.model.TopLevelItem;
 import hudson.util.LogTaskListener;
@@ -68,18 +66,6 @@ public class BranchNameContributorTest {
     public void cleanOutAllItems() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
-        }
-        for (Computer comp : r.jenkins.getComputers()) {
-            for (Executor e : comp.getExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
-            for (Executor e : comp.getOneOffExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
         }
     }
 

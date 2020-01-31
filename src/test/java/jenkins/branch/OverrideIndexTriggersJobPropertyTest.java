@@ -62,7 +62,7 @@ public class OverrideIndexTriggersJobPropertyTest {
         sampleRepo.git("add", "server");
         sampleRepo.git("commit", "--all", "--message=release");
         MultiBranchImpl stuff = r.jenkins.createProject(MultiBranchImpl.class, "stuff");
-        BranchSource branchSource = new BranchSource(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false));
+        BranchSource branchSource = new BranchSource(new GitSCMSource(sampleRepo.toString()));
         branchSource.setStrategy(new NamedExceptionsBranchPropertyStrategy(new BranchProperty[0], new NamedExceptionsBranchPropertyStrategy.Named[] {
             new NamedExceptionsBranchPropertyStrategy.Named("release*", new BranchProperty[] {new NoTriggerBranchProperty()})
         }));
@@ -128,7 +128,7 @@ public class OverrideIndexTriggersJobPropertyTest {
         assertEquals(".*", prop.getBranches());
         top.getProperties().replace(new NoTriggerOrganizationFolderProperty("(?!release.*).*"));
         top.getProjectFactories().add(new OrganizationFolderTest.MockFactory());
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false))));
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new GitSCMSource(sampleRepo.toString()))));
         r.configRoundtrip(top);
         prop = top.getProperties().get(NoTriggerOrganizationFolderProperty.class);
         assertNotNull(prop);
@@ -188,7 +188,7 @@ public class OverrideIndexTriggersJobPropertyTest {
         sampleRepo.git("add", "stuff");
         sampleRepo.git("commit", "--all", "--message=master-1");
         MultiBranchImpl stuff = r.jenkins.createProject(MultiBranchImpl.class, "stuff");
-        BranchSource branchSource = new BranchSource(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false));
+        BranchSource branchSource = new BranchSource(new GitSCMSource(sampleRepo.toString()));
         stuff.getSourcesList().add(branchSource);
         r.configRoundtrip(stuff);
         stuff.scheduleBuild2(0).getFuture().get();

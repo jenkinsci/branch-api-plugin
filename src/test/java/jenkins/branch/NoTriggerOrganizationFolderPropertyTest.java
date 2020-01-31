@@ -67,7 +67,7 @@ public class NoTriggerOrganizationFolderPropertyTest {
         assertEquals(".*", prop.getBranches());
         top.getProperties().replace(new NoTriggerOrganizationFolderProperty("(?!release.*).*"));
         top.getProjectFactories().add(new OrganizationFolderTest.MockFactory());
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false))));
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new GitSCMSource(sampleRepo.toString()))));
         r.configRoundtrip(top);
         prop = top.getProperties().get(NoTriggerOrganizationFolderProperty.class);
         assertNotNull(prop);

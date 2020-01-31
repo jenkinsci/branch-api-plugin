@@ -62,18 +62,6 @@ public class OrganizationChildOrphanedItemsPropertyTest {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
-        for (Computer comp : r.jenkins.getComputers()) {
-            for (Executor e : comp.getExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
-            for (Executor e : comp.getOneOffExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
-        }
     }
 
     @Test

@@ -26,8 +26,6 @@ package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetric;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetricDescriptor;
-import hudson.model.Computer;
-import hudson.model.Executor;
 import hudson.model.TopLevelItem;
 import hudson.util.DescribableList;
 import integration.harness.BasicMultiBranchProject;
@@ -65,18 +63,6 @@ public class OrganizationChildHealthMetricsPropertyTest {
     public void cleanOutAllItems() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
-        }
-        for (Computer comp : r.jenkins.getComputers()) {
-            for (Executor e : comp.getExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
-            for (Executor e : comp.getOneOffExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
         }
     }
 

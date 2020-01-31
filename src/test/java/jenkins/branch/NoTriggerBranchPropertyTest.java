@@ -59,7 +59,7 @@ public class NoTriggerBranchPropertyTest {
         sampleRepo.git("add", "server");
         sampleRepo.git("commit", "--all", "--message=release");
         MultiBranchImpl stuff = r.jenkins.createProject(MultiBranchImpl.class, "stuff");
-        BranchSource branchSource = new BranchSource(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false));
+        BranchSource branchSource = new BranchSource(new GitSCMSource(sampleRepo.toString()));
         branchSource.setStrategy(new NamedExceptionsBranchPropertyStrategy(new BranchProperty[0], new NamedExceptionsBranchPropertyStrategy.Named[] {
             new NamedExceptionsBranchPropertyStrategy.Named("release*", new BranchProperty[] {new NoTriggerBranchProperty()})
         }));

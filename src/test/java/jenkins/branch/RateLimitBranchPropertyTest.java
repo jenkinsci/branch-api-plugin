@@ -197,11 +197,12 @@ public class RateLimitBranchPropertyTest {
             assertThat(startCondition.isDone(), is(true));
             // it can take more than the requested delay... that's ok, but it should not be
             // more than 500ms longer (i.e. 5 of our Queue.maintain loops above)
+            final long delay = (long)(60.f * 60.f / rate * 1000);
             assertThat("At least the rate implied delay but no more than 500ms longer",
                     System.currentTimeMillis() - startTime,
                     allOf(
-                            greaterThanOrEqualTo(60 * 60 / rate * 1000L - 200L),
-                            lessThanOrEqualTo(60 * 60 / rate * 1000L * 500L)
+                            greaterThanOrEqualTo(delay - 200L),
+                            lessThanOrEqualTo(delay + 500L)
                     )
             );
             future.get();
@@ -277,7 +278,7 @@ public class RateLimitBranchPropertyTest {
             // will pick up more responsively than the default 5s
             startCondition = future2.getStartCondition();
             long endTime = startTime + 60*60/rate*1000L*5; // at least 5 times the expected delay
-            while (!startCondition.isDone() && System.currentTimeMillis() < midTime) {
+            while (!startCondition.isDone() && System.currentTimeMillis() < endTime) {
                 Queue.getInstance().maintain();
                 Thread.sleep(100);
             }
@@ -286,11 +287,12 @@ public class RateLimitBranchPropertyTest {
             FreeStyleBuild secondBuild = startCondition.get();
             // it can take more than the requested delay... that's ok, but it should not be
             // more than 500ms longer (i.e. 5 of our Queue.maintain loops above)
+            final long delay = (long)(60.f * 60.f / rate * 1000);
             assertThat("At least the rate implied delay but no more than 500ms longer",
                     secondBuild.getStartTimeInMillis() - firstBuild.getStartTimeInMillis(),
                     allOf(
-                            greaterThanOrEqualTo(60 * 60 / rate * 1000L - 200L),
-                            lessThanOrEqualTo(60 * 60 / rate * 1000L * 500L)
+                            greaterThanOrEqualTo(delay - 200L),
+                            lessThanOrEqualTo(delay + 500L)
                     )
             );
             future.get();
