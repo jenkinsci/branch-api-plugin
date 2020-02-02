@@ -25,8 +25,6 @@
 package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
-import hudson.model.Computer;
-import hudson.model.Executor;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;

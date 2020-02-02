@@ -25,8 +25,6 @@
 package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
-import hudson.model.Computer;
-import hudson.model.Executor;
 import hudson.model.TopLevelItem;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
