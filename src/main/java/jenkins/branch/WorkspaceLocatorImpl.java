@@ -549,8 +549,17 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                                     try {
                                         child.deleteRecursive();
                                     } catch (IOException x) {
-                                        LOGGER.log(Level.WARNING, "could not delete workspace " + child, x);
-                                        listener.getLogger().println("could not delete workspace " + child + " , wrong file ownership? Review exception in jenkins log and manually remove the directory");
+                                        //Prevent flooding logs if recursive delete fails
+                                        if (x.getSuppressed().length != 0) {
+                                            IOException e = new IOException(x.getMessage(), x.getCause());
+                                            e.setStackTrace(x.getStackTrace());
+                                            LOGGER.log(Level.WARNING, "could not delete workspace " + child + " on " + node.getNodeName() + " check finer logs for more information", e);
+                                            LOGGER.log(Level.FINE, "could not delete workspace " + child + " on " + node.getNodeName() , x);
+                                        } else {
+                                            LOGGER.log(Level.WARNING, "could not delete workspace " + child + " on " + node.getNodeName(), x);
+                                        }
+                                        listener.getLogger().println("could not delete workspace " + child  + " on " + node.getNodeName()
+                                                                        + " , wrong file ownership? Review exception in jenkins log and manually remove the directory");
                                     }
                                 }
                             }
