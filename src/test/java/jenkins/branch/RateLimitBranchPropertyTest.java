@@ -65,10 +65,10 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.isNotNull;
 
 public class RateLimitBranchPropertyTest {
     /**
@@ -170,7 +170,7 @@ public class RateLimitBranchPropertyTest {
             );
             assertThat(master.isInQueue(), is(false));
             assertThat(master.getQueueItem(), nullValue());
-            assertThat(master.getBuilds().getLastBuild(), isNotNull());
+            assertThat(master.getBuilds().getLastBuild(), notNullValue());
             long startTime = master.getBuilds().getLastBuild().getTimeInMillis();
             QueueTaskFuture<FreeStyleBuild> future = master.scheduleBuild2(0);
 
