@@ -68,6 +68,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.isNotNull;
 
 public class RateLimitBranchPropertyTest {
     /**
@@ -169,13 +170,14 @@ public class RateLimitBranchPropertyTest {
             );
             assertThat(master.isInQueue(), is(false));
             assertThat(master.getQueueItem(), nullValue());
+            assertThat(master.getBuilds().getLastBuild(), isNotNull());
+            long startTime = master.getBuilds().getLastBuild().getTimeInMillis();
             QueueTaskFuture<FreeStyleBuild> future = master.scheduleBuild2(0);
 
             // let the item get added to the queue
             while (!master.isInQueue()) {
                 Thread.yield();
             }
-            long startTime = System.currentTimeMillis();
             assertThat(master.isInQueue(), is(true));
 
             // while it is in the queue, until queue maintenance takes place, it will not be flagged as blocked
@@ -218,7 +220,7 @@ public class RateLimitBranchPropertyTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             BasicParameterDefinitionBranchProperty p = new BasicParameterDefinitionBranchProperty();
-            p.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(new StringParameterDefinition("FOO", "BAR")));
+            p.setParameterDefinitions(Collections.singletonList(new StringParameterDefinition("FOO", "BAR")));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
                     new RateLimitBranchProperty(rate, "hour", false),
                     new ConcurrentBuildBranchProperty(),
@@ -245,7 +247,7 @@ public class RateLimitBranchPropertyTest {
             QueueTaskFuture<FreeStyleBuild> future = master.scheduleBuild2(0);
             QueueTaskFuture<FreeStyleBuild> future2 = master.scheduleBuild2(0, (Cause) null,
                     (Action) new ParametersAction(
-                            Collections.<ParameterValue>singletonList(new StringParameterValue("FOO", "MANCHU"))));
+                            Collections.singletonList(new StringParameterValue("FOO", "MANCHU"))));
             assertThat(future, not(is(future2)));
 
             // let the item get added to the queue
@@ -308,7 +310,7 @@ public class RateLimitBranchPropertyTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             BasicParameterDefinitionBranchProperty p = new BasicParameterDefinitionBranchProperty();
-            p.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(new StringParameterDefinition("FOO", "BAR")));
+            p.setParameterDefinitions(Collections.singletonList(new StringParameterDefinition("FOO", "BAR")));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
                     new RateLimitBranchProperty(1, "hour", true),
                     p
@@ -380,7 +382,7 @@ public class RateLimitBranchPropertyTest {
             // now we trigger a user build... it should skip the queue
             QueueTaskFuture<FreeStyleBuild> future2 = master.scheduleBuild2(0, new Cause.UserIdCause(),
                     (Action) new ParametersAction(
-                            Collections.<ParameterValue>singletonList(new StringParameterValue("FOO", "MANCHU"))));
+                            Collections.singletonList(new StringParameterValue("FOO", "MANCHU"))));
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s
             LOGGER.info("Checking user submitted build skips");
