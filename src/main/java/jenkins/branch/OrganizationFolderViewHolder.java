@@ -27,7 +27,6 @@ package jenkins.branch;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.ListView;
 import hudson.model.View;
@@ -35,6 +34,7 @@ import hudson.model.ViewDescriptor;
 import hudson.model.ViewGroup;
 import hudson.security.ACL;
 import hudson.security.Permission;
+import hudson.views.DefaultViewsTabBar;
 import hudson.views.StatusColumn;
 import hudson.views.ViewsTabBar;
 import hudson.views.WeatherColumn;
@@ -156,7 +156,7 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
     @Override
     public ViewsTabBar getTabBar() {
         if (tabBar == null) {
-            tabBar = new LocalizedViewsTabBar();
+            tabBar = new DefaultViewsTabBar();
         }
         return tabBar;
     }
