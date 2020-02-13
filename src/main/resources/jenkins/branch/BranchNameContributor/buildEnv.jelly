@@ -55,4 +55,16 @@ THE SOFTWARE.
     <t:buildEnvVar name="CHANGE_FORK">
         <j:out value="${%blurb.CHANGE_FORK}"/>
     </t:buildEnvVar>
+    <t:buildEnvVar name="TAG_NAME">
+        <j:out value="${%blurb.TAG_NAME}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="TAG_TIMESTAMP">
+        <j:out value="${%blurb.TAG_TIMESTAMP}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="TAG_UNIXTIME">
+        <j:out value="${%blurb.TAG_UNIXTIME}"/>
+    </t:buildEnvVar>
+    <t:buildEnvVar name="TAG_DATE">
+        <j:out value="${%blurb.TAG_DATE}"/>
+    </t:buildEnvVar>
 </j:jelly>
