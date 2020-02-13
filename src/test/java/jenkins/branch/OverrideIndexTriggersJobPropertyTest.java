@@ -32,6 +32,7 @@ import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.plugins.git.traits.BranchDiscoveryTrait;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMNavigator;
 import static org.junit.Assert.assertEquals;
@@ -62,7 +63,9 @@ public class OverrideIndexTriggersJobPropertyTest {
         sampleRepo.git("add", "server");
         sampleRepo.git("commit", "--all", "--message=release");
         MultiBranchImpl stuff = r.jenkins.createProject(MultiBranchImpl.class, "stuff");
-        BranchSource branchSource = new BranchSource(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false));
+        GitSCMSource source = new GitSCMSource(sampleRepo.toString());
+        source.setTraits(Collections.singletonList(new BranchDiscoveryTrait()));
+        BranchSource branchSource = new BranchSource(source);
         branchSource.setStrategy(new NamedExceptionsBranchPropertyStrategy(new BranchProperty[0], new NamedExceptionsBranchPropertyStrategy.Named[] {
             new NamedExceptionsBranchPropertyStrategy.Named("release*", new BranchProperty[] {new NoTriggerBranchProperty()})
         }));
@@ -128,7 +131,9 @@ public class OverrideIndexTriggersJobPropertyTest {
         assertEquals(".*", prop.getBranches());
         top.getProperties().replace(new NoTriggerOrganizationFolderProperty("(?!release.*).*"));
         top.getProjectFactories().add(new OrganizationFolderTest.MockFactory());
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false))));
+        GitSCMSource source = new GitSCMSource(sampleRepo.toString());
+        source.setTraits(Collections.singletonList(new BranchDiscoveryTrait()));
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.singletonList(source)));
         r.configRoundtrip(top);
         prop = top.getProperties().get(NoTriggerOrganizationFolderProperty.class);
         assertNotNull(prop);
@@ -188,7 +193,9 @@ public class OverrideIndexTriggersJobPropertyTest {
         sampleRepo.git("add", "stuff");
         sampleRepo.git("commit", "--all", "--message=master-1");
         MultiBranchImpl stuff = r.jenkins.createProject(MultiBranchImpl.class, "stuff");
-        BranchSource branchSource = new BranchSource(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", false));
+        GitSCMSource source = new GitSCMSource(sampleRepo.toString());
+        source.setTraits(Collections.singletonList(new BranchDiscoveryTrait()));
+        BranchSource branchSource = new BranchSource(source);
         stuff.getSourcesList().add(branchSource);
         r.configRoundtrip(stuff);
         stuff.scheduleBuild2(0).getFuture().get();

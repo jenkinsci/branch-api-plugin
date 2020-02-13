@@ -25,8 +25,6 @@
 package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
-import hudson.model.Computer;
-import hudson.model.Executor;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
@@ -61,18 +59,6 @@ public class OrganizationChildOrphanedItemsPropertyTest {
     public void cleanOutAllItems() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
-        }
-        for (Computer comp : r.jenkins.getComputers()) {
-            for (Executor e : comp.getExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
-            for (Executor e : comp.getOneOffExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
         }
     }
 
