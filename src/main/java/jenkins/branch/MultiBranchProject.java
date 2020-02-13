@@ -2369,7 +2369,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @Extension
     public static class CopyItemVeto extends ItemListener {
-        //@Override // TODO once Jenkins 2.51+ which has JENKINS-34691 merged
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void onCheckCopy(Item item, ItemGroup parent) throws Failure {
             if (item.getParent() instanceof MultiBranchProject) {
                 throw new Failure(Messages.MultiBranchProject_CopyItemVeto_reason());
