@@ -72,7 +72,7 @@ public class DescriptionColumn extends ListViewColumn {
     }
 
     /**
-     * Gets the description of a job.
+     * Gets the formatted description of a job.
      *
      * @param p   the metadata action.
      * @param job the job.
