@@ -296,6 +296,7 @@ public class MigrationTest {
         });
     }
 
+    @SuppressWarnings("rawtypes")
     private void assertDataMigrated(TopLevelItem foo) throws Exception {
         assertThat(foo, instanceOf(OrganizationFolder.class));
         OrganizationFolder prj = (OrganizationFolder) foo;

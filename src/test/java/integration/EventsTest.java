@@ -29,12 +29,10 @@ import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
-import hudson.Extension;
 import hudson.Functions;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.FreeStyleProject;
-import hudson.model.OneOffExecutor;
 import hudson.model.Queue;
 import hudson.model.Result;
 import hudson.model.TaskListener;
@@ -151,18 +149,6 @@ public class EventsTest {
     public void cleanOutAllItems() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
-        }
-        for (Computer comp : r.jenkins.getComputers()) {
-            for (Executor e : comp.getExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
-            for (Executor e : comp.getOneOffExecutors()) {
-                if (e.getCauseOfDeath() != null) {
-                    e.doYank();
-                }
-            }
         }
     }
 
@@ -772,7 +758,7 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("We now have branches",
                     prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject master = prj.getItem("master");
@@ -792,7 +778,7 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", SLASHY_BRANCH_NAME, "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", SLASHY_BRANCH_NAME, "junkHash"));
             assertThat("We now have branches",
                     prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject branch = prj.getItem(SLASHY_JOB_NAME);
@@ -814,7 +800,7 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", I18N_BRANCH_NAME, "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", I18N_BRANCH_NAME, "junkHash"));
             assertThat("We now have branches",
                     prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject branch = prj.getItem(I18N_JOB_NAME);
@@ -834,12 +820,12 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             FreeStyleProject master = prj.getItem("master");
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
             c.addFile("foo", "master", "adding file", "file", new byte[0]);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild(), notNullValue());
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(2));
@@ -855,13 +841,13 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, c.getRevision("foo",
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, c.getRevision("foo",
                     SLASHY_BRANCH_NAME)));
             FreeStyleProject branch = prj.getItem(SLASHY_JOB_NAME);
             r.waitUntilNoActivity();
             assertThat("The "+SLASHY_BRANCH_NAME+" branch was built", branch.getLastBuild().getNumber(), is(1));
             c.addFile("foo", SLASHY_BRANCH_NAME, "adding file", "file", new byte[0]);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo",
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo",
                     SLASHY_BRANCH_NAME, c.getRevision("foo", SLASHY_BRANCH_NAME)));
             r.waitUntilNoActivity();
             assertThat("The " + SLASHY_BRANCH_NAME + " branch was built", branch.getLastBuild(), notNullValue());
@@ -878,13 +864,13 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, c.getRevision("foo",
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, c.getRevision("foo",
                     I18N_BRANCH_NAME)));
             FreeStyleProject branch = prj.getItem(I18N_JOB_NAME);
             r.waitUntilNoActivity();
             assertThat("The " + I18N_BRANCH_NAME + " branch was built", branch.getLastBuild().getNumber(), is(1));
             c.addFile("foo", I18N_BRANCH_NAME, "adding file", "file", new byte[0]);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo",
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo",
                     I18N_BRANCH_NAME, c.getRevision("foo", I18N_BRANCH_NAME)));
             r.waitUntilNoActivity();
             assertThat("The " + I18N_BRANCH_NAME + " branch was built", branch.getLastBuild(), notNullValue());
@@ -899,13 +885,13 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             FreeStyleProject master = prj.getItem("master");
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
             String revision = c.getRevision("foo", "master");
             c.addFile("foo", "master", "adding file", "file", new byte[0]);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", revision));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", revision));
             r.waitUntilNoActivity();
             assertThat("The master branch was not built", master.getLastBuild().getNumber(), is(1));
         }
@@ -920,13 +906,13 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, c.getRevision("foo", SLASHY_BRANCH_NAME)));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, c.getRevision("foo", SLASHY_BRANCH_NAME)));
             FreeStyleProject master = prj.getItem(SLASHY_JOB_NAME);
             r.waitUntilNoActivity();
             assertThat("The branch was built", master.getLastBuild().getNumber(), is(1));
             String revision = c.getRevision("foo", SLASHY_BRANCH_NAME);
             c.addFile("foo", SLASHY_BRANCH_NAME, "adding file", "file", new byte[0]);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", SLASHY_BRANCH_NAME, revision));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", SLASHY_BRANCH_NAME, revision));
             r.waitUntilNoActivity();
             assertThat("The branch was not built", master.getLastBuild().getNumber(), is(1));
         }
@@ -941,13 +927,13 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, c.getRevision("foo", I18N_BRANCH_NAME)));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, c.getRevision("foo", I18N_BRANCH_NAME)));
             FreeStyleProject master = prj.getItem(I18N_JOB_NAME);
             r.waitUntilNoActivity();
             assertThat("The branch was built", master.getLastBuild().getNumber(), is(1));
             String revision = c.getRevision("foo", I18N_BRANCH_NAME);
             c.addFile("foo", I18N_BRANCH_NAME, "adding file", "file", new byte[0]);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", I18N_BRANCH_NAME, revision));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", I18N_BRANCH_NAME, revision));
             r.waitUntilNoActivity();
             assertThat("The branch was not built", master.getLastBuild().getNumber(), is(1));
         }
@@ -970,7 +956,7 @@ public class EventsTest {
             // and never even hit the events log
             c.addFile("foo", "master", "adding file", "file", new byte[0]);
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             r.waitUntilNoActivity();
             assertThat("The master branch was not built", master.getLastBuild().getNumber(), is(1));
             assertThat(prj.getComputation().getEventsFile().lastModified(), is(lastModified));
@@ -1004,20 +990,6 @@ public class EventsTest {
             assertThat(prj.getComputation().getEventsFile().lastModified(), greaterThan(lastModified));
             assertThat("The master branch was built once only", master.getLastBuild().getNumber(), is(1));
             assertThat(master.getLastBuild().getResult(), is(Result.SUCCESS));
-            List<Throwable> deaths = new ArrayList<>();
-            for (Computer comp : r.jenkins.getComputers()) {
-                for (Executor e : comp.getExecutors()) {
-                    if (e.getCauseOfDeath() != null) {
-                        deaths.add(e.getCauseOfDeath());
-                    }
-                }
-                for (Executor e : comp.getOneOffExecutors()) {
-                    if (e.getCauseOfDeath() != null) {
-                        deaths.add(e.getCauseOfDeath());
-                    }
-                }
-            }
-            assertThat("None of the executors have died abnormally", deaths, containsInAnyOrder());
         }
     }
 
@@ -1206,22 +1178,9 @@ public class EventsTest {
                 List<Queue.Executable> building = new ArrayList<>();
                 List<Throwable> deaths = new ArrayList<>();
                 for (Computer c : r.jenkins.getComputers()) {
-                    for (Executor e : c.getExecutors()) {
+                    for (Executor e : c.getAllExecutors()) {
                         if (e.isBusy()) {
-                            if (e.getCauseOfDeath() == null) {
-                                building.add(e.getCurrentExecutable());
-                            } else {
-                                deaths.add(e.getCauseOfDeath());
-                            }
-                        }
-                    }
-                    for (Executor e : c.getOneOffExecutors()) {
-                        if (e.isBusy()) {
-                            if (e.getCauseOfDeath() == null) {
-                                building.add(e.getCurrentExecutable());
-                            } else {
-                                deaths.add(e.getCauseOfDeath());
-                            }
+                            building.add(e.getCurrentExecutable());
                         }
                     }
                 }
@@ -1245,13 +1204,8 @@ public class EventsTest {
             return true;
         }
         for (Computer n : r.jenkins.getComputers()) {
-            for (OneOffExecutor e: n.getOneOffExecutors()) {
-                if (e.getCauseOfDeath() == null && e.isBusy()) {
-                    return true;
-                }
-            }
-            for (Executor e : n.getExecutors()) {
-                if (e.getCauseOfDeath() == null && e.isBusy()) {
+            for (Executor e: n.getAllExecutors()) {
+                if (e.isBusy()) {
                     return true;
                 }
             }
@@ -1268,7 +1222,7 @@ public class EventsTest {
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat("Adding sources doesn't trigger indexing",
                     prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "fork", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "fork", "junkHash"));
             assertThat("Events only trigger the branch they mention",
                     prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
         }
@@ -1304,11 +1258,11 @@ public class EventsTest {
             assertThat("No events means no new builds in master branch", master.getLastBuild().getNumber(), is(1));
             assertThat("No events means no new builds in feature branch", feature.getLastBuild().getNumber(), is(1));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("The master branch was built from event", master.getLastBuild().getNumber(), is(2));
             assertThat("The feature branch was not built", feature.getLastBuild().getNumber(), is(1));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
             assertThat("The master branch was not built", master.getLastBuild().getNumber(), is(2));
             assertThat("The feature branch was built from event", feature.getLastBuild().getNumber(), is(2));
         }
@@ -1335,21 +1289,21 @@ public class EventsTest {
             c.addFile("foo", "master", "Adding README.md", "README.md", "This is the readme".getBytes());
             c.addFile("foo", "feature", "Adding README.adoc", "README.adoc", "This is the readme".getBytes());
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("The master branch was built from event", master.getLastBuild().getNumber(), is(2));
             assertThat("The feature branch was not built", feature.getLastBuild().getNumber(), is(1));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
             assertThat("The master branch was not built", master.getLastBuild().getNumber(), is(2));
             assertThat("The feature branch was built from event", feature.getLastBuild().getNumber(), is(2));
 
             // Now fire events that match but verification will show no change, so no rebuilt
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("The master branch was not rebuilt", master.getLastBuild().getNumber(), is(2));
             assertThat("The feature branch was not built", feature.getLastBuild().getNumber(), is(2));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
             assertThat("The master branch was not built", master.getLastBuild().getNumber(), is(2));
             assertThat("The feature branch was not rebuilt", feature.getLastBuild().getNumber(), is(2));
         }
@@ -1467,11 +1421,11 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild(), notNullValue());
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
             assertThat("Events only validate the rumoured change", feature.isDisabled(), is(false));
 
             c.deleteBranch("foo", "feature");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
             assertThat("Events do not delete items", prj.getItem("feature"), is(feature));
             assertThat("Events only validate the rumoured change", feature.isDisabled(), is(true));
         }
@@ -1495,10 +1449,10 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild(), notNullValue());
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
 
             c.deleteBranch("foo", "feature");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
 
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -1533,12 +1487,12 @@ public class EventsTest {
             prj.setCriteria(new BasicSCMSourceCriteria("marker.txt"));
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("Events only validate the rumoured change",
                     prj.getItems(), Matchers.<FreeStyleProject>empty());
 
             c.addFile("foo", "master", "Adding README.md", "README.md", "This is the readme".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("The criteria must be met to create the branch job",
                     prj.getItems(), Matchers.<FreeStyleProject>empty());
 
@@ -1555,7 +1509,7 @@ public class EventsTest {
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
             c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("We now have branches",
                     prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject master = prj.getItem("master");
@@ -1576,7 +1530,7 @@ public class EventsTest {
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
 
             c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             FreeStyleProject master = prj.getItem("master");
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild(), notNullValue());
@@ -1586,11 +1540,11 @@ public class EventsTest {
             assertThat("No new branches without indexing or event",
                     prj.getItems(), is((Collection<FreeStyleProject>) Collections.singletonList(master)));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "does-not-exist", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "does-not-exist", "junkHash"));
             assertThat("Events only validate the rumoured change",
                     prj.getItems(), is((Collection<FreeStyleProject>) Collections.singletonList(master)));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "feature-1", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "feature-1", "junkHash"));
             assertThat("Events add the new branch",
                     prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.singletonList(master))));
 
@@ -1799,20 +1753,20 @@ public class EventsTest {
 
             c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
             c.cloneBranch("foo", "master", "feature-1");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "does-not-exist", "junkHash"));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "feature-1", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "does-not-exist", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "feature-1", "junkHash"));
             FreeStyleProject feature1 = prj.getItem("feature-1");
             r.waitUntilNoActivity();
             assertThat("The feature-1 branch was built", feature1.getLastBuild(), notNullValue());
             assertThat("The feature-1 branch was built", feature1.getLastBuild().getNumber(), is(1));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.REMOVED, c, "foo", "feature-1", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.REMOVED, c, "foo", "feature-1", "junkHash"));
             assertThat("Events only validate the rumoured change", feature1.isDisabled(), is(false));
             assertThat("The feature-1 branch was not built", feature1.getLastBuild(), notNullValue());
             assertThat("The feature-1 branch was not built", feature1.getLastBuild().getNumber(), is(1));
 
             c.rmFile("foo", "feature-1", "removing marker file", "marker.txt");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature-1", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "feature-1", "junkHash"));
             assertThat("Events do not delete items", prj.getItem("feature-1"), is(feature1));
             assertThat("Events only validate the rumoured change", feature1.isDisabled(), is(true));
             assertThat("The feature-1 branch was not built", feature1.getLastBuild(), notNullValue());
@@ -2065,7 +2019,7 @@ public class EventsTest {
             c.createRepository("manchu");
             c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
             c.addFile("bar", "master", "adding marker", "marker.txt", "A marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "bar", "master", "junkHash"));
             BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
             assertThat("We now have the second project matching", bar, notNullValue());
             assertThat("We now have only the two projects matching",
@@ -2091,7 +2045,7 @@ public class EventsTest {
             c.deleteBranch("bar", "master");
             c.addFile("foo", SLASHY_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
             c.addFile("bar", SLASHY_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", SLASHY_BRANCH_NAME, "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "bar", SLASHY_BRANCH_NAME, "junkHash"));
             BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
             assertThat("We now have the second project matching", bar, notNullValue());
             assertThat("We now have only the two projects matching",
@@ -2117,7 +2071,7 @@ public class EventsTest {
             c.deleteBranch("bar", "master");
             c.addFile("foo", I18N_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
             c.addFile("bar", I18N_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", I18N_BRANCH_NAME, "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "bar", I18N_BRANCH_NAME, "junkHash"));
             BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
             assertThat("We now have the second project matching", bar, notNullValue());
             assertThat("We now have only the two projects matching",
@@ -2138,11 +2092,11 @@ public class EventsTest {
             c.createRepository("bar");
             c.createRepository("manchu");
             c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "bar", "master", "junkHash"));
             assertThat("Events only apply to the branch they refer to and are validated",
                     prj.getItems(),
                     Matchers.<MultiBranchProject<?, ?>>empty());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "bar", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "bar", "master", "junkHash"));
             assertThat("Events only apply to the branch they refer to and are validated",
                     prj.getItems(),
                     Matchers.<MultiBranchProject<?, ?>>empty());
@@ -2160,7 +2114,7 @@ public class EventsTest {
             c.createRepository("bar");
             c.createRepository("manchu");
             c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
@@ -2230,7 +2184,7 @@ public class EventsTest {
             c.createRepository("manchu");
             c.cloneBranch("foo", "master", "feature");
             c.addFile("foo", "feature", "adding marker", "marker.txt", "A marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "feature", "junkHash"));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
@@ -2253,7 +2207,7 @@ public class EventsTest {
             c.createRepository("manchu");
             c.cloneBranch("foo", "master", SLASHY_BRANCH_NAME);
             c.addFile("foo", SLASHY_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", SLASHY_BRANCH_NAME, "junkHash"));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
@@ -2276,7 +2230,7 @@ public class EventsTest {
             c.createRepository("manchu");
             c.cloneBranch("foo", "master", I18N_BRANCH_NAME);
             c.addFile("foo", I18N_BRANCH_NAME, "adding marker", "marker.txt", "A marker".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", I18N_BRANCH_NAME, "junkHash"));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
@@ -2299,7 +2253,7 @@ public class EventsTest {
             c.createRepository("manchu");
             c.cloneBranch("foo", "master", "feature");
             c.addFile("foo", "feature", "adding marker", "marker.txt", "A marker".getBytes());
-            fire(new MockSCMSourceEvent(SCMEvent.Type.CREATED, c, "foo"));
+            fire(new MockSCMSourceEvent(null, SCMEvent.Type.CREATED, c, "foo"));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
@@ -2321,11 +2275,11 @@ public class EventsTest {
             c.cloneBranch("foo", "master", "feature");
             c.addFile("foo", "feature", "adding marker", "marker.txt", "A marker".getBytes());
             c.cloneBranch("foo", "feature", "sustaining");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "ignored"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", "ignored"));
             assertThat("Event specified branch does not match",
                     prj.getItem("foo"),
                     nullValue());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "ignored"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "feature", "ignored"));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
@@ -2348,7 +2302,7 @@ public class EventsTest {
             c.createRepository("bar");
             c.createRepository("manchu");
             c.cloneBranch("foo", "master", "feature");
-            fire(new MockSCMSourceEvent(SCMEvent.Type.CREATED, c, "foo"));
+            fire(new MockSCMSourceEvent(null, SCMEvent.Type.CREATED, c, "foo"));
             assertThat("No matching branches",
                     prj.getItems(),
                     Matchers.<MultiBranchProject<?, ?>>empty());
@@ -2397,12 +2351,12 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
             c.deleteBranch("foo", "feature");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
             assertThat("Feature branch is disabled", feature.isDisabled(), is(true));
             assertThat("Feature branch is dead", prj.getProjectFactory().getBranch(feature), instanceOf(Branch.Dead.class));
 
             c.createBranch("foo", "feature");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "feature", "junkHash"));
             assertThat("Feature branch is resurrected", feature.isDisabled(), is(false));
             assertThat("Feature branch is resurrected", prj.getProjectFactory().getBranch(feature),
                     not(instanceOf(Branch.Dead.class)));
@@ -2432,11 +2386,11 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
             c.rmFile("foo", "feature", "remove marker", "marker.txt");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
             assertThat("Feature branch is disabled", feature.isDisabled(), is(true));
 
             c.addFile("foo", "feature", "marker", "marker.txt", "build me again".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
             assertThat("Feature branch is resurrected", feature.isDisabled(), is(false));
             r.waitUntilNoActivity();
             assertThat("The feature branch was rebuilt", feature.getLastBuild().getNumber(), is(2));
@@ -2473,7 +2427,7 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
             c.createBranch("foo", "feature");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "feature", "junkHash"));
             assertThat("Feature branch takeover by higher priority source",
                     prj.getProjectFactory().getBranch(feature).getSourceId(),
                     is("foo:id"));
@@ -2512,7 +2466,7 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
             c.cloneBranch("bar", "master", "feature");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "bar", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "bar", "feature", "junkHash"));
             assertThat("Feature branch not taken over by lower priority source",
                     prj.getProjectFactory().getBranch(feature).getSourceId(),
                     is("foo:id"));
@@ -2552,12 +2506,12 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
             c.deleteBranch("foo", "feature");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.REMOVED, c, "foo", "feature", "junkHash"));
             assertThat("Feature branch is disabled", feature.isDisabled(), is(true));
             assertThat("Feature branch is dead", prj.getProjectFactory().getBranch(feature),
                     instanceOf(Branch.Dead.class));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "bar", "feature", "junkHash"));
             assertThat("Feature branch takeover by lower priority source",
                     prj.getProjectFactory().getBranch(feature).getSourceId(),
                     is("bar:id"));
@@ -2665,7 +2619,7 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
             c.cloneBranch("foo", "master", "feature");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
             assertThat("Feature branch takeover by higher priority source",
                     prj.getProjectFactory().getBranch(feature).getSourceId(),
                     is("foo:id"));
@@ -2707,7 +2661,7 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
             c.addFile("bar", "feature", "change", "marker.txt", "ignore this".getBytes());
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "bar", "feature", "junkHash"));
             assertThat("Feature branch not taken over by lower priority source",
                     prj.getProjectFactory().getBranch(feature).getSourceId(),
                     is("foo:id"));
@@ -2749,12 +2703,12 @@ public class EventsTest {
             assertThat("The feature branch was built", feature.getLastBuild().getNumber(), is(1));
 
             c.rmFile("foo", "feature", "allow bar to take over", "marker.txt");
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "feature", "junkHash"));
             assertThat("Feature branch is disabled", feature.isDisabled(), is(true));
             assertThat("Feature branch is dead", prj.getProjectFactory().getBranch(feature),
                     instanceOf(Branch.Dead.class));
 
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", "feature", "junkHash"));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "bar", "feature", "junkHash"));
             assertThat("Feature branch takeover by lower priority source",
                     prj.getProjectFactory().getBranch(feature).getSourceId(),
                     is("bar:id"));
@@ -2770,13 +2724,13 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             FreeStyleProject master = prj.getItem("master");
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
             assertEquals(prj.getProjectFactory().getLastSeenRevision(master), prj.getProjectFactory().getRevision(master));
             c.addFile("foo", "master", "adding file", "file", new byte[0]);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild(), notNullValue());
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(2));
@@ -2793,14 +2747,14 @@ public class EventsTest {
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             source.setBuildStrategies(Collections.<BranchBuildStrategy>singletonList(new SkipInitialBuildStrategyImpl()));
             prj.getSourcesList().add(source);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             FreeStyleProject master = prj.getItem("master");
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild(), nullValue());
             assertNotNull(prj.getProjectFactory().getLastSeenRevision(master));
             assertNull(prj.getProjectFactory().getRevision(master));
             c.addFile("foo", "master", "adding file", "file", new byte[0]);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild(), notNullValue());
             assertThat("The master branch was built", master.getLastBuild().getNumber(), is(1));
@@ -2838,7 +2792,7 @@ public class EventsTest {
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             source.setBuildStrategies(Collections.<BranchBuildStrategy>singletonList(new SkipIAllBuildStrategyImpl()));
             prj.getSourcesList().add(source);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             FreeStyleProject master = prj.getItem("master");
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild(), nullValue());
@@ -2846,7 +2800,7 @@ public class EventsTest {
             assertNotNull(scmLastSeenRevision1);
             assertNull(prj.getProjectFactory().getRevision(master));
             c.addFile("foo", "master", "adding file", "file", new byte[0]);
-            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            fire(new MockSCMHeadEvent(null, SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
             r.waitUntilNoActivity();
             assertThat("The master branch was built", master.getLastBuild(), nullValue());
             SCMRevision scmLastSeenRevision2 = prj.getProjectFactory().getLastSeenRevision(master);

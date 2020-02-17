@@ -131,7 +131,7 @@ public class BrandingTest {
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
-            fire(new MockSCMSourceEvent(SCMEvent.Type.UPDATED, c, "foo"));
+            fire(new MockSCMSourceEvent(null, SCMEvent.Type.UPDATED, c, "foo"));
             r.waitUntilNoActivity();
             assertThat(prj.getAction(MockSCMLink.class), hasProperty("id", is("source")));
         }
@@ -362,6 +362,7 @@ public class BrandingTest {
     }
 
     @Test
+    @SuppressWarnings("rawtypes")
     public void given_orgFolderWithI18nRepos_when_indexing_then_repoNamesEncoded()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
@@ -437,6 +438,7 @@ public class BrandingTest {
     }
 
     @Test
+    @SuppressWarnings("rawtypes")
     public void given_orgFolderWithNonSafeRepos_when_indexing_then_repoNamesEncoded()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
