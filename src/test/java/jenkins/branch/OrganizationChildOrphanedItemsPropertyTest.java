@@ -57,7 +57,8 @@ public class OrganizationChildOrphanedItemsPropertyTest {
 
     @Before
     public void cleanOutAllItems() throws Exception {
-        for (TopLevelItem i : r.getInstance().getItems()) {
+        //Use item map to avoid the permissions check
+        for (TopLevelItem i : r.getInstance().getItemMap().values()) {
             i.delete();
         }
     }
