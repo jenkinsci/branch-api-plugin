@@ -25,25 +25,6 @@
 
 package jenkins.branch;
 
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.hasProperty;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
-
-import java.util.Collections;
-
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.TestExtension;
-import org.kohsuke.stapler.DataBoundConstructor;
-
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.ChoiceParameterDefinition;
 import hudson.model.ItemGroup;
@@ -53,10 +34,29 @@ import hudson.model.StringParameterDefinition;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicDummyStepBranchProperty;
 import integration.harness.BasicMultiBranchProject;
+import java.util.Arrays;
+import java.util.Collections;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
+import org.kohsuke.stapler.DataBoundConstructor;
+
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertThat;
 
 public class ParameterDefinitionBranchPropertyTest {
     /**
@@ -121,6 +121,8 @@ public class ParameterDefinitionBranchPropertyTest {
     }
 
     @Issue("JENKINS-61438")
+    // TODO Enable this test case when jenkins.version includes the patch in stapler/stapler#182 
+    @Ignore("Enable this test when stapler/stapler#182 is merged and the jenkins.version will include the patch")
     @Test
     public void choiceParameterIssue() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
@@ -146,7 +148,7 @@ public class ParameterDefinitionBranchPropertyTest {
                     allOf(
                             instanceOf(ChoiceParameterDefinition.class),
                             hasProperty("name", is("CHOOSE")),
-                            hasProperty("defaultValue", is(new String[] { "a", "b" })),
+                            hasProperty("choices", is(Arrays.asList("a", "b"))),
                             hasProperty("description", is("choose one"))
                             )
                     ));
