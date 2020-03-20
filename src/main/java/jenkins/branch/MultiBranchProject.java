@@ -157,6 +157,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     private transient String srcDigest, facDigest;
 
+    private boolean firstBranchIndexingExecuted;
+
     /**
      * Constructor, mandated by {@link TopLevelItem}.
      *
@@ -652,6 +654,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             long end = System.currentTimeMillis();
             listener.getLogger().format("[%tc] Finished branch indexing. Indexing took %s%n", end,
                     Util.getTimeSpanString(end - start));
+            firstBranchIndexingExecuted = true;
         }
     }
 
@@ -2234,6 +2237,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                          @NonNull SCMRevision currRevision,
                                          @CheckForNull SCMRevision lastBuiltRevision,
                                          @CheckForNull SCMRevision lastSeenRevision) {
+            if (causeFactory instanceof IndexingCauseFactory) {
+                if (!firstBranchIndexingExecuted) {
+                    return false;
+                }
+                // the build will be scheduled only for branches and PRs created/modified after the
+                // first branch indexing (disable building everything after the job creation, but
+                // allows automatic build of branches/PRs which were not executed by webhook)
+                if (lastBuiltRevision == null && currRevision.equals(lastSeenRevision)) {
+                    return false;
+                }
+            }
             BranchSource branchSource = null;
             for (BranchSource s: MultiBranchProject.this.sources) {
                 if (s.getSource().getId().equals(source.getId())) {
