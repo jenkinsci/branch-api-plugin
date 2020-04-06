@@ -399,11 +399,12 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 String nodeName = node instanceof Jenkins ? "master" : node.getNodeName();
                 try {
                     try (Timeout timeout = Timeout.limit(5, TimeUnit.MINUTES)) {
+                        t.setName(oldName + ": possibly deleting workspace for " + tli.getFullName() + " on " + nodeName);
                         FilePath loc = locate(tli, node, false);
                         if (loc == null) {
                             return;
                         }
-                        t.setName(oldName + ": deleting workspace in " + loc + " on " + nodeName);
+                        t.setName(oldName + ": deleting workspace for " + tli.getFullName() + " in " + loc + " on " + nodeName);
                         String base = loc.getName();
                         FilePath parent = loc.getParent();
                         if (parent == null) { // unlikely but just in case
