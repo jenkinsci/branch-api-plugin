@@ -28,6 +28,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.model.Computer;
 import hudson.model.Item;
@@ -56,6 +57,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -119,6 +121,21 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
     /** Same as {@link WorkspaceList#COMBINATOR}. */
     private static final String COMBINATOR = System.getProperty(WorkspaceList.class.getName(), "@");
+
+    /**
+     * @see #indexCache()
+     * @see #load
+     * @see #save
+     */
+    private final Map<VirtualChannel, IndexCacheEntry> indexCache = new WeakHashMap<>();
+    private static final class IndexCacheEntry {
+        final String workspaceRoot;
+        final Map<String, String> index;
+        IndexCacheEntry(String workspaceRoot, Map<String, String> index) {
+            this.workspaceRoot = workspaceRoot;
+            this.index = index;
+        }
+    }
 
     @Override
     public FilePath locate(TopLevelItem item, Node node) {
@@ -213,7 +230,21 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
     }
 
+    private static Map<VirtualChannel, IndexCacheEntry> indexCache() {
+        return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).indexCache;
+    }
+
     private static Map<String, String> load(FilePath workspace) throws IOException, InterruptedException {
+        Map<VirtualChannel, IndexCacheEntry> _indexCache = indexCache();
+        IndexCacheEntry entry;
+        synchronized (_indexCache) {
+            entry = _indexCache.get(workspace.getChannel());
+        }
+        if (entry != null && entry.workspaceRoot.equals(workspace.getRemote())) {
+            LOGGER.log(Level.FINER, "cache hit on {0}", workspace);
+            return entry.index;
+        }
+        LOGGER.log(Level.FINER, "cache miss on {0}", workspace);
         Map<String, String> map = new TreeMap<>();
         FilePath index = workspace.child(INDEX_FILE_NAME);
         if (index.exists()) {
@@ -230,6 +261,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     map.put(key, value);
                 }
             }
+        }
+        synchronized (_indexCache) {
+            _indexCache.put(workspace.getChannel(), new IndexCacheEntry(workspace.getRemote(), map));
         }
         return map;
     }
@@ -252,6 +286,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             b.append(entry.getKey()).append('\n').append(entry.getValue()).append('\n');
         }
         workspace.child(INDEX_FILE_NAME).act(new WriteAtomic(b.toString()));
+        LOGGER.log(Level.FINER, "cache update on {0}", workspace);
+        Map<VirtualChannel, IndexCacheEntry> _indexCache = indexCache();
+        synchronized (_indexCache) {
+            _indexCache.put(workspace.getChannel(), new IndexCacheEntry(workspace.getRemote(), index));
+        }
     }
     private static final class WriteAtomic extends MasterToSlaveFileCallable<Void> {
         private static final long serialVersionUID = 1;
