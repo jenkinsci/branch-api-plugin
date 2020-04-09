@@ -119,7 +119,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
      * File containing pairs of lines tracking workspaces.
      * The first line in a pair is a {@link TopLevelItem#getFullName};
      * the second is a workspace-relative path.
-     * Reads and writes to this file should be synchronized on the {@link Node}.
+     * Reads and writes to this file should be synchronized on {@link #lockFor}.
      */
     static final String INDEX_FILE_NAME = "workspaces.txt";
 
@@ -315,7 +315,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         public Object load(Node node) throws Exception {
             // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
             // Avoiding new String(…) because static analyzers complain
-            // Could use anything but hoping that a future JVM enhanced thread dumps to display monitors of type String
+            // Could use anything but hoping that a future JVM enhances thread dumps to display monitors of type String
             return new StringBuilder("WorkspaceLocatorImpl lock for ").append(node.getNodeName()).toString();
         }
     });
