@@ -172,7 +172,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             throw new IllegalArgumentException("Dangerous job name `" + fullName + "`"); // better not to mess around
         }
         try {
-            synchronized (node) {
+            synchronized (lockFor(node)) {
                 Map<String, String> index = load(workspace);
                 // Already listed:
                 String path = index.get(fullName);
@@ -302,6 +302,16 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
             new TextFile(f).write(text);
             return null;
+        }
+    }
+
+    private static final Map<Node, Object> nodeLocks = new WeakHashMap<>();
+    private static Object lockFor(Node node) {
+        synchronized (nodeLocks) {
+            // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
+            // Avoiding new String(…) because static analyzers complain
+            // Could use anything but hoping that a future JVM enhanced thread dumps to display monitors of type String
+            return nodeLocks.computeIfAbsent(node, _node -> new StringBuilder("WorkspaceLocatorImpl lock for ").append(node.getNodeName()).toString());
         }
     }
 
@@ -459,7 +469,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         }
                         FilePath workspace = getWorkspaceRoot(node);
                         if (workspace != null) {
-                            synchronized (node) {
+                            synchronized (lockFor(node)) {
                                 Map<String, String> index = load(workspace);
                                 index.remove(tli.getFullName());
                                 save(index, workspace);
@@ -532,7 +542,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         }
                         FilePath workspace = getWorkspaceRoot(node);
                         if (workspace != null) {
-                            synchronized (node) {
+                            synchronized (lockFor(node)) {
                                 Map<String, String> index = load(workspace);
                                 index.remove(oldFullName);
                                 assert index.containsKey(newFullName); // locate(…, true) should have added it
@@ -570,7 +580,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             if (workspace == null) {
                 return;
             }
-            synchronized (node) {
+            synchronized (lockFor(node)) {
                 Map<String, String> index = load(workspace);
                 boolean modified = false;
                 try (ACLContext as = ACL.as(ACL.SYSTEM)) {
