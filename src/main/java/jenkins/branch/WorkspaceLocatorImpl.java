@@ -26,6 +26,9 @@ package jenkins.branch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -58,7 +61,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -306,13 +309,22 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
     }
 
-    private final Map<String, Object> nodeLocks = new ConcurrentHashMap<>();
+    // Avoiding WeakHashMap<Node, T> since Slave overrides hashCode/equals
+    private final LoadingCache<Node, Object> nodeLocks = CacheBuilder.newBuilder().weakKeys().build(new CacheLoader<Node, Object>() {
+        @Override
+        public Object load(Node node) throws Exception {
+            // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
+            // Avoiding new String(…) because static analyzers complain
+            // Could use anything but hoping that a future JVM enhanced thread dumps to display monitors of type String
+            return new StringBuilder("WorkspaceLocatorImpl lock for ").append(node.getNodeName()).toString();
+        }
+    });
     private static Object lockFor(Node node) {
-        // Avoiding WeakHashMap<Node, T> since Slave overrides hashCode/equals
-        // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
-        // Avoiding new String(…) because static analyzers complain
-        // Could use anything but hoping that a future JVM enhanced thread dumps to display monitors of type String
-        return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.computeIfAbsent(node.getNodeName(), name -> new StringBuilder("WorkspaceLocatorImpl lock for ").append(name).toString());
+        try {
+            return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.get(node);
+        } catch (ExecutionException x) {
+            throw new AssertionError(x);
+        }
     }
 
     private static final Pattern GOOD_RAW_WORKSPACE_DIR = Pattern.compile("(.+)[/\\\\][$][{]ITEM_FULL_?NAME[}][/\\\\]?");
