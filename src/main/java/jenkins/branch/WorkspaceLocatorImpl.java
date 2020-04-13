@@ -26,6 +26,9 @@ package jenkins.branch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -58,6 +61,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -115,7 +119,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
      * File containing pairs of lines tracking workspaces.
      * The first line in a pair is a {@link TopLevelItem#getFullName};
      * the second is a workspace-relative path.
-     * Reads and writes to this file should be synchronized on the {@link Node}.
+     * Reads and writes to this file should be synchronized on {@link #lockFor}.
      */
     static final String INDEX_FILE_NAME = "workspaces.txt";
 
@@ -172,7 +176,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             throw new IllegalArgumentException("Dangerous job name `" + fullName + "`"); // better not to mess around
         }
         try {
-            synchronized (node) {
+            synchronized (lockFor(node)) {
                 Map<String, String> index = load(workspace);
                 // Already listed:
                 String path = index.get(fullName);
@@ -302,6 +306,24 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
             new TextFile(f).write(text);
             return null;
+        }
+    }
+
+    // Avoiding WeakHashMap<Node, T> since Slave overrides hashCode/equals
+    private final LoadingCache<Node, Object> nodeLocks = CacheBuilder.newBuilder().weakKeys().build(new CacheLoader<Node, Object>() {
+        @Override
+        public Object load(Node node) throws Exception {
+            // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
+            // Avoiding new String(…) because static analyzers complain
+            // Could use anything but hoping that a future JVM enhances thread dumps to display monitors of type String
+            return new StringBuilder("WorkspaceLocatorImpl lock for ").append(node.getNodeName()).toString();
+        }
+    });
+    private static Object lockFor(Node node) {
+        try {
+            return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.get(node);
+        } catch (ExecutionException x) {
+            throw new AssertionError(x);
         }
     }
 
@@ -459,7 +481,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         }
                         FilePath workspace = getWorkspaceRoot(node);
                         if (workspace != null) {
-                            synchronized (node) {
+                            synchronized (lockFor(node)) {
                                 Map<String, String> index = load(workspace);
                                 index.remove(tli.getFullName());
                                 save(index, workspace);
@@ -532,7 +554,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         }
                         FilePath workspace = getWorkspaceRoot(node);
                         if (workspace != null) {
-                            synchronized (node) {
+                            synchronized (lockFor(node)) {
                                 Map<String, String> index = load(workspace);
                                 index.remove(oldFullName);
                                 assert index.containsKey(newFullName); // locate(…, true) should have added it
@@ -570,7 +592,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             if (workspace == null) {
                 return;
             }
-            synchronized (node) {
+            synchronized (lockFor(node)) {
                 Map<String, String> index = load(workspace);
                 boolean modified = false;
                 try (ACLContext as = ACL.as(ACL.SYSTEM)) {
