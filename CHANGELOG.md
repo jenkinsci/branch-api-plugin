@@ -107,7 +107,7 @@ Released: 2019-04-08
         was to initially configure this to once per day and never update
         it. The new behaviour will now enforce the triggers defined
         in Child Scan Triggers for the organization folder.   
-        > **NOTE **if you have been using some custom
+        > **NOTE** if you have been using some custom
         hack to change the multibranch scan triggers after initial
         creation, that hack is no longer needed... and in fact it will
         now cease to work
