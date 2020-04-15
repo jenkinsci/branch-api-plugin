@@ -1,7 +1,26 @@
 # Changelog
 
+## 2.5.6
+
+Released: 2020-04-15
+
+-   [PR 189](https://github.com/jenkinsci/branch-api-plugin/pull/189) - Do not lock Node objects during workspace cleanup operations.
+-   [PR 188](https://github.com/jenkinsci/branch-api-plugin/pull/188) - Cache workspace locations to avoid unnecessary remoting calls when looking up workspaces for multibranch projects.
+-   [PR 187](https://github.com/jenkinsci/branch-api-plugin/pull/187) - Include the name of the job being processed in the thread name during workspace cleanup operations to help diagnose issues.
+-   [PR 182](https://github.com/jenkinsci/branch-api-plugin/pull/182) - Add documentation for tag-related environment variables that this plugin contributes to builds.
+-   [PR 181](https://github.com/jenkinsci/branch-api-plugin/pull/181) - When workspace deletion fails with an error, only log suppressed exceptions at FINE level. The outermost exception is still logged at WARNING level.
+-   [PR 180](https://github.com/jenkinsci/branch-api-plugin/pull/180) - Use `DefaultViewsTabBar` from Jenkins core to be able to remove duplicated code.
+-   [PR 179](https://github.com/jenkinsci/branch-api-plugin/pull/179) - Use `AbstractItem.TASK_NOUN` from Jenkins core to be able to remove unnecessary reflection.
+-   [PR 178](https://github.com/jenkinsci/branch-api-plugin/pull/178) - Add `@Override` annotations to methods now that the Jenkins baseline is new enough to have those methods.
+-   [PR 177](https://github.com/jenkinsci/branch-api-plugin/pull/177) - Refactor tests: remove unnecessary code, reduce delay times, and correct delay calculations.
+-   [PR 176](https://github.com/jenkinsci/branch-api-plugin/pull/176) - Update code to avoid deprecation warnings.
+-   [PR 174](https://github.com/jenkinsci/branch-api-plugin/pull/174) - Reduce lock contention when displaying views for multibranch projects.
+-   [PR 173](https://github.com/jenkinsci/branch-api-plugin/pull/173) - Reduce the number of permission checks needed when displaying views for mulitbranch projects.
+-   [PR 171](https://github.com/jenkinsci/branch-api-plugin/pull/171) - Update the URL in the POM to point to GitHub instead of wiki.jenkins.io.
+
 ## 2.5.5
-Dec 06, 2019
+
+Released: 2019-12-06
 
 -   [JENKINS-39682](https://issues.jenkins-ci.org/browse/JENKINS-39682) -
     Trigger after-save hooks and recalculate after `createProjectFromXML`
@@ -14,14 +33,17 @@ Dec 06, 2019
     Do not duplicate input in NameEncoder.decode ([PR\#168](https://github.com/jenkinsci/branch-api-plugin/pull/168))
 
 ## 2.5.4
-Jul 25, 2019
+
+Released: 2019-07-25
 
 -   [JENKINS-54864](https://issues.jenkins-ci.org/browse/JENKINS-54864) -
     Undeprecate the "Automatic branch project triggering" property for organization folders and disable the automated
     migration that replaced it with a "Named Branch" build strategy from Basic Branch Build Strategies Plugin starting
     in version 2.1.0 of this plugin because the migration caused an undesirable change in behavior in some cases.
 
-## 2.5.3 
+## 2.5.3
+
+Released: 2019-07-03
 
 -   [PR\#155](https://github.com/jenkinsci/branch-api-plugin/pull/155) - Fix JDK 11.0.3 javadoc warnings
 -   [PR\#156](https://github.com/jenkinsci/branch-api-plugin/pull/156) - add second and minute granularity
@@ -32,20 +54,23 @@ Jul 25, 2019
     replace leading hyphen in mnemonic of ws path ([PR\#161](https://github.com/jenkinsci/branch-api-plugin/pull/161))
 
 ## 2.5.2
-May 24, 2019
+
+Released: 2019-05-24
 
 -   Typo fix from v2.5.1 and internal refactoring ([PR\#153](https://github.com/jenkinsci/branch-api-plugin/pull/153),
     [PR\#154](https://github.com/jenkinsci/branch-api-plugin/pull/154))
 
 ## 2.5.1
-May 22, 2019
+
+Released: 2019-05-22
 
 -   [JENKINS-57588](https://issues.jenkins-ci.org/browse/JENKINS-57588) -
     Prevent job storm on upgrade from 2.4.x and earlier
     ([PR\#152](https://github.com/jenkinsci/branch-api-plugin/pull/152))
 
 ## 2.5.0
-May 21, 2019
+
+Released: 2019-05-21
 
 -   [PR\#145](https://github.com/jenkinsci/branch-api-plugin/pull/145)
     - Support for programmatically generating OrganizationFolders
@@ -64,7 +89,8 @@ May 21, 2019
     Indicate dead branch on job and run pages ([PR\#151](https://github.com/jenkinsci/branch-api-plugin/pull/151))
 
 ## 2.4.0
-Apr 8, 2019
+
+Released: 2019-04-08
 
 -   [JENKINS-56903](https://issues.jenkins-ci.org/browse/JENKINS-56903) -
     Add a health reporting metric for multibranch projects that only reports the health of the "primary" branch (as
@@ -81,7 +107,7 @@ Apr 8, 2019
         was to initially configure this to once per day and never update
         it. The new behaviour will now enforce the triggers defined
         in Child Scan Triggers for the organization folder.   
-        > **NOTE **if you have been using some custom
+        > **NOTE** if you have been using some custom
         hack to change the multibranch scan triggers after initial
         creation, that hack is no longer needed... and in fact it will
         now cease to work
@@ -94,7 +120,8 @@ Apr 8, 2019
 -   Jenkins core version bump to 2.138 LTS line
 
 ## 2.3.0
-Apr 4, 2019
+
+Released: 2019-04-04
 
 -   Set the revision even if the build does not happen. Enabling  
     [JENKINS-38552](https://issues.jenkins-ci.org/browse/JENKINS-38552) -
@@ -102,7 +129,8 @@ Apr 4, 2019
 -   Updated some test dependencies
 
 ## 2.2.0
-Mar 21, 2019
+
+Released: 2019-03-21
 
 -   [JENKINS-56658](https://issues.jenkins-ci.org/browse/JENKINS-56658) -
     Changed API for BranchBuildStrategy to provide strategies with access to the task listener. Impact assessment:
@@ -117,25 +145,29 @@ Mar 21, 2019
     “path sanitization ineffective when using legacy Workspace Root Directory” ending in slash 
 
 ## 2.1.2
-Dec 6, 2018
+
+Released: 2018-12-06
 
 -   [JENKINS-54654](https://issues.jenkins-ci.org/browse/JENKINS-54654) -
 
 ## 2.1.1
-Nov 19, 2018
+
+Released: 2018-11-19
 
 -   [JENKINS-54640](https://issues.jenkins-ci.org/browse/JENKINS-54640) -
     Index collision check was not working
 
 ## 2.1.0
-Nov 16, 2018
+
+Released: 2018-11-16
 
 -   [JENKINS-47859](https://issues.jenkins-ci.org/browse/JENKINS-47859) -
     Migrate "Automatic branch project triggering » Branch names to build automatically" hack to the branch
     build strategy implementation
 
 ## 2.0.21
-Nov 9, 2018
+
+Released: 2018-11-09
 
 -   [JENKINS-2111](https://issues.jenkins-ci.org/browse/JENKINS-2111),
     [JENKINS-34564](https://issues.jenkins-ci.org/browse/JENKINS-34564),
@@ -146,27 +178,32 @@ Nov 9, 2018
 -   Code cleanup
 
 ## 2.0.20.1
-Nov 15, 2018
+
+Released: 2018-11-15
 
 -   Updated pom to fix the PCT for the Git Plugin
 
 ## 2.0.20
-Apr 20, 2018
+
+Released: 2018-04-20
 
 -   [JENKINS-50777](https://issues.jenkins-ci.org/browse/JENKINS-50777)
 
 ## 2.0.19
-Apr 5, 2018
+
+Released: 2018-04-05
 
 -   Remove usage restriction from OrganizationFolder
 
 ## 2.0.18
-Jan 10, 2018
+
+Released: 2018-01-10
 
 -   [JENKINS-48890](https://issues.jenkins-ci.org/browse/JENKINS-48890)
 
 ## 2.0.17
-Jan 2, 2018
+
+Released: 2018-01-02
 
 -   [JENKINS-48535](https://issues.jenkins-ci.org/browse/JENKINS-48535)
     Provide an API that enabled extension plugin to provide a branch
@@ -177,7 +214,8 @@ Jan 2, 2018
     projects
 
 ## 2.0.16
-Dec 5, 2017
+
+Released: 2017-12-05
 
 -   [JENKINS-44335](https://issues.jenkins-ci.org/browse/JENKINS-44335)
     Allow user-boosting option in rate limit throttle
@@ -191,7 +229,8 @@ Dec 5, 2017
     ([PR\#114](https://github.com/jenkinsci/branch-api-plugin/pull/114))
 
 ## 2.0.15
-Oct 26, 2017
+
+Released: 2017-10-26
 
 -   [JENKINS-47678](https://issues.jenkins-ci.org/browse/JENKINS-47678)
     If a BranchBuildStrategy is provided by an extension plugin,
@@ -199,20 +238,23 @@ Oct 26, 2017
     configured will fail with a class cast exception.
 
 ## 2.0.14
-Oct 9, 2017
+
+Released: 2017-10-09
 
 -   [JENKINS-47311](https://issues.jenkins-ci.org/browse/JENKINS-47311)
     Ok, sometimes you have a bad day making simple fixes.
     [Fixed](https://github.com/jenkinsci/branch-api-plugin/commit/720206f89cc7d0caafe0b67dba23d8abc1b88275) now.
 
 ## 2.0.13
-Oct 9, 2017
+
+Released: 2017-10-09
 
 -   [JENKINS-47340](https://issues.jenkins-ci.org/browse/JENKINS-47340)
     Fix NPE when saving organization folders
 
 ## 2.0.12
-Oct 6, 2017
+
+Released: 2017-10-06
 
 -   [JENKINS-47311](https://issues.jenkins-ci.org/browse/JENKINS-47311)
     Fix the broken form submission and add the missing form support for
@@ -229,7 +271,8 @@ Oct 6, 2017
 -   Update to SCM API 2.2.3
 
 ## 2.0.11
-Jul 17, 2017
+
+Released: 2017-07-17
 
 -   [JENKINS-38837](https://issues.jenkins-ci.org/browse/JENKINS-38837) Mutibranch
     project plugin does not respect "Workspace Root Directory" global
@@ -245,14 +288,16 @@ Jul 17, 2017
     MultiBranchProject not properly disabled
 
 ## 2.0.10
-Jun 9, 2017
+
+Released: 2017-06-09
 
 -   [JENKINS-44784](https://issues.jenkins-ci.org/browse/JENKINS-44784)
     Perform workspace cleanup for deleted branch projects asynchronously
     and apply a timeout.
 
 ## 2.0.9
-May 2, 2017
+
+Released: 2017-05-02
 
 -   [JENKINS-41736](https://issues.jenkins-ci.org/browse/JENKINS-41736)
     Leverage the new event description API from SCM API to expose event
@@ -263,7 +308,8 @@ May 2, 2017
     outside of their container)
 
 ## 2.0.8
-Mar 8, 2017
+
+Released: 2017-03-08
 
 -   [JENKINS-37364](https://issues.jenkins-ci.org/browse/JENKINS-37364) Tabs
     should indicate the number of items they have
@@ -277,7 +323,8 @@ Mar 8, 2017
     same build number 
 
 ## 2.0.7
-Feb 22, 2017
+
+Released: 2017-02-22
 
 -   [JENKINS-34564](https://issues.jenkins-ci.org/browse/JENKINS-34564)
     Allow workspace paths to be less than 54 characters
@@ -290,7 +337,8 @@ Feb 22, 2017
     trigger incorrect branches
 
 ## 2.0.6
-Feb 14, 2017
+
+Released: 2017-02-14
 
 -   [JENKINS-42000](https://issues.jenkins-ci.org/browse/JENKINS-42000) If
     there is a problem when scanning an Organization Folder, do not
@@ -298,7 +346,8 @@ Feb 14, 2017
     folder!
 
 ## 2.0.5
-Feb 14, 2017
+
+Released: 2017-02-14
 
 -   [JENKINS-41948](https://issues.jenkins-ci.org/browse/JENKINS-41948) (workaround)
     Restore some binary compatibility by adding a bridge method that got
@@ -307,7 +356,8 @@ Feb 14, 2017
     SCM events should be ignored when suppressing SCM triggering. 
 
 ## 2.0.4
-Feb 10, 2017
+
+Released: 2017-02-10
 
 -   [JENKINS-41927](https://issues.jenkins-ci.org/browse/JENKINS-41927)
     Orphaned branches should have name in strikethrough
@@ -316,13 +366,15 @@ Feb 10, 2017
     less useful than they should be
 
 ## 2.0.3
-Feb 8, 2017
+
+Released: 2017-02-08
 
 -   [JENKINS-41795](https://issues.jenkins-ci.org/browse/JENKINS-41795) Report
     the origin of SCM Events when available
 
 ## 2.0.2
-Feb 2, 2017
+
+Released: 2017-02-02
 
 -   [JENKINS-41517](https://issues.jenkins-ci.org/browse/JENKINS-41517) Branch
     API's event logging could be more consistent in reporting the event
@@ -341,13 +393,15 @@ Feb 2, 2017
     during loading of branch jobs when migrating from 1.x to 2.x
 
 ## 2.0.1
-Jan 17, 2017
+
+Released: 2017-01-17
 
 -   [JENKINS-41125](https://issues.jenkins-ci.org/browse/JENKINS-41125) Branch
     API 2.0.0 event processing doesn't consistently mangle names
 
 ## 2.0.0
-Jan 16, 2017
+
+Released: 2017-01-16
 
 > **Note**: Please read [this Blog Post](https://jenkins.io/blog/2017/01/17/scm-api-2/) before
     upgrading
@@ -381,7 +435,8 @@ Jan 16, 2017
     contextual naming for SCMHead/SCMSource/SCMNavigator instances
 
 ## 2.0.0-beta-1
-Dev 16, 2016
+
+Released: 2016-12-16
 
 -   Available in the experimental update center only
 -   Pick up API changes from SCM API 2.0 (requires SCM API 2.0.1-beta-1
@@ -390,13 +445,15 @@ Dev 16, 2016
     2.0.0-beta-1)
 
 ## 1.11.1
-Nov 04, 2016
+
+Released: 2016-11-04
 
 -   [JENKINS-39520](https://issues.jenkins-ci.org/browse/JENKINS-39520)
     Error when dynamically installing multiple branch source plugins.
 
 ## 1.11
-Sep 23, 2016
+
+Released: 2016-09-23
 
 -   [JENKINS-34564](https://issues.jenkins-ci.org/browse/JENKINS-34564)
     Branch projects now get custom workspace paths inside the node’s
@@ -447,34 +504,43 @@ A full fix should probably come in
 all project types.
 
 ## 1.10.2
-Sep 03, 2016; 1.10.1 burned
+
+Released: 2016-09-03
 
 -   [JENKINS-34239](https://issues.jenkins-ci.org/browse/JENKINS-34239)
     Fix of
     [JENKINS-33106](https://issues.jenkins-ci.org/browse/JENKINS-33106)
     in 1.4 did not work in all cases.
 
+## 1.10.1
+
+Broken release, do not use.
+
 ## 1.10
-Jun 09, 2016
+
+Released: 2016-06-09
 
 -   [JENKINS-34246](https://issues.jenkins-ci.org/browse/JENKINS-34246)
     Improve organization folder API to allow project recognizers to
     indicate removed repositories or edited configuration.
 
 ## 1.9
-Jun 01, 2016
+
+Released: 2016-06-01
 
 -   [JENKINS-32178](https://issues.jenkins-ci.org/browse/JENKINS-32178)
     Broken links in custom views of multibranch projects.
 
 ## 1.9-beta-1
-May 23, 2016
+
+Released: 2016-05-23
 
 -   [JENKINS-32396](https://issues.jenkins-ci.org/browse/JENKINS-32396)
     Option to suppress automatic SCM trigger.
 
 ## 1.8
-May 13, 2016
+
+Released: 2016-05-13
 
 -   [JENKINS-33819](https://issues.jenkins-ci.org/browse/JENKINS-33819)
     `OrphanedItemStrategy` is now propagated to multibranch projects.
@@ -488,7 +554,8 @@ May 13, 2016
     was fixed.
 
 ## 1.7
-Apr 29, 2016
+
+Released: 2016-04-29
 
 -   [JENKINS-34259](https://issues.jenkins-ci.org/browse/JENKINS-34259)
     Some links (in left menu) in Pipeline Multibranch projects and
@@ -497,7 +564,8 @@ Apr 29, 2016
 -   Documented build environment variables.
 
 ## 1.6
-Apr 11, 2016
+
+Released: 2016-04-11
 
 -   [JENKINS-33808](https://issues.jenkins-ci.org/browse/JENKINS-33808)
     Support for Item categorization. More information about this new
@@ -505,14 +573,16 @@ Apr 11, 2016
     [JENKINS-31162](https://issues.jenkins-ci.org/browse/JENKINS-31162)
 
 ## 1.5
-Mar 21, 2016
+
+Released: 2016-03-21
 
 -   [JENKINS-32670](https://issues.jenkins-ci.org/browse/JENKINS-32670)
     Suppress whole branch property UI for project types which do not
     have any supported branch properties, such as multibranch Pipeline.
 
 ## 1.4
-Mar 14, 2016
+
+Released: 2016-03-14
 
 -   [JENKINS-33106](https://issues.jenkins-ci.org/browse/JENKINS-33106)
     Organization folder types not displayed under *New Item* without a restart.
@@ -529,7 +599,8 @@ Feb 18, 2016
     Adapt to Parent POM 2.3
 
 ## 1.1
-Jan 28, 2016
+
+Released: 2016-01-28
 
 -   [JENKINS-31949](https://issues.jenkins-ci.org/browse/JENKINS-31949)
     Bogus *New Item* option inside folders.
@@ -542,7 +613,8 @@ Jan 28, 2016
     organization folders.
 
 ## 1.0
-Nov 12, 2015
+
+Released: 2015-11-12
 
 -   Fix to `RateLimitBranchProperty` for the benefit of Workflow
     multibranch `properties` step.
