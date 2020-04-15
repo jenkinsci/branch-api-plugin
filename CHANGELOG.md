@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.5.6
+
+Released: 2020-04-15
+
+-   [PR 189](https://github.com/jenkinsci/branch-api-plugin/pull/189) - Do not lock Node objects during workspace cleanup operations.
+-   [PR 188](https://github.com/jenkinsci/branch-api-plugin/pull/188) - Cache workspace locations to avoid unnecessary remoting calls when looking up workspaces for multibranch projects.
+-   [PR 187](https://github.com/jenkinsci/branch-api-plugin/pull/187) - Include the name of the job being processed in the thread name during workspace cleanup operations to help diagnose issues.
+-   [PR 182](https://github.com/jenkinsci/branch-api-plugin/pull/182) - Add documentation for tag-related environment variables that this plugin contributes to builds.
+-   [PR 181](https://github.com/jenkinsci/branch-api-plugin/pull/181) - When workspace deletion fails with an error, only log suppressed exceptions at FINE level. The outermost exception is still logged at WARNING level.
+-   [PR 180](https://github.com/jenkinsci/branch-api-plugin/pull/180) - Use `DefaultViewsTabBar` from Jenkins core to be able to remove duplicated code.
+-   [PR 179](https://github.com/jenkinsci/branch-api-plugin/pull/179) - Use `AbstractItem.TASK_NOUN` from Jenkins core to be able to remove unnecessary reflection.
+-   [PR 178](https://github.com/jenkinsci/branch-api-plugin/pull/178) - Add `@Override` annotations to methods now that the Jenkins baseline is new enough to have those methods.
+-   [PR 177](https://github.com/jenkinsci/branch-api-plugin/pull/177) - Refactor tests: remove unnecessary code, reduce delay times, and correct delay calculations.
+-   [PR 176](https://github.com/jenkinsci/branch-api-plugin/pull/176) - Update code to avoid deprecation warnings.
+-   [PR 174](https://github.com/jenkinsci/branch-api-plugin/pull/174) - Reduce lock contention when displaying views for multibranch projects.
+-   [PR 173](https://github.com/jenkinsci/branch-api-plugin/pull/173) - Reduce the number of permission checks needed when displaying views for mulitbranch projects.
+-   [PR 171](https://github.com/jenkinsci/branch-api-plugin/pull/171) - Update the URL in the POM to point to GitHub instead of wiki.jenkins.io.
+
 ## 2.5.5
 
 Released: 2019-12-06
