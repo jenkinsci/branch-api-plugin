@@ -33,6 +33,7 @@ import hudson.model.Run;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.Publisher;
 import java.lang.reflect.Type;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.ArrayList;
@@ -120,6 +121,7 @@ public class UntrustedBranchProperty extends BranchProperty {
     /**
      * Our {@link Descriptor}.
      */
+    @Symbol("untrustedCode")
     @Extension
     @SuppressWarnings("unused") // instantiated by Jenkins
     public static class DescriptorImpl extends BranchPropertyDescriptor {
