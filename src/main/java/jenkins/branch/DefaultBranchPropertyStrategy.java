@@ -82,7 +82,7 @@ public class DefaultBranchPropertyStrategy extends BranchPropertyStrategy {
     /**
      * Our {@link BranchPropertyStrategyDescriptor}.
      */
-    @Symbol("allBranchesSameProperties")
+    @Symbol("allBranchesSame")
     @Extension
     @SuppressWarnings("unused") // by jenkins
     public static class DescriptorImpl extends BranchPropertyStrategyDescriptor {

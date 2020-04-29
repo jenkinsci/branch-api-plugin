@@ -113,7 +113,7 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
     /**
      * Our {@link BranchPropertyStrategyDescriptor}.
      */
-    @Symbol("namedBranchesDifferentProperties")
+    @Symbol("namedBranchesDifferent")
     @Extension
     @SuppressWarnings("unused") // by jenkins
     public static class DescriptorImpl extends BranchPropertyStrategyDescriptor {
