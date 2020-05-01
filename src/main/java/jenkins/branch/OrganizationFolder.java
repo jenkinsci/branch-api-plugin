@@ -99,6 +99,8 @@ import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.UncategorizedSCMSourceCategory;
+import net.sf.json.JSONObject;
+
 import org.acegisecurity.AccessDeniedException;
 import org.acegisecurity.Authentication;
 import org.apache.commons.io.Charsets;
@@ -144,6 +146,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     private DescribableList<BranchBuildStrategy, BranchBuildStrategyDescriptor> buildStrategies = new DescribableList<>(this);
 
     /**
+     * The branches properties.
+     *
+     * @since 2.5.6
+     */
+    private BranchPropertyStrategy strategy;
+
+    /**
      * The persisted state maintained outside of the config file.
      *
      * @since 2.0
@@ -163,6 +172,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * @since 2.0
      */
     private transient String facDigest;
+
+    /**
+     * The {@link #propertyStrategy} digest used to detect if we need to trigger a rescan on save.
+     *
+     * @since 2.5.6
+     */
+    private transient String propsDigest;
 
     /**
      * The {@link #buildStrategies} digest used to detect if we need to trigger a rescan on save.
@@ -268,6 +284,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 facDigest = null;
             }
             try {
+                propsDigest = Util.getDigestOf(Items.XSTREAM2.toXML(strategy));
+            } catch (XStreamException e) {
+                propsDigest = null;
+            }
+            try {
                 bbsDigest = Util.getDigestOf(Items.XSTREAM2.toXML(buildStrategies));
             } catch (XStreamException e) {
                 bbsDigest = null;
@@ -336,6 +357,26 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
+     * Gets the strategy.
+     *
+     * @return the strategy.
+     * @since 2.5.6
+     */
+    public BranchPropertyStrategy getStrategy() {
+        return strategy != null ? strategy : new DefaultBranchPropertyStrategy(new BranchProperty[0]);
+    }
+
+    /**
+     * Sets the branch property strategy.
+     *
+     * @param strategy chosen.
+     * @since 2.5.6
+     */
+    public void setStrategy(BranchPropertyStrategy strategy) {
+        this.strategy = strategy;
+    }
+
+    /**
      * The {@link BranchBuildStrategy}s to apply.
      *
      * @return The {@link BranchBuildStrategy}s to apply.
@@ -351,9 +392,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     @Override
     protected void submit(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, Descriptor.FormException {
         super.submit(req, rsp);
-        navigators.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(SCMNavigatorDescriptor.class), "navigators");
-        projectFactories.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
-        buildStrategies.rebuildHetero(req, req.getSubmittedForm(), ExtensionList.lookup(BranchBuildStrategyDescriptor.class), "buildStrategies");
+
+        JSONObject json = req.getSubmittedForm();
+        navigators.rebuildHetero(req, json, ExtensionList.lookup(SCMNavigatorDescriptor.class), "navigators");
+        projectFactories.rebuildHetero(req, json, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
+        buildStrategies.rebuildHetero(req, json, ExtensionList.lookup(BranchBuildStrategyDescriptor.class), "buildStrategies");
+        strategy = req.bindJSON(BranchPropertyStrategy.class, json.getJSONObject("strategy"));
+
         for (SCMNavigator n : navigators) {
             n.afterSave(this);
         }
@@ -369,6 +414,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         } catch (XStreamException e) {
             facDigest = null;
         }
+        String propsDigest;
+        try {
+            propsDigest = Util.getDigestOf(Items.XSTREAM2.toXML(strategy));
+        } catch (XStreamException e) {
+            propsDigest = null;
+        }
         String bbsDigest;
         try {
             bbsDigest = Util.getDigestOf(Items.XSTREAM2.toXML(buildStrategies));
@@ -377,9 +428,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
         recalculateAfterSubmitted(!StringUtils.equals(navDigest, this.navDigest));
         recalculateAfterSubmitted(!StringUtils.equals(facDigest, this.facDigest));
+        recalculateAfterSubmitted(!StringUtils.equals(propsDigest, this.propsDigest));
         recalculateAfterSubmitted(!StringUtils.equals(bbsDigest, this.bbsDigest));
         this.navDigest = navDigest;
         this.facDigest = facDigest;
+        this.propsDigest = propsDigest;
         this.bbsDigest = bbsDigest;
     }
 
@@ -729,6 +782,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @NonNull
         public String getCategoryId() {
             return "nested-projects";
+        }
+
+        /**
+         * Gets all the {@link BranchPropertyStrategyDescriptor} instances applicable to the specified project and source.
+         *
+         * @return all the {@link BranchPropertyStrategyDescriptor} instances  applicable to the specified project and
+         *         source.
+         */
+        public List<BranchPropertyStrategyDescriptor> propertyStrategyDescriptors() {
+            return BranchPropertyStrategyDescriptor.all();
         }
 
         /**
@@ -1389,10 +1452,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     for (SCMSource source : sources) {
                         BranchSource branchSource = new BranchSource(source);
                         branchSource.setBuildStrategies(buildStrategies);
-                        // TODO do we want/need a more general BranchPropertyStrategyFactory?
+                        branchSource.setStrategy(strategy); 
                         branchSources.add(branchSource);
                     }
-                    sources = null; // make sure complete gets called just once
                     return branchSources;
                 }
 
