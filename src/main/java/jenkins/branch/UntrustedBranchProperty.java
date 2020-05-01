@@ -121,7 +121,7 @@ public class UntrustedBranchProperty extends BranchProperty {
     /**
      * Our {@link Descriptor}.
      */
-    @Symbol("untrustedBranches")
+    @Symbol("untrusted")
     @Extension
     @SuppressWarnings("unused") // instantiated by Jenkins
     public static class DescriptorImpl extends BranchPropertyDescriptor {
