@@ -102,12 +102,19 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
     @NonNull
     @Override
     public List<BranchProperty> getPropertiesFor(SCMHead head) {
+        List<BranchProperty> properties = new ArrayList<>();
+
         for (Named named : namedExceptions) {
             if (named.isMatch(head)) {
-                return new ArrayList<>(named.getProps());
+                properties.addAll(named.getProps());
             }
         }
-        return new ArrayList<>(defaultProperties);
+
+        if (properties.isEmpty()) {
+            // if no one defined adds default
+            properties.addAll(defaultProperties);
+        }
+        return properties;
     }
 
     /**
