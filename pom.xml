@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>3.43</version>
+    <version>3.56</version>
     <relativePath />
   </parent>
 
@@ -67,10 +67,9 @@
   <properties>
     <revision>2.5.7</revision>
     <changelist>-SNAPSHOT</changelist>
-    <jenkins.version>2.138.4</jenkins.version>
     <java.level>8</java.level>
-    <scm-api.version>2.4.1</scm-api.version>
-    <git-plugin.version>3.10.0</git-plugin.version>
+    <jenkins.version>2.176.4</jenkins.version>
+    <slf4jVersion>1.7.26</slf4jVersion>
   </properties>
 
   <repositories>
@@ -87,36 +86,38 @@
     </pluginRepository>
   </pluginRepositories>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.jenkins.tools.bom</groupId>
+        <artifactId>bom-2.176.x</artifactId>
+        <version>9</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <!-- plugin dependencies -->
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>scm-api</artifactId>
-      <version>${scm-api.version}</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>cloudbees-folder</artifactId>
-      <version>6.11</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>structs</artifactId>
-      <version>1.18</version>
     </dependency>
     <!-- jenkins dependencies -->
     <!-- test dependencies -->
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>1.8.5</version>
       <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.hamcrest</groupId>
-          <artifactId>hamcrest-core</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency> <!-- previously gathered from org.jenkins-ci.lib:lib-jenkins-maven-embedder -->
       <groupId>org.codehaus.plexus</groupId>
@@ -127,20 +128,17 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>scm-api</artifactId>
-      <version>${scm-api.version}</version>
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>credentials</artifactId>
-      <version>2.1.16</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>git</artifactId>
-      <version>${git-plugin.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -156,14 +154,12 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>git</artifactId>
-      <version>${git-plugin.version}</version>
       <classifier>tests</classifier>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>junit</artifactId>
-      <version>1.6</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
