@@ -32,6 +32,7 @@ import hudson.model.Job;
 import hudson.model.Queue;
 import hudson.model.Run;
 import java.util.List;
+import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -52,6 +53,7 @@ public class NoTriggerBranchProperty extends BranchProperty {
         return null;
     }
 
+    @Symbol("suppressAutomaticTriggering")
     @Extension
     public static class DescriptorImpl extends BranchPropertyDescriptor {
         @Override

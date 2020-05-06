@@ -27,6 +27,7 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import jenkins.scm.api.SCMHead;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.ArrayList;
@@ -81,6 +82,7 @@ public class DefaultBranchPropertyStrategy extends BranchPropertyStrategy {
     /**
      * Our {@link BranchPropertyStrategyDescriptor}.
      */
+    @Symbol("allBranchesSame")
     @Extension
     @SuppressWarnings("unused") // by jenkins
     public static class DescriptorImpl extends BranchPropertyStrategyDescriptor {

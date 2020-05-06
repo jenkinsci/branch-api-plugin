@@ -147,21 +147,21 @@ public class BranchCategoryFilterTest {
 
     }
 
-    private static abstract class TopLevelJob extends Job<TopLevelJob, TopLevelRun> implements TopLevelItem {
+    public static abstract class TopLevelJob extends Job<TopLevelJob, TopLevelRun> implements TopLevelItem {
 
         protected TopLevelJob(ItemGroup parent, String name) {
             super(parent, name);
         }
     }
 
-    private static abstract class TopLevelRun extends Run<TopLevelJob, TopLevelRun> {
+    public static abstract class TopLevelRun extends Run<TopLevelJob, TopLevelRun> {
 
         protected TopLevelRun(@Nonnull TopLevelJob job) throws IOException {
             super(job);
         }
     }
 
-    private static abstract class MockSCMSource extends SCMSource {
+    public static abstract class MockSCMSource extends SCMSource {
 
         protected MockSCMSource() {
             super("1");

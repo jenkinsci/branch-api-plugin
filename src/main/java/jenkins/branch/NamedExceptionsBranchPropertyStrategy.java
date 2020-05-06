@@ -32,6 +32,7 @@ import hudson.model.Descriptor;
 import jenkins.scm.api.SCMHead;
 import org.apache.commons.lang.StringUtils;
 import org.apache.tools.ant.types.selectors.SelectorUtils;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.File;
@@ -112,6 +113,7 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
     /**
      * Our {@link BranchPropertyStrategyDescriptor}.
      */
+    @Symbol("namedBranchesDifferent")
     @Extension
     @SuppressWarnings("unused") // by jenkins
     public static class DescriptorImpl extends BranchPropertyStrategyDescriptor {
