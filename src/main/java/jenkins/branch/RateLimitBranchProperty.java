@@ -181,6 +181,7 @@ public class RateLimitBranchProperty extends BranchProperty {
     /**
      * Our descriptor
      */
+    @Symbol("rateLimit")
     @Extension
     @SuppressWarnings("unused") // instantiated by jenkins
     public static class DescriptorImpl extends BranchPropertyDescriptor {

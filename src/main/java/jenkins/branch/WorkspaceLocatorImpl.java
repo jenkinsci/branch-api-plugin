@@ -26,8 +26,12 @@ package jenkins.branch;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.model.Computer;
 import hudson.model.Item;
@@ -56,6 +60,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.WeakHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -113,12 +119,27 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
      * File containing pairs of lines tracking workspaces.
      * The first line in a pair is a {@link TopLevelItem#getFullName};
      * the second is a workspace-relative path.
-     * Reads and writes to this file should be synchronized on the {@link Node}.
+     * Reads and writes to this file should be synchronized on {@link #lockFor}.
      */
     static final String INDEX_FILE_NAME = "workspaces.txt";
 
     /** Same as {@link WorkspaceList#COMBINATOR}. */
     private static final String COMBINATOR = System.getProperty(WorkspaceList.class.getName(), "@");
+
+    /**
+     * @see #indexCache()
+     * @see #load
+     * @see #save
+     */
+    private final Map<VirtualChannel, IndexCacheEntry> indexCache = new WeakHashMap<>();
+    private static final class IndexCacheEntry {
+        final String workspaceRoot;
+        final Map<String, String> index;
+        IndexCacheEntry(String workspaceRoot, Map<String, String> index) {
+            this.workspaceRoot = workspaceRoot;
+            this.index = index;
+        }
+    }
 
     @Override
     public FilePath locate(TopLevelItem item, Node node) {
@@ -155,7 +176,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             throw new IllegalArgumentException("Dangerous job name `" + fullName + "`"); // better not to mess around
         }
         try {
-            synchronized (node) {
+            synchronized (lockFor(node)) {
                 Map<String, String> index = load(workspace);
                 // Already listed:
                 String path = index.get(fullName);
@@ -213,7 +234,21 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
     }
 
+    private static Map<VirtualChannel, IndexCacheEntry> indexCache() {
+        return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).indexCache;
+    }
+
     private static Map<String, String> load(FilePath workspace) throws IOException, InterruptedException {
+        Map<VirtualChannel, IndexCacheEntry> _indexCache = indexCache();
+        IndexCacheEntry entry;
+        synchronized (_indexCache) {
+            entry = _indexCache.get(workspace.getChannel());
+        }
+        if (entry != null && entry.workspaceRoot.equals(workspace.getRemote())) {
+            LOGGER.log(Level.FINER, "cache hit on {0}", workspace);
+            return entry.index;
+        }
+        LOGGER.log(Level.FINER, "cache miss on {0}", workspace);
         Map<String, String> map = new TreeMap<>();
         FilePath index = workspace.child(INDEX_FILE_NAME);
         if (index.exists()) {
@@ -230,6 +265,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     map.put(key, value);
                 }
             }
+        }
+        synchronized (_indexCache) {
+            _indexCache.put(workspace.getChannel(), new IndexCacheEntry(workspace.getRemote(), map));
         }
         return map;
     }
@@ -252,6 +290,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             b.append(entry.getKey()).append('\n').append(entry.getValue()).append('\n');
         }
         workspace.child(INDEX_FILE_NAME).act(new WriteAtomic(b.toString()));
+        LOGGER.log(Level.FINER, "cache update on {0}", workspace);
+        Map<VirtualChannel, IndexCacheEntry> _indexCache = indexCache();
+        synchronized (_indexCache) {
+            _indexCache.put(workspace.getChannel(), new IndexCacheEntry(workspace.getRemote(), index));
+        }
     }
     private static final class WriteAtomic extends MasterToSlaveFileCallable<Void> {
         private static final long serialVersionUID = 1;
@@ -263,6 +306,24 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
             new TextFile(f).write(text);
             return null;
+        }
+    }
+
+    // Avoiding WeakHashMap<Node, T> since Slave overrides hashCode/equals
+    private final LoadingCache<Node, Object> nodeLocks = CacheBuilder.newBuilder().weakKeys().build(new CacheLoader<Node, Object>() {
+        @Override
+        public Object load(Node node) throws Exception {
+            // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
+            // Avoiding new String(…) because static analyzers complain
+            // Could use anything but hoping that a future JVM enhances thread dumps to display monitors of type String
+            return new StringBuilder("WorkspaceLocatorImpl lock for ").append(node.getNodeName()).toString();
+        }
+    });
+    private static Object lockFor(Node node) {
+        try {
+            return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.get(node);
+        } catch (ExecutionException x) {
+            throw new AssertionError(x);
         }
     }
 
@@ -399,11 +460,12 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 String nodeName = node instanceof Jenkins ? "master" : node.getNodeName();
                 try {
                     try (Timeout timeout = Timeout.limit(5, TimeUnit.MINUTES)) {
+                        t.setName(oldName + ": possibly deleting workspace for " + tli.getFullName() + " on " + nodeName);
                         FilePath loc = locate(tli, node, false);
                         if (loc == null) {
                             return;
                         }
-                        t.setName(oldName + ": deleting workspace in " + loc + " on " + nodeName);
+                        t.setName(oldName + ": deleting workspace for " + tli.getFullName() + " in " + loc + " on " + nodeName);
                         String base = loc.getName();
                         FilePath parent = loc.getParent();
                         if (parent == null) { // unlikely but just in case
@@ -419,7 +481,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         }
                         FilePath workspace = getWorkspaceRoot(node);
                         if (workspace != null) {
-                            synchronized (node) {
+                            synchronized (lockFor(node)) {
                                 Map<String, String> index = load(workspace);
                                 index.remove(tli.getFullName());
                                 save(index, workspace);
@@ -492,7 +554,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         }
                         FilePath workspace = getWorkspaceRoot(node);
                         if (workspace != null) {
-                            synchronized (node) {
+                            synchronized (lockFor(node)) {
                                 Map<String, String> index = load(workspace);
                                 index.remove(oldFullName);
                                 assert index.containsKey(newFullName); // locate(…, true) should have added it
@@ -530,7 +592,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             if (workspace == null) {
                 return;
             }
-            synchronized (node) {
+            synchronized (lockFor(node)) {
                 Map<String, String> index = load(workspace);
                 boolean modified = false;
                 try (ACLContext as = ACL.as(ACL.SYSTEM)) {

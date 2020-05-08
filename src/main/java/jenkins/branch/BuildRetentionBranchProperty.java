@@ -6,6 +6,7 @@ import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.Run;
 import jenkins.model.BuildDiscarder;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
@@ -84,6 +85,7 @@ public class BuildRetentionBranchProperty extends BranchProperty {
     /**
      * Our {@link hudson.model.Descriptor}.
      */
+    @Symbol("buildRetention")
     @Extension
     @SuppressWarnings("unused") // instantiated by Jenkins
     public static class DescriptorImpl extends BranchPropertyDescriptor {
