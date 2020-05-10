@@ -1,10 +1,9 @@
 package jenkins.branch;
 
-import jenkins.branch.MultiBranchProject;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Stephen Connolly
