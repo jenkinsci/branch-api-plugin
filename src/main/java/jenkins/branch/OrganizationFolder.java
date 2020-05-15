@@ -41,7 +41,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
 import hudson.ExtensionList;
-import hudson.Functions;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.console.ModelHyperlinkNote;

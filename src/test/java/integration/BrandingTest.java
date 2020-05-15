@@ -71,6 +71,7 @@ import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
@@ -80,7 +81,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
 
 public class BrandingTest {
 
@@ -131,7 +131,7 @@ public class BrandingTest {
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
-            fire(new MockSCMSourceEvent(SCMEvent.Type.UPDATED, c, "foo"));
+            fire(new MockSCMSourceEvent(null, SCMEvent.Type.UPDATED, c, "foo"));
             r.waitUntilNoActivity();
             assertThat(prj.getAction(MockSCMLink.class), hasProperty("id", is("source")));
         }
