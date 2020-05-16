@@ -35,11 +35,15 @@
        </f:entry>
     </table>
   </f:repeatable>
+  <f:helpLink url="${descriptor.getHelpFile('named')}" featureName="${%Exceptions}"/>
+  <f:helpArea/>
   </f:block>
   </f:section>
   <f:section title="${%Defaults}">
   <f:block>
     <f:repeatableHeteroProperty field="defaultProperties" hasHeader="true" oneEach="true" honorOrder="true" addCaption="${%Add property}" deleteCaption="${%Delete property}"/>
+    <f:helpLink url="${descriptor.helpFile}" featureName="${%Defaults}"/>
+    <f:helpArea/>
   </f:block>
   </f:section>
 </j:jelly>
