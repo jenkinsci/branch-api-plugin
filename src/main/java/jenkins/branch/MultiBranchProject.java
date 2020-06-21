@@ -2199,8 +2199,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return scmLastSeenRevision;
         }
 
+        private Cause[] getCauses() {
+            List<Cause> causes = new ArrayList<>();
+            causes.addAll(getComputation().getCauses()); // get project running cause
+            causes.addAll(Arrays.asList(causeFactory.create(source)));
+            return causes.toArray(new Cause[0]);
+        }
+
         private void doAutomaticBuilds(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull String rawName, @NonNull P project, Action[] revisionActions, SCMRevision scmLastBuiltRevision, SCMRevision scmLastSeenRevision) {
-            if (isAutomaticBuild(head, revision, scmLastBuiltRevision, scmLastSeenRevision)) {
+            if (isAutomaticBuild(head, revision, scmLastBuiltRevision, scmLastSeenRevision, getCauses())) {
                 scheduleBuild(
                         _factory,
                         project,
@@ -2226,12 +2233,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * @param currRevision the current built revision.
          * @param lastBuiltRevision the previous built revision
          * @param lastSeenRevision the last seen revision
+         * @param causes causes of the current build
          * @return {@code true} if the head should be automatically built when discovered / modified.
          */
         private boolean isAutomaticBuild(@NonNull SCMHead head,
                                          @NonNull SCMRevision currRevision,
                                          @CheckForNull SCMRevision lastBuiltRevision,
-                                         @CheckForNull SCMRevision lastSeenRevision) {
+                                         @CheckForNull SCMRevision lastSeenRevision,
+                                         @CheckForNull Cause[] causes) {
             BranchSource branchSource = null;
             for (BranchSource s: MultiBranchProject.this.sources) {
                 if (s.getSource().getId().equals(source.getId())) {
@@ -2249,7 +2258,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 return !(head instanceof TagSCMHead);
             } else {
                 for (BranchBuildStrategy s: buildStrategies) {
-                    if (s.automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener)) {
+                    if (s.automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, causes)) {
                         return true;
                     }
                 }

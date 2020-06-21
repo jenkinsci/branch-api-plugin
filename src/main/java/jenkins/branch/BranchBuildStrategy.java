@@ -28,6 +28,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
+import hudson.model.Cause;
 import hudson.model.TaskListener;
 import hudson.util.LogTaskListener;
 import java.util.logging.Level;
@@ -160,13 +161,45 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      * {@link SCMHead} has been detected as created / modified.
      * @since 2.4.2
      */
+    @Deprecated
+    @SuppressWarnings("deprecation")
+    @Restricted(ProtectedExternally.class)
+    public boolean isAutomaticBuild(@NonNull SCMSource source,
+                                             @NonNull SCMHead head,
+                                             @NonNull SCMRevision currRevision,
+                                             @CheckForNull SCMRevision lastBuiltRevision,
+                                             @CheckForNull SCMRevision lastSeenRevision,
+                                             @NonNull TaskListener listener) {
+        throw new UnsupportedOperationException("Modern implementation accessed using legacy API method");
+    }
+
+    /**
+     * SPI: Should the specified {@link SCMRevision} of the {@link SCMHead} for the specified {@link SCMSource} be
+     * triggered when the {@link SCMHead} has been detected as created / modified?
+     *
+     * @param source       the {@link SCMSource}
+     * @param head         the {@link SCMHead}
+     * @param currRevision the {@link SCMRevision} that the build head is now at
+     * @param lastBuiltRevision the {@link SCMRevision} that the build head was last seen at or {@code null} if this is a newly
+     *                     discovered head. It replaces prevRevision from the previous SPI version. Care should be taken to consider
+     *                     the case of non {@link SCMRevision#isDeterministic()} previous revisions as polling for changes will have
+     *                     confirmed that there is a change between this and {@code currRevision} even if the two are equal.
+     * @param lastSeenRevision the {@link SCMRevision} that the head was last seen
+     * @param listener     the {@link TaskListener} that can be used for outputting any rational for the decision
+     * @param causes       the {@link Cause} of the build
+     * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
+     * {@link SCMHead} has been detected as created / modified.
+     * @since 2.5.7
+     */
+    @SuppressWarnings("deprecation")
     @Restricted(ProtectedExternally.class)
     public abstract boolean isAutomaticBuild(@NonNull SCMSource source,
                                              @NonNull SCMHead head,
                                              @NonNull SCMRevision currRevision,
                                              @CheckForNull SCMRevision lastBuiltRevision,
                                              @CheckForNull SCMRevision lastSeenRevision,
-                                             @NonNull TaskListener listener);
+                                             @NonNull TaskListener listener,
+                                             @NonNull Cause[] causes);
 
     /**
      * API: Should the specified {@link SCMRevision} of the {@link SCMHead} for the specified {@link SCMSource} be
@@ -244,6 +277,42 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
                                         @CheckForNull SCMRevision lastBuiltRevision,
                                         @CheckForNull SCMRevision lastSeenRevision,
                                         @NonNull TaskListener listener) {
+        return automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, new Cause[0]);
+    }
+
+    /**
+     * API: Should the specified {@link SCMRevision} of the {@link SCMHead} for the specified {@link SCMSource} be
+     * triggered when the {@link SCMHead} has been detected as created / modified?
+     *
+     * @param source       the {@link SCMSource}
+     * @param head         the {@link SCMHead}
+     * @param currRevision the {@link SCMRevision} that the head is now at
+     * @param lastBuiltRevision the {@link SCMRevision} that the build head was last seen at or {@code null} if this is a newly
+     *                     discovered head. Care should be taken to consider the case of non
+     *                     {@link SCMRevision#isDeterministic()} previous revisions as polling for changes will have
+     *                     confirmed that there is a change between this and {@code currRevision} even if the two
+     *                     are equal.
+     * @param lastSeenRevision the {@link SCMRevision} that the head was last seen
+     * @param listener     the TaskListener to be used
+     * @param causes       the {@link Cause}
+     * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
+     * {@link SCMHead} has been detected as created / modified.
+     * @since 2.5.7
+     */
+    @SuppressWarnings("deprecation")
+    public final boolean automaticBuild(@NonNull SCMSource source,
+                                        @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        @CheckForNull SCMRevision lastBuiltRevision,
+                                        @CheckForNull SCMRevision lastSeenRevision,
+                                        @NonNull TaskListener listener,
+                                        @NonNull Cause[] causes) {
+        if (Util.isOverridden(BranchBuildStrategy.class, getClass(), "isAutomaticBuild", SCMSource.class,
+                SCMHead.class, SCMRevision.class, SCMRevision.class, SCMRevision.class, TaskListener.class,
+                Cause[].class)) {
+            // modern implementation written to the 2.5.7+ spec
+            return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, causes);
+        }
         if (Util.isOverridden(BranchBuildStrategy.class, getClass(), "isAutomaticBuild", SCMSource.class,
                 SCMHead.class, SCMRevision.class, SCMRevision.class, SCMRevision.class, TaskListener.class)) {
             // modern implementation written to the 2.4.2+ spec
@@ -271,7 +340,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
         }
         // this is going to throw an abstract method exception, but we should never get here as all implementations
         // have to at least have overridden one of the methods above.
-        return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener);
+        return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, causes);
     }
 
     /**
