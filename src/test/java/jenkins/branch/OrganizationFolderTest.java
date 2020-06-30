@@ -63,9 +63,7 @@ import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -81,8 +79,7 @@ public class OrganizationFolderTest {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-            assertEquals(1, projectFactories.size());
-            assertEquals(MockFactory.class, projectFactories.get(0).getClass());
+            assertThat(projectFactories, contains(instanceOf(MockFactory.class)));
             projectFactories.add(new MockFactory());
             top.getNavigators().add(new SingleSCMNavigator("stuff",
                     Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",
@@ -94,9 +91,7 @@ public class OrganizationFolderTest {
             assertEquals(SingleSCMNavigator.class, navigators.get(0).getClass());
             assertEquals("stuff", ((SingleSCMNavigator) navigators.get(0)).getName());
             projectFactories = top.getProjectFactories();
-            assertEquals(2, projectFactories.size());
-            assertEquals(MockFactory.class, projectFactories.get(0).getClass());
-            assertEquals(MockFactory.class, projectFactories.get(1).getClass());
+            assertThat(projectFactories, containsInAnyOrder(instanceOf(MockFactory.class), instanceOf(MockFactory.class)));
         }
     }
 
@@ -133,8 +128,7 @@ public class OrganizationFolderTest {
     public void deletedMarker() throws Exception {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-        assertEquals(1, projectFactories.size());
-        assertEquals(MockFactory.class, projectFactories.get(0).getClass());
+        assertThat(projectFactories, contains(instanceOf(MockFactory.class)));
         top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
         top.scheduleBuild2(0).getFuture().get();
         top.getComputation().writeWholeLogTo(System.out);

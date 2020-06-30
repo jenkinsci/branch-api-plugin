@@ -53,7 +53,6 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
 
 public class OrganizationChildHealthMetricsPropertyTest {
     @ClassRule
@@ -72,8 +71,7 @@ public class OrganizationChildHealthMetricsPropertyTest {
             c.createRepository("stuff");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = prj.getProjectFactories();
-            assertEquals(1, projectFactories.size());
-            assertEquals(OrganizationFolderTest.MockFactory.class, projectFactories.get(0).getClass());
+            assertThat(projectFactories, contains(instanceOf(OrganizationFolderTest.MockFactory.class)));
             projectFactories.add(new OrganizationFolderTest.MockFactory());
             prj.getNavigators().add(new SingleSCMNavigator("stuff",
                     Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",

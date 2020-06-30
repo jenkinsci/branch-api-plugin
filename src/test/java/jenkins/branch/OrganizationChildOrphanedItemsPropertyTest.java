@@ -46,10 +46,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.Matchers.*;
 
 public class OrganizationChildOrphanedItemsPropertyTest {
     @ClassRule
@@ -68,8 +65,7 @@ public class OrganizationChildOrphanedItemsPropertyTest {
             c.createRepository("stuff");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = prj.getProjectFactories();
-            assertEquals(1, projectFactories.size());
-            assertEquals(OrganizationFolderTest.MockFactory.class, projectFactories.get(0).getClass());
+            assertThat(projectFactories, contains(instanceOf(OrganizationFolderTest.MockFactory.class)));
             projectFactories.add(new OrganizationFolderTest.MockFactory());
             prj.getNavigators().add(new SingleSCMNavigator("stuff",
                     Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",

@@ -51,7 +51,7 @@ import org.jvnet.hudson.test.TestExtension;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -76,16 +76,17 @@ public class CustomOrganizationFolderDescriptorTest {
     
     @Test
     public void noNavigatorNoFactoryInstalled() throws Exception {
-        assertEquals(1, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
-        assertEquals(SingleSCMNavigator.DescriptorImpl.class, ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass());
-        assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
+        assertThat(ExtensionList.lookup(SCMNavigatorDescriptor.class),
+                contains(instanceOf(SingleSCMNavigator.DescriptorImpl.class)));
+        assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size()); // FIXME fails in PCT
         assertThat(newItemTypes(), containsInAnyOrder());
     }
 
     @Test
     public void someNavigatorNoFactoryInstalled() throws Exception {
-        assertEquals(2, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
-        assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
+        assertThat(ExtensionList.lookup(SCMNavigatorDescriptor.class),
+                containsInAnyOrder(instanceOf(SomeNavigatorNoFactoryInstalledDescriptor.class), instanceOf(SingleSCMNavigator.DescriptorImpl.class)));
+        assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size()); // FIXME fails in PCT
         assertThat(newItemTypes(), containsInAnyOrder());
     }
     @TestExtension("someNavigatorNoFactoryInstalled")
@@ -95,7 +96,7 @@ public class CustomOrganizationFolderDescriptorTest {
     public void noNavigatorSomeFactoryInstalled() throws Exception {
         assertEquals(1, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
         assertEquals(SingleSCMNavigator.DescriptorImpl.class, ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass());
-        assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
+        assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size()); // FIXME fails in PCT
         assertThat(newItemTypes(), containsInAnyOrder());
     }
     @TestExtension("noNavigatorSomeFactoryInstalled")
@@ -104,7 +105,7 @@ public class CustomOrganizationFolderDescriptorTest {
     @Test
     public void someNavigatorSomeFactoryInstalled() throws Exception {
         assertEquals(2, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
-        assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
+        assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size()); // FIXME fails in PCT
         assertThat(newItemTypes(), containsInAnyOrder("MockNavigator"));
     }
     @TestExtension("someNavigatorSomeFactoryInstalled")
