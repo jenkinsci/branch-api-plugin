@@ -92,7 +92,7 @@ public class OrganizationFolderTest {
             assertEquals(SingleSCMNavigator.class, navigators.get(0).getClass());
             assertEquals("stuff", ((SingleSCMNavigator) navigators.get(0)).getName());
             projectFactories = top.getProjectFactories();
-            assertThat(projectFactories, containsInAnyOrder(instanceOf(MockFactory.class), instanceOf(MockFactory.class)));
+            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItems(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class), ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
         }
     }
 
