@@ -78,7 +78,8 @@ public class CustomOrganizationFolderDescriptorTest {
     public void noNavigatorNoFactoryInstalled() throws Exception {
         assertThat(ExtensionList.lookup(SCMNavigatorDescriptor.class),
                 hasItem(ExtensionList.lookupSingleton(SingleSCMNavigator.DescriptorImpl.class)));
-        assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size()); // FIXME fails in PCT
+        // Ensure none of our mock factories sneaked into this test (though other MultiBranchProjectFactory impls may exist on the classpath)
+        assertThat(ExtensionList.lookup(OrganizationFolderTest.MockFactoryDescriptor.class), is(empty()));
         assertThat(newItemTypes(), containsInAnyOrder());
     }
 
@@ -86,7 +87,8 @@ public class CustomOrganizationFolderDescriptorTest {
     public void someNavigatorNoFactoryInstalled() throws Exception {
         assertThat(ExtensionList.lookup(SCMNavigatorDescriptor.class),
                 hasItems(ExtensionList.lookupSingleton(SingleSCMNavigator.DescriptorImpl.class), ExtensionList.lookupSingleton(SomeNavigatorNoFactoryInstalledDescriptor.class)));
-        assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size()); // FIXME fails in PCT
+        // Ensure none of our mock factories sneaked into this test (though other MultiBranchProjectFactory impls may exist on the classpath)
+        assertThat(ExtensionList.lookup(OrganizationFolderTest.MockFactoryDescriptor.class), is(empty()));
         assertThat(newItemTypes(), containsInAnyOrder());
     }
     @TestExtension("someNavigatorNoFactoryInstalled")
