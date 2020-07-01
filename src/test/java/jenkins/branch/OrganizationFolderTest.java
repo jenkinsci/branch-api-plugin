@@ -62,6 +62,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import static jenkins.branch.matchers.Extracting.extracting;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
@@ -79,7 +80,7 @@ public class OrganizationFolderTest {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-            assertThat(projectFactories, contains(instanceOf(MockFactory.class)));
+            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             projectFactories.add(new MockFactory());
             top.getNavigators().add(new SingleSCMNavigator("stuff",
                     Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",
@@ -128,7 +129,7 @@ public class OrganizationFolderTest {
     public void deletedMarker() throws Exception {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-        assertThat(projectFactories, contains(instanceOf(MockFactory.class)));
+        assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
         top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
         top.scheduleBuild2(0).getFuture().get();
         top.getComputation().writeWholeLogTo(System.out);
