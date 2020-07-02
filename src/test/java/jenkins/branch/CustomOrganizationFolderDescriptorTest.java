@@ -73,22 +73,19 @@ public class CustomOrganizationFolderDescriptorTest {
                 .remove(ExtensionList.lookup(SCMNavigatorDescriptor.class).get(
                         MockSCMNavigator.DescriptorImpl.class)));
     }
-    
+
     @Test
     public void noNavigatorNoFactoryInstalled() throws Exception {
-        assertThat(ExtensionList.lookup(SCMNavigatorDescriptor.class),
-                hasItem(ExtensionList.lookupSingleton(SingleSCMNavigator.DescriptorImpl.class)));
-        // Ensure none of our mock factories sneaked into this test (though other MultiBranchProjectFactory impls may exist on the classpath)
-        assertThat(ExtensionList.lookup(MockNavigatorDescriptor.class), is(empty()));
-        assertThat(ExtensionList.lookup(OrganizationFolderTest.MockFactoryDescriptor.class), is(empty()));
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class), hasSize(1));
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass(), is(SingleSCMNavigator.DescriptorImpl.class));
+        assumeThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), is(empty()));
         assertThat(newItemTypes(), containsInAnyOrder());
     }
 
     @Test
     public void someNavigatorNoFactoryInstalled() throws Exception {
-        assertThat(ExtensionList.lookup(SCMNavigatorDescriptor.class),
-                hasItems(ExtensionList.lookupSingleton(SingleSCMNavigator.DescriptorImpl.class), ExtensionList.lookupSingleton(SomeNavigatorNoFactoryInstalledDescriptor.class)));
-        assertThat(ExtensionList.lookup(OrganizationFolderTest.MockFactoryDescriptor.class), is(empty()));
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class), hasSize(2));
+        assumeThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), is(empty()));
         assertThat(newItemTypes(), containsInAnyOrder());
     }
     @TestExtension("someNavigatorNoFactoryInstalled")
@@ -96,11 +93,9 @@ public class CustomOrganizationFolderDescriptorTest {
 
     @Test
     public void noNavigatorSomeFactoryInstalled() throws Exception {
-        assertThat(ExtensionList.lookup(SCMNavigatorDescriptor.class),
-                hasItem(ExtensionList.lookupSingleton(SingleSCMNavigator.DescriptorImpl.class)));
-        assertThat(ExtensionList.lookup(MockNavigatorDescriptor.class), is(empty()));
-        assertThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class),
-                hasItem(ExtensionList.lookupSingleton(NoNavigatorSomeFactoryInstalledDescriptor.class)));
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class), hasSize(1));
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass(), is(SingleSCMNavigator.DescriptorImpl.class));
+        assumeThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), hasSize(1));
         assertThat(newItemTypes(), containsInAnyOrder());
     }
     @TestExtension("noNavigatorSomeFactoryInstalled")
@@ -108,10 +103,8 @@ public class CustomOrganizationFolderDescriptorTest {
 
     @Test
     public void someNavigatorSomeFactoryInstalled() throws Exception {
-        assertThat(ExtensionList.lookup(SCMNavigatorDescriptor.class),
-                hasItems(ExtensionList.lookupSingleton(SingleSCMNavigator.DescriptorImpl.class), ExtensionList.lookupSingleton(SomeNavigatorSomeFactoryInstalledDescriptor1.class)));
-        assertThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class),
-                hasItem(ExtensionList.lookupSingleton(SomeNavigatorSomeFactoryInstalledDescriptor2.class)));
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class), hasSize(2));
+        assumeThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), hasSize(1));
         assertThat(newItemTypes(), containsInAnyOrder("MockNavigator"));
     }
     @TestExtension("someNavigatorSomeFactoryInstalled")
