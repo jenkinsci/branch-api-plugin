@@ -121,8 +121,7 @@ public class ParameterDefinitionBranchPropertyTest {
     }
 
     @Issue("JENKINS-61438")
-    // TODO Enable this test case when jenkins.version includes the patch in stapler/stapler#182 
-    @Ignore("Enable this test when stapler/stapler#182 is merged and the jenkins.version will include the patch")
+    @Ignore("TODO enable in 2.242+")
     @Test
     public void choiceParameterIssue() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
