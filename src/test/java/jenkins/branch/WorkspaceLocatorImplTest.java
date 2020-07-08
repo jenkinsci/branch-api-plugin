@@ -234,7 +234,7 @@ public class WorkspaceLocatorImplTest {
     public void uniquification() throws Exception {
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
         assertEquals("a_b", r.buildAndAssertSuccess(r.createFreeStyleProject("a'b")).getWorkspace().getName());
-        assertEquals("a_b_2", r.buildAndAssertSuccess(r.createFreeStyleProject("a\"b")).getWorkspace().getName());
+        assertEquals("a_b_2", r.buildAndAssertSuccess(r.createFreeStyleProject("a(b")).getWorkspace().getName());
         assertEquals("ch_to_fit_in_a_short_path_at_all", r.buildAndAssertSuccess(r.createFreeStyleProject("way too much to fit in a short path at all")).getWorkspace().getName());
         assertEquals("_to_fit_in_a_short_path_at_all_2", r.buildAndAssertSuccess(r.createFreeStyleProject("really way too much to fit in a short path at all")).getWorkspace().getName());
         assertEquals("_to_fit_in_a_short_path_at_all_3", r.buildAndAssertSuccess(r.createFreeStyleProject("way, way, way too much to fit in a short path at all")).getWorkspace().getName());
