@@ -30,6 +30,7 @@ import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.WorkspaceList;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.logging.Level;
@@ -226,7 +227,11 @@ public class WorkspaceLocatorImplTest {
         s = (DumbSlave) r.jenkins.getNode("remote");
         s.toComputer().connect(true).get();
         assertEquals(Collections.emptyList(), s.getWorkspaceRoot().listDirectories());
-        s.toComputer().getLogText().writeLogTo(0, System.out);
+        try {
+            s.toComputer().getLogText().writeLogTo(0, System.out);
+        } catch (IOException x) { // observed in Windows CI: FileNotFoundException: …\logs\slaves\remote\slave.log
+            x.printStackTrace();
+        }
     }
 
     @Issue({"JENKINS-2111", "JENKINS-58177"})
