@@ -145,6 +145,9 @@ public class EventsTest {
      */
     @ClassRule
     public static JenkinsRule r = new JenkinsRule();
+    static {
+        r.timeout = 600;
+    }
 
     @Before
     public void cleanOutAllItems() throws Exception {
