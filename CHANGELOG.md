@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.5.8
+
+Released: 2020-07-17
+
+- [PR 202](https://github.com/jenkinsci/branch-api-plugin/pull/202) - Update tests to fix OrganizationFolderTest.deletedMarker failed in PCT with megawar incl. workflow-multibranch
+- [PR 201](https://github.com/jenkinsci/branch-api-plugin/pull/201) - Update tests to fix flake in RateLimitBranchPropertyTest.rateLimitsBlockBuilds_maxRate.
+
+
 ## 2.5.7
 
 Released: 2020-07-08
