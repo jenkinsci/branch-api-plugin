@@ -49,11 +49,11 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.TestExtension;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeThat;
 
@@ -73,19 +73,19 @@ public class CustomOrganizationFolderDescriptorTest {
                 .remove(ExtensionList.lookup(SCMNavigatorDescriptor.class).get(
                         MockSCMNavigator.DescriptorImpl.class)));
     }
-    
+
     @Test
     public void noNavigatorNoFactoryInstalled() throws Exception {
-        assertEquals(1, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
-        assertEquals(SingleSCMNavigator.DescriptorImpl.class, ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass());
-        assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class), hasSize(1));
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass(), is(SingleSCMNavigator.DescriptorImpl.class));
+        assumeThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), is(empty()));
         assertThat(newItemTypes(), containsInAnyOrder());
     }
 
     @Test
     public void someNavigatorNoFactoryInstalled() throws Exception {
-        assertEquals(2, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
-        assertEquals(0, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class), hasSize(2));
+        assumeThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), is(empty()));
         assertThat(newItemTypes(), containsInAnyOrder());
     }
     @TestExtension("someNavigatorNoFactoryInstalled")
@@ -93,9 +93,9 @@ public class CustomOrganizationFolderDescriptorTest {
 
     @Test
     public void noNavigatorSomeFactoryInstalled() throws Exception {
-        assertEquals(1, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
-        assertEquals(SingleSCMNavigator.DescriptorImpl.class, ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass());
-        assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class), hasSize(1));
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class).get(0).getClass(), is(SingleSCMNavigator.DescriptorImpl.class));
+        assumeThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), hasSize(1));
         assertThat(newItemTypes(), containsInAnyOrder());
     }
     @TestExtension("noNavigatorSomeFactoryInstalled")
@@ -103,8 +103,8 @@ public class CustomOrganizationFolderDescriptorTest {
 
     @Test
     public void someNavigatorSomeFactoryInstalled() throws Exception {
-        assertEquals(2, ExtensionList.lookup(SCMNavigatorDescriptor.class).size());
-        assertEquals(1, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).size());
+        assumeThat(ExtensionList.lookup(SCMNavigatorDescriptor.class), hasSize(2));
+        assumeThat(ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), hasSize(1));
         assertThat(newItemTypes(), containsInAnyOrder("MockNavigator"));
     }
     @TestExtension("someNavigatorSomeFactoryInstalled")

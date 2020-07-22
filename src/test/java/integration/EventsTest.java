@@ -29,7 +29,6 @@ import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
-import hudson.Extension;
 import hudson.Functions;
 import hudson.model.Computer;
 import hudson.model.Executor;
@@ -101,6 +100,7 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
@@ -116,7 +116,6 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assume.assumeThat;
 import org.junit.Ignore;
 
@@ -146,6 +145,9 @@ public class EventsTest {
      */
     @ClassRule
     public static JenkinsRule r = new JenkinsRule();
+    static {
+        r.timeout = 600;
+    }
 
     @Before
     public void cleanOutAllItems() throws Exception {
