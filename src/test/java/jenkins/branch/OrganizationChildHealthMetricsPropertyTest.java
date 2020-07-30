@@ -26,6 +26,7 @@ package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetric;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetricDescriptor;
+import hudson.ExtensionList;
 import hudson.model.TopLevelItem;
 import hudson.util.DescribableList;
 import integration.harness.BasicMultiBranchProject;
@@ -33,6 +34,7 @@ import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
 import java.util.Collections;
 import java.util.List;
+
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.SingleSCMSource;
@@ -47,13 +49,9 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static jenkins.branch.matchers.Extracting.extracting;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 
 public class OrganizationChildHealthMetricsPropertyTest {
     @ClassRule
@@ -72,8 +70,7 @@ public class OrganizationChildHealthMetricsPropertyTest {
             c.createRepository("stuff");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = prj.getProjectFactories();
-            assertEquals(1, projectFactories.size());
-            assertEquals(OrganizationFolderTest.MockFactory.class, projectFactories.get(0).getClass());
+            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             projectFactories.add(new OrganizationFolderTest.MockFactory());
             prj.getNavigators().add(new SingleSCMNavigator("stuff",
                     Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",

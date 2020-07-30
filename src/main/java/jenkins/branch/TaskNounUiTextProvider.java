@@ -26,8 +26,6 @@ package jenkins.branch;
 import hudson.Extension;
 import hudson.model.AbstractItem;
 import hudson.util.AlternativeUiTextProvider;
-import java.lang.reflect.Field;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;

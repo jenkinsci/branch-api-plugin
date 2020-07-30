@@ -41,7 +41,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
 import hudson.ExtensionList;
-import hudson.Functions;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.console.ModelHyperlinkNote;
@@ -127,7 +126,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * Our logger.
      */
-    private static final Logger LOGGER = Logger.getLogger(MultiBranchProject.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(OrganizationFolder.class.getName());
     /**
      * Our navigators.
      */
@@ -1419,7 +1418,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         MultiBranchProjectFactory factory = null;
                         Map<String, Object> attributes = Collections.<String, Object>emptyMap();
                         for (MultiBranchProjectFactory candidateFactory : projectFactories) {
-                            if (recognizes(attributes, candidateFactory)) {
+                            boolean recognizes = recognizes(attributes, candidateFactory);
+                            LOGGER.fine(() -> candidateFactory + " recognizes " + projectName + " with " + attributes + "? " + recognizes);
+                            if (recognizes) {
                                 factory = candidateFactory;
                                 break;
                             }

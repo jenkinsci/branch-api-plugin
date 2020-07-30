@@ -33,7 +33,6 @@ import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.plugins.git.traits.BranchDiscoveryTrait;
-import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMNavigator;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;

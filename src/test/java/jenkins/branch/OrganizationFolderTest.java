@@ -34,6 +34,7 @@ import hudson.model.TaskListener;
 import hudson.model.View;
 import hudson.scm.NullSCM;
 import hudson.security.Permission;
+import integration.harness.BasicMultiBranchProjectFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -41,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMSource;
@@ -62,15 +64,22 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.*;
+import static jenkins.branch.matchers.Extracting.extracting;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeThat;
+import org.jvnet.hudson.test.LoggerRule;
 
 public class OrganizationFolderTest {
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
+
+    @Rule
+    public LoggerRule logging = new LoggerRule().record(ComputedFolder.class, Level.FINE).record(OrganizationFolder.class, Level.FINE);
 
     @Test
     public void configRoundTrip() throws Exception {
@@ -78,8 +87,7 @@ public class OrganizationFolderTest {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-            assertEquals(1, projectFactories.size());
-            assertEquals(MockFactory.class, projectFactories.get(0).getClass());
+            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             projectFactories.add(new MockFactory());
             top.getNavigators().add(new SingleSCMNavigator("stuff",
                     Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",
@@ -91,9 +99,7 @@ public class OrganizationFolderTest {
             assertEquals(SingleSCMNavigator.class, navigators.get(0).getClass());
             assertEquals("stuff", ((SingleSCMNavigator) navigators.get(0)).getName());
             projectFactories = top.getProjectFactories();
-            assertEquals(2, projectFactories.size());
-            assertEquals(MockFactory.class, projectFactories.get(0).getClass());
-            assertEquals(MockFactory.class, projectFactories.get(1).getClass());
+            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItems(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class), ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
         }
     }
 
@@ -128,10 +134,12 @@ public class OrganizationFolderTest {
     @Issue("JENKINS-34246")
     @Test
     public void deletedMarker() throws Exception {
+        assumeThat("TODO fails if jth.jenkins-war.path includes WorkflowMultiBranchProjectFactory since SingleSCMSource ignores SCMSourceCriteria",
+            ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).stream().map(d -> d.clazz).toArray(),
+            arrayContainingInAnyOrder(MockFactory.class, BasicMultiBranchProjectFactory.class));
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-        assertEquals(1, projectFactories.size());
-        assertEquals(MockFactory.class, projectFactories.get(0).getClass());
+        assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
         top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
         top.scheduleBuild2(0).getFuture().get();
         top.getComputation().writeWholeLogTo(System.out);

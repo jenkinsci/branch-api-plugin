@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.5.8
+
+Released: 2020-07-17
+
+- [PR 202](https://github.com/jenkinsci/branch-api-plugin/pull/202) - Update tests to fix OrganizationFolderTest.deletedMarker failed in PCT with megawar incl. workflow-multibranch
+- [PR 201](https://github.com/jenkinsci/branch-api-plugin/pull/201) - Update tests to fix flake in RateLimitBranchPropertyTest.rateLimitsBlockBuilds_maxRate.
+
+
+## 2.5.7
+
+Released: 2020-07-08
+
+- [PR 200](https://github.com/jenkinsci/branch-api-plugin/pull/200) - Update tests to fix errors caused by [JENKINS-61956](https://issues.jenkins-ci.org/browse/JENKINS-61956) when testing against Jenkins 2.237 or newer.
+- [PR 199](https://github.com/jenkinsci/branch-api-plugin/pull/199) - Add assumptions to some tests that expect a particular set of mock extensions to be the only available extensions so that the tests are skipped in the PCT.
+- [PR 197](https://github.com/jenkinsci/branch-api-plugin/pull/197) - Use `org.hamcrest.MatcherAssert.assertThat` instead of `org.junit.Assert.assertThat` in tests.
+- [PR 192](https://github.com/jenkinsci/branch-api-plugin/pull/192) - Add symbols to subclasses of `BranchProperty` and `BranchPropertyStrategy`. Also update minimum supported Jenkins version to 2.176.4.
+
 ## 2.5.6
 
 Released: 2020-04-15
