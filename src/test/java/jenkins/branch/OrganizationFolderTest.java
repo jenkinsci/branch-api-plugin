@@ -29,11 +29,14 @@ import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import hudson.ExtensionList;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
+import hudson.model.ParameterDefinition;
 import hudson.model.Result;
+import hudson.model.StringParameterDefinition;
 import hudson.model.TaskListener;
 import hudson.model.View;
 import hudson.scm.NullSCM;
 import hudson.security.Permission;
+import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import java.io.IOException;
 import java.util.Arrays;
@@ -75,6 +78,22 @@ import org.jvnet.hudson.test.LoggerRule;
 
 public class OrganizationFolderTest {
 
+    public static class OrganizationFolderBranchProperty extends ParameterDefinitionBranchProperty {
+
+        @DataBoundConstructor
+        public OrganizationFolderBranchProperty() {
+            super();
+        }
+
+        @TestExtension
+        public static class DescriptorImpl extends BranchPropertyDescriptor {
+            @Override
+            protected boolean isApplicable(MultiBranchProjectDescriptor projectDescriptor) {
+                return projectDescriptor instanceof BasicMultiBranchProject.DescriptorImpl;
+            }
+        }
+    }
+
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
@@ -100,6 +119,47 @@ public class OrganizationFolderTest {
             assertEquals("stuff", ((SingleSCMNavigator) navigators.get(0)).getName());
             projectFactories = top.getProjectFactories();
             assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItems(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class), ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
+        }
+    }
+
+    @Issue("JENKINS-48837")
+    @Test
+    public void verifyBranchPropertiesAppliedOnNewProjects() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("stuff");
+            OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
+            List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
+            assertEquals(1, projectFactories.size());
+            assertEquals(MockFactory.class, projectFactories.get(0).getClass());
+            top.getNavigators().add(new SingleSCMNavigator("stuff",
+                    Collections.<SCMSource>singletonList(new SingleSCMSource("stuffy",
+                            new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
+                    );
+            OrganizationFolderBranchProperty instance = new OrganizationFolderBranchProperty();
+            instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
+                    new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")
+                    ));
+            top.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[] { instance }));
+            top = r.configRoundtrip(top);
+
+            top.scheduleBuild(0);
+            r.waitUntilNoActivity();
+
+            // get the child project produced by the factory after scan
+            MultiBranchImpl prj = (MultiBranchImpl) top.getItem("stuff");
+            // verify new multibranch project have branch properties inherited from folder
+            assertThat(prj.getSources().get(0).getStrategy(), instanceOf(DefaultBranchPropertyStrategy.class));
+            DefaultBranchPropertyStrategy strategy = (DefaultBranchPropertyStrategy) prj.getSources().get(0).getStrategy();
+            assertThat(strategy.getProps().get(0), instanceOf(OrganizationFolderBranchProperty.class));
+            OrganizationFolderBranchProperty property = (OrganizationFolderBranchProperty) strategy.getProps().get(0);
+            assertThat(property.getParameterDefinitions(), contains(
+                    allOf(
+                            instanceOf(StringParameterDefinition.class),
+                            hasProperty("name", is("PARAM_STR")),
+                            hasProperty("defaultValue", is("PARAM_DEFAULT_0812673")),
+                            hasProperty("description", is("The param"))
+                    )
+            ));
         }
     }
 
