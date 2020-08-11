@@ -147,7 +147,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * The branches properties.
      *
-     * @since 2.5.6
+     * @since 2.5.9
      */
     private BranchPropertyStrategy strategy;
 
@@ -175,7 +175,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * The {@link #propertyStrategy} digest used to detect if we need to trigger a rescan on save.
      *
-     * @since 2.5.6
+     * @since 2.5.9
      */
     private transient String propsDigest;
 
@@ -359,7 +359,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * Gets the strategy.
      *
      * @return the strategy.
-     * @since 2.5.6
+     * @since 2.5.9
      */
     public BranchPropertyStrategy getStrategy() {
         return strategy != null ? strategy : new DefaultBranchPropertyStrategy(new BranchProperty[0]);
@@ -369,7 +369,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * Sets the branch property strategy.
      *
      * @param strategy chosen.
-     * @since 2.5.6
+     * @since 2.5.9
      */
     public void setStrategy(BranchPropertyStrategy strategy) {
         this.strategy = strategy;
