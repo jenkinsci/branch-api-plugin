@@ -189,7 +189,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      * @param causes       the {@link Cause} of the build
      * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
      * {@link SCMHead} has been detected as created / modified.
-     * @since 2.5.7
+     * @since 2.6.2
      */
     @Restricted(ProtectedExternally.class)
     public abstract boolean isAutomaticBuild(@NonNull SCMSource source,
@@ -296,7 +296,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      * @param causes       the {@link Cause}
      * @return {@code true} if and only if the {@link SCMRevision} should be automatically built when the
      * {@link SCMHead} has been detected as created / modified.
-     * @since 2.5.7
+     * @since 2.6.2
      */
     @SuppressWarnings("deprecation")
     public final boolean automaticBuild(@NonNull SCMSource source,
@@ -309,7 +309,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
         if (Util.isOverridden(BranchBuildStrategy.class, getClass(), "isAutomaticBuild", SCMSource.class,
                 SCMHead.class, SCMRevision.class, SCMRevision.class, SCMRevision.class, TaskListener.class,
                 Cause[].class)) {
-            // modern implementation written to the 2.5.7+ spec
+            // modern implementation written to the 2.6.2+ spec
             return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, causes);
         }
         if (Util.isOverridden(BranchBuildStrategy.class, getClass(), "isAutomaticBuild", SCMSource.class,
