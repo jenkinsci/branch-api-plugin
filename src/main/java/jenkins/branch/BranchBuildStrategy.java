@@ -191,7 +191,6 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      * {@link SCMHead} has been detected as created / modified.
      * @since 2.5.7
      */
-    @SuppressWarnings("deprecation")
     @Restricted(ProtectedExternally.class)
     public abstract boolean isAutomaticBuild(@NonNull SCMSource source,
                                              @NonNull SCMHead head,
