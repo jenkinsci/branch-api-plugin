@@ -68,7 +68,6 @@ import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import static jenkins.branch.matchers.Extracting.extracting;
-import org.acegisecurity.providers.TestingAuthenticationToken;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
@@ -354,7 +353,8 @@ public class OrganizationFolderTest {
         OrganizationFolder org_folder = new OrganizationFolder( computed_folder, "org" );
 
         // SYSTEM (the default authentication scope) can do everything, so we need to look like someone else.
-        Authentication some_user = new TestingAuthenticationToken( this, "testing", null );
+        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
+        Authentication some_user = User.getById("testing", true).impersonate();
 
         // verify that all of of the suppressed permissions are actually suppressed!
         for( Permission perm : suppressed_permissions ) {
