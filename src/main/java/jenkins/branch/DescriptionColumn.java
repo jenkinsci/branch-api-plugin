@@ -72,16 +72,16 @@ public class DescriptionColumn extends ListViewColumn {
     }
 
     /**
-     * Gets the description of a job.
+     * Gets the formatted description of a job.
      *
      * @param p   the metadata action.
      * @param job the job.
-     * @return the description.
+     * @return the description. It is never unfiltered, unescaped HTML.
      * @throws IOException if there was an issue encoding the description.
      */
     @Restricted(NoExternalUse.class)
     @SuppressWarnings("unused") // used via Jelly EL binding
-    public String description(@CheckForNull Object p, @NonNull Object job) throws IOException {
+    public String formattedDescription(@CheckForNull Object p, @NonNull Object job) throws IOException {
         if (p instanceof ObjectMetadataAction) {
             // when the description comes from the metadata, assume plain text and use Util.escape
             String objectDescription = ((ObjectMetadataAction) p).getObjectDescription();
