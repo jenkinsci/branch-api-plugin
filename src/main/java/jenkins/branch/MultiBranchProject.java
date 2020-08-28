@@ -36,7 +36,6 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
-import hudson.Functions;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.console.ModelHyperlinkNote;
@@ -66,7 +65,6 @@ import hudson.util.XStream2;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -690,7 +688,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
             _actions[0] = new CauseAction(_causes);
         }
-        if (ParameterizedJobMixIn.scheduleBuild2(item, 0, _actions) != null) {
+        if (ParameterizedJobMixIn.scheduleBuild2(item, -1, _actions) != null) {
             listener.getLogger().println("Scheduled build for branch: " + name);
             try {
                 factory.setRevisionHash(item, revision);

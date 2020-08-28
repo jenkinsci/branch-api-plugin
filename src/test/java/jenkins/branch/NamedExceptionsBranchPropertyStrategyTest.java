@@ -3,8 +3,8 @@ package jenkins.branch;
 import org.junit.Test;
 
 import static jenkins.branch.NamedExceptionsBranchPropertyStrategy.Named.isMatch;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 /**
  * @author Stephen Connolly

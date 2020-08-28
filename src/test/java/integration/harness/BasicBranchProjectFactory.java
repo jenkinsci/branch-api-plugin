@@ -39,6 +39,15 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 public class BasicBranchProjectFactory extends BranchProjectFactory<FreeStyleProject, FreeStyleBuild> {
 
+    /**
+     * Set the quiet period on projects produced by this factor to this this value.
+     *
+     * Defaults to 0 to speed up tests.  In most cases, we are not interested in testing that quiet period is honored.
+     *
+     * If set to -1, the Jenkins-provided quietPeriod will be used.
+     */
+    public static int quietPeriodSeconds = 0;
+
     @DataBoundConstructor
     public BasicBranchProjectFactory() {
     }
@@ -47,6 +56,13 @@ public class BasicBranchProjectFactory extends BranchProjectFactory<FreeStylePro
     public FreeStyleProject newInstance(Branch branch) {
         FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getEncodedName());
         setBranch(job, branch);
+        if (quietPeriodSeconds >= 0) {
+            try {
+                job.setQuietPeriod(quietPeriodSeconds);
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
+        }
         return job;
     }
 

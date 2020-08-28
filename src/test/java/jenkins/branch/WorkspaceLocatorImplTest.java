@@ -30,6 +30,7 @@ import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.WorkspaceList;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.logging.Level;
@@ -156,8 +157,8 @@ public class WorkspaceLocatorImplTest {
         assertEquals(r.jenkins.getRootPath().child("workspace/stuff_dev_flow"), r.jenkins.getWorkspaceFor(master));
         DumbSlave slave = r.createOnlineSlave();
         assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow"), slave.getWorkspaceFor(master));
-        FreeStyleProject unrelated = r.createFreeStyleProject("100% crazy");
-        assertEquals(r.jenkins.getRootPath().child("workspace/100% crazy"), r.jenkins.getWorkspaceFor(unrelated));
+        FreeStyleProject unrelated = r.createFreeStyleProject("100's of problems");
+        assertEquals(r.jenkins.getRootPath().child("workspace/100's of problems"), r.jenkins.getWorkspaceFor(unrelated));
         // Checking other values of workspaceDir.
         Field workspaceDir = Jenkins.class.getDeclaredField("workspaceDir"); // currently settable only by Jenkins.doConfigSubmit
         workspaceDir.setAccessible(true);
@@ -215,7 +216,7 @@ public class WorkspaceLocatorImplTest {
     @Test
     public void deleteOffline() throws Exception {
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
-        FreeStyleProject p = r.createFreeStyleProject("a$b");
+        FreeStyleProject p = r.createFreeStyleProject("a'b");
         DumbSlave s = r.createSlave("remote", null, null);
         p.setAssignedNode(s);
         assertEquals(s, r.buildAndAssertSuccess(p).getBuiltOn());
@@ -226,15 +227,19 @@ public class WorkspaceLocatorImplTest {
         s = (DumbSlave) r.jenkins.getNode("remote");
         s.toComputer().connect(true).get();
         assertEquals(Collections.emptyList(), s.getWorkspaceRoot().listDirectories());
-        s.toComputer().getLogText().writeLogTo(0, System.out);
+        try {
+            s.toComputer().getLogText().writeLogTo(0, System.out);
+        } catch (IOException x) { // observed in Windows CI: FileNotFoundException: …\logs\slaves\remote\slave.log
+            x.printStackTrace();
+        }
     }
 
     @Issue({"JENKINS-2111", "JENKINS-58177"})
     @Test
     public void uniquification() throws Exception {
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
-        assertEquals("a_b", r.buildAndAssertSuccess(r.createFreeStyleProject("a$b")).getWorkspace().getName());
-        assertEquals("a_b_2", r.buildAndAssertSuccess(r.createFreeStyleProject("a!b")).getWorkspace().getName());
+        assertEquals("a_b", r.buildAndAssertSuccess(r.createFreeStyleProject("a'b")).getWorkspace().getName());
+        assertEquals("a_b_2", r.buildAndAssertSuccess(r.createFreeStyleProject("a(b")).getWorkspace().getName());
         assertEquals("ch_to_fit_in_a_short_path_at_all", r.buildAndAssertSuccess(r.createFreeStyleProject("way too much to fit in a short path at all")).getWorkspace().getName());
         assertEquals("_to_fit_in_a_short_path_at_all_2", r.buildAndAssertSuccess(r.createFreeStyleProject("really way too much to fit in a short path at all")).getWorkspace().getName());
         assertEquals("_to_fit_in_a_short_path_at_all_3", r.buildAndAssertSuccess(r.createFreeStyleProject("way, way, way too much to fit in a short path at all")).getWorkspace().getName());

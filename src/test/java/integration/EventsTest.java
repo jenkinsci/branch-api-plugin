@@ -29,7 +29,6 @@ import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
-import hudson.Extension;
 import hudson.Functions;
 import hudson.model.Computer;
 import hudson.model.Executor;
@@ -40,6 +39,7 @@ import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.model.queue.QueueTaskFuture;
+import integration.harness.BasicBranchProjectFactory;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
@@ -101,6 +101,7 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
@@ -116,7 +117,6 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assume.assumeThat;
 import org.junit.Ignore;
 
@@ -146,6 +146,9 @@ public class EventsTest {
      */
     @ClassRule
     public static JenkinsRule r = new JenkinsRule();
+    static {
+        r.timeout = 600;
+    }
 
     @Before
     public void cleanOutAllItems() throws Exception {
@@ -764,6 +767,54 @@ public class EventsTest {
         }
     }
 
+    @Issue("JENKINS-54052")
+    @Test
+    public void given_multibranchWithSources_when_zero_quiet_period_then_two_runs() throws Exception {
+        int savedQuietPeriod = BasicBranchProjectFactory.quietPeriodSeconds;
+        try (MockSCMController c = MockSCMController.create()) {
+            BasicBranchProjectFactory.quietPeriodSeconds = 0;
+            FreeStyleProject master = runMultipleScansOnChangedMaster(c);
+            assertThat("The master branch was built twice - zero quiet period works", master.getLastBuild().getNumber(), is(2));
+        } finally {
+            BasicBranchProjectFactory.quietPeriodSeconds = savedQuietPeriod;
+        }
+    }
+
+    @Issue("JENKINS-54052")
+    @Test
+    public void given_multibranchWithSources_when_system_quiet_period_then_one_run() throws Exception {
+        int savedQuietPeriod = BasicBranchProjectFactory.quietPeriodSeconds;
+        try (MockSCMController c = MockSCMController.create()) {
+            BasicBranchProjectFactory.quietPeriodSeconds = -1;
+            FreeStyleProject master = runMultipleScansOnChangedMaster(c);
+            assertThat("The master branch was built once - system quiet period respected",
+                master.getLastBuild().getNumber(), is(1));
+        } finally {
+            BasicBranchProjectFactory.quietPeriodSeconds = savedQuietPeriod;
+        }
+    }
+
+    private FreeStyleProject runMultipleScansOnChangedMaster(MockSCMController c) throws Exception {
+        c.createRepository("foo");
+        BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+        prj.setCriteria(null);
+        prj.getSourcesList()
+            .add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
+        prj.scheduleBuild2(0).getFuture().get();
+
+        // This simulates any number of scenarios where multiple events come in quickly for the same pipeline branch
+        c.addFile("foo", "master", "Test fast update", "update.txt", "...".getBytes());
+        prj.scheduleBuild2(0).getFuture().get();
+
+        assertThat("We now have branches",
+            prj.getItems(),
+            not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+        FreeStyleProject master = prj.getItem("master");
+        assertThat("We now have the master branch", master, notNullValue());
+        r.waitUntilNoActivity();
+        assertThat("The master branch was built", master.getLastBuild(), notNullValue());
+        return master;
+    }
 
     @Test
     public void given_multibranchWithSources_when_matchingEvent_then_branchesAreFoundAndBuilt() throws Exception {

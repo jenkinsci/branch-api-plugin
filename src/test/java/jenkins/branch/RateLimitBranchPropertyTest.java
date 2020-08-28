@@ -31,8 +31,6 @@ import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Job;
-import hudson.model.ParameterDefinition;
-import hudson.model.ParameterValue;
 import hudson.model.ParametersAction;
 import hudson.model.Queue;
 import hudson.model.Run;
@@ -56,6 +54,7 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -68,7 +67,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assume.assumeThat;
 
 public class RateLimitBranchPropertyTest {
     /**
@@ -142,7 +141,7 @@ public class RateLimitBranchPropertyTest {
     // we run this test at two rates which have more than the error margin (500ms) in expected delay to ensure
     // that the delay is doubled when the rate is halved and thus rule out a false positive where there is a general
     // delay on all builds of more than the expected delay.
-    public void rateLimitsBlockBuilds(int rate) throws Exception {
+    private void rateLimitsBlockBuilds(int rate) throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -200,7 +199,7 @@ public class RateLimitBranchPropertyTest {
             // it can take more than the requested delay... that's ok, but it should not be
             // more than 500ms longer (i.e. 5 of our Queue.maintain loops above)
             final long delay = (long)(60.f * 60.f / rate * 1000);
-            assertThat("At least the rate implied delay but no more than 500ms longer",
+            assumeThat("At least the rate implied delay but no more than 500ms longer",
                     System.currentTimeMillis() - startTime,
                     allOf(
                             greaterThanOrEqualTo(delay - 200L),
