@@ -32,10 +32,13 @@ import hudson.model.Job;
 import hudson.model.ParameterDefinition;
 import hudson.model.StringParameterDefinition;
 import hudson.model.TopLevelItem;
+import hudson.util.VersionNumber;
 import integration.harness.BasicDummyStepBranchProperty;
 import integration.harness.BasicMultiBranchProject;
 import java.util.Arrays;
 import java.util.Collections;
+
+import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
@@ -50,13 +53,8 @@ import org.jvnet.hudson.test.TestExtension;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.hasProperty;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assume.assumeThat;
 
 public class ParameterDefinitionBranchPropertyTest {
     /**
@@ -121,9 +119,9 @@ public class ParameterDefinitionBranchPropertyTest {
     }
 
     @Issue("JENKINS-61438")
-    @Ignore("TODO enable in 2.242+")
     @Test
     public void choiceParameterIssue() throws Exception {
+        assumeThat(Jenkins.getVersion(), greaterThanOrEqualTo(new VersionNumber("2.242")));
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
