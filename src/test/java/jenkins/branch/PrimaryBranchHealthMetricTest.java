@@ -20,7 +20,10 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.in;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -69,7 +72,7 @@ public class PrimaryBranchHealthMetricTest {
             assertThat("We now have the master branch", master, notNullValue());
             assertThat("'master' branch's reports should be exactly the reports as it is the primary branch",
                     prj.getBuildHealthReports(),
-                    containsInAnyOrder(asMatchers(master.getBuildHealthReports(), Matchers::is))
+                    containsInAnyOrder(master.getBuildHealthReports().toArray())
             );
         }
     }
@@ -94,35 +97,15 @@ public class PrimaryBranchHealthMetricTest {
             FreeStyleProject stable = prj.getItem("stable");
             assertThat("We now have the stable branch", stable, notNullValue());
             assertThat(
-                    "'master' branch's reports should not be present as it is not the primary branch",
+                    "none of 'master' branch's reports should be present as it is not the primary branch",
                     prj.getBuildHealthReports(),
-                    not(
-                            containsInAnyOrder(asMatchers(master.getBuildHealthReports(), Matchers::is))
-                    )
+                    everyItem(not(is(in(master.getBuildHealthReports().toArray()))))
             );
             assertThat(
                     "'stable' branch's reports should be exactly the reports as it is the primary branch",
                     prj.getBuildHealthReports(),
-                    containsInAnyOrder(asMatchers(stable.getBuildHealthReports(), Matchers::is))
+                    containsInAnyOrder(stable.getBuildHealthReports().toArray())
             );
         }
     }
-
-    /**
-     * Helper for matching a list of instances with {@link Matchers#containsInAnyOrder(Collection)} or {@link
-     * Matchers#contains(List)} as these expect a list of {@link Matcher} instance not a list of instances so you will
-     * get a test failure due to a class cast exception because of type erasure.
-     *
-     * @param instances the instances you want to match.
-     * @param matcherFunction the function to use for converting instances to matchers, normally {@link
-     *         Matchers#is(Object)}.
-     * @param <T> the type of instance.
-     * @param <V> the type of object matched by the resulting matcher.
-     * @return a list of {@link Matcher} instance, one for every instance in the input list.
-     */
-    private static <T,V> List<Matcher<V>> asMatchers(List<T> instances, Function<T, Matcher<V>> matcherFunction) {
-        return instances.stream().map(matcherFunction).collect(Collectors.toList());
-    }
-
-
 }
