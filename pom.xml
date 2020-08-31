@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.6</version>
+    <version>4.7</version>
     <relativePath />
   </parent>
 
@@ -58,15 +58,16 @@
   </developers>
 
   <scm>
-    <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
-    <url>http://github.com/jenkinsci/${project.artifactId}-plugin</url>
+    <connection>scm:git:git://github.com/${gitHubRepo}.git</connection>
+    <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+    <url>http://github.com/${gitHubRepo}</url>
     <tag>${scmTag}</tag>
   </scm>
 
   <properties>
     <revision>2.5.10</revision>
     <changelist>-SNAPSHOT</changelist>
+    <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     <jenkins.version>2.176.4</jenkins.version>
     <java.level>8</java.level>
   </properties>
