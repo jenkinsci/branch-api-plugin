@@ -25,6 +25,7 @@
 package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.AbstractFolder;
+import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetric;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetricDescriptor;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
@@ -33,7 +34,11 @@ import hudson.Util;
 import hudson.model.Actionable;
 import hudson.model.HealthReport;
 import hudson.model.Item;
+import hudson.model.Job;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -111,7 +116,23 @@ public class PrimaryBranchHealthMetric extends FolderHealthMetric {
                     && ((Actionable) item).getAction(PrimaryInstanceMetadataAction.class) != null) {
                 if (reports == null) {
                     reports = new ArrayList<>();
-                    reports.add(getHealthReport(item));
+                    reports.addAll(Util.fixNull(getHealthReports(item)));
+                }
+            }
+        }
+
+        public static List<HealthReport> getHealthReports(Item item) {
+            if (item instanceof Job) {
+                return ((Job<?,?>) item).getBuildHealthReports();
+            } else if (item instanceof Folder) {
+                return ((Folder) item).getBuildHealthReports();
+            } else {
+                try {
+                    Method getBuildHealth = item.getClass().getMethod("getBuildHealthReports");
+                    return (List<HealthReport>) getBuildHealth.invoke(item);
+                } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException var2) {
+                    HealthReport report = getHealthReport(item);
+                    return report == null ? null : Collections.singletonList(report);
                 }
             }
         }

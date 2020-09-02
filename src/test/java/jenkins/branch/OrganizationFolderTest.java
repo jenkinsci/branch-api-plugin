@@ -33,6 +33,7 @@ import hudson.model.ParameterDefinition;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
 import hudson.model.TaskListener;
+import hudson.model.User;
 import hudson.model.View;
 import hudson.scm.NullSCM;
 import hudson.security.Permission;
@@ -59,7 +60,6 @@ import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.acegisecurity.Authentication;
-import org.acegisecurity.providers.TestingAuthenticationToken;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
@@ -353,7 +353,8 @@ public class OrganizationFolderTest {
         OrganizationFolder org_folder = new OrganizationFolder( computed_folder, "org" );
 
         // SYSTEM (the default authentication scope) can do everything, so we need to look like someone else.
-        Authentication some_user = new TestingAuthenticationToken( this, "testing", null );
+        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
+        Authentication some_user = User.getById("testing", true).impersonate();
 
         // verify that all of of the suppressed permissions are actually suppressed!
         for( Permission perm : suppressed_permissions ) {
@@ -375,7 +376,8 @@ public class OrganizationFolderTest {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
 
         // SYSTEM (the default authentication scope) can do everything, so we need to look like someone else.
-        Authentication some_user = new TestingAuthenticationToken( this, "testing", null );
+        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
+        Authentication some_user = User.getById("testing", true).impersonate();
 
         // verify that none of the suppressed permissions are suppressed
         for( Permission perm : suppressed_permissions ) {

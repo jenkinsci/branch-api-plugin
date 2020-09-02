@@ -2,11 +2,17 @@ package jenkins.branch;
 
 import hudson.model.FreeStyleProject;
 import hudson.model.TopLevelItem;
-import integration.harness.BasicMultiBranchProject;
+import integration.harness.HealthReportingMultiBranchProject;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
+import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -14,7 +20,10 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.in;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -35,7 +44,7 @@ public class PrimaryBranchHealthMetricTest {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", "stable");
-            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            HealthReportingMultiBranchProject prj = r.jenkins.createProject(HealthReportingMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
@@ -52,7 +61,7 @@ public class PrimaryBranchHealthMetricTest {
             c.createRepository("foo");
             c.createBranch("foo", "stable");
             c.setPrimaryBranch("foo", "master");
-            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            HealthReportingMultiBranchProject prj = r.jenkins.createProject(HealthReportingMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
@@ -61,7 +70,10 @@ public class PrimaryBranchHealthMetricTest {
             prj.invalidateBuildHealthReports();
             FreeStyleProject master = prj.getItem("master");
             assertThat("We now have the master branch", master, notNullValue());
-            assertThat(prj.getBuildHealthReports(), containsInAnyOrder(master.getBuildHealth()));
+            assertThat("'master' branch's reports should be exactly the reports as it is the primary branch",
+                    prj.getBuildHealthReports(),
+                    containsInAnyOrder(master.getBuildHealthReports().toArray())
+            );
         }
     }
 
@@ -70,8 +82,10 @@ public class PrimaryBranchHealthMetricTest {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", "stable");
+            // we want to ensure that the implementation is based on the SCM's reported primary branch and not just
+            // hard-coded to the string 'master'
             c.setPrimaryBranch("foo", "stable");
-            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
+            HealthReportingMultiBranchProject prj = r.jenkins.createProject(HealthReportingMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             prj.scheduleBuild2(0).getFuture().get();
@@ -82,10 +96,16 @@ public class PrimaryBranchHealthMetricTest {
             assertThat("We now have the master branch", master, notNullValue());
             FreeStyleProject stable = prj.getItem("stable");
             assertThat("We now have the stable branch", stable, notNullValue());
-            assertThat(prj.getBuildHealthReports(), not(containsInAnyOrder(master.getBuildHealth())));
-            assertThat(prj.getBuildHealthReports(), containsInAnyOrder(stable.getBuildHealth()));
+            assertThat(
+                    "none of 'master' branch's reports should be present as it is not the primary branch",
+                    prj.getBuildHealthReports(),
+                    everyItem(not(is(in(master.getBuildHealthReports().toArray()))))
+            );
+            assertThat(
+                    "'stable' branch's reports should be exactly the reports as it is the primary branch",
+                    prj.getBuildHealthReports(),
+                    containsInAnyOrder(stable.getBuildHealthReports().toArray())
+            );
         }
     }
-
-
 }
