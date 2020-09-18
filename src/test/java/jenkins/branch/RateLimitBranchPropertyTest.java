@@ -289,7 +289,7 @@ public class RateLimitBranchPropertyTest {
             // it can take more than the requested delay... that's ok, but it should not be
             // more than 500ms longer (i.e. 5 of our Queue.maintain loops above)
             final long delay = (long)(60.f * 60.f / rate * 1000);
-            assertThat("At least the rate implied delay but no more than 500ms longer",
+            assumeThat("At least the rate implied delay but no more than 500ms longer",
                     secondBuild.getStartTimeInMillis() - firstBuild.getStartTimeInMillis(),
                     allOf(
                             greaterThanOrEqualTo(delay - 200L),
