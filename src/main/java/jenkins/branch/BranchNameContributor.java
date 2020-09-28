@@ -36,6 +36,7 @@ import jenkins.scm.api.SCMHeadOrigin;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.metadata.ContributorMetadataAction;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
+import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead2;
 import jenkins.scm.api.mixin.TagSCMHead;
@@ -61,6 +62,11 @@ public class BranchNameContributor extends EnvironmentContributor {
                 // Note: not using Branch.name, since in the future that could be something different
                 // than SCMHead.name, which is what we really want here.
                 envs.put("BRANCH_NAME", head.getName());
+                if (branch.getAction(PrimaryInstanceMetadataAction.class) != null) {
+                    envs.put("BRANCH_IS_PRIMARY", "true");
+                } else {
+                    envs.put("BRANCH_IS_PRIMARY", "false");
+                }
                 if (head instanceof ChangeRequestSCMHead) {
                     envs.putIfNotNull("CHANGE_ID", ((ChangeRequestSCMHead) head).getId());
                     SCMHead target = ((ChangeRequestSCMHead) head).getTarget();
