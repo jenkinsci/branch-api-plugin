@@ -421,7 +421,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     // Get current used memory as Percentages
                     usedMemoryPercent = (double)usedMemory / totalMemory * 100;
                     // While the maximum usage of Memory is below 85% And Queue isn't empty - Keep spawning threads
-                    // If memory is exceeded break while - Check if list is empty, if not 
+                    // If memory limit is exceeded break while - Check if list is empty, if not retry
                     while(usedMemoryPercent <= 85.00 && !nodes.isEmpty()){
                         Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.poll()));
                         usedMemory = totalMemory - instance.freeMemory();
