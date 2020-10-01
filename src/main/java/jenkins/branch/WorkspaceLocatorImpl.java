@@ -56,9 +56,12 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
@@ -397,14 +400,33 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         @Override
         public void onDeleted(Item item) {
+            // Instantiate a Queue as Auxiliary to limit amount of threads executing at the same time
+            
+            Runtime instance = Runtime.getRuntime();
+            boolean isrunning = true;
+            // Get totalt memory available
+            long totalmem = instance.totalMemory();
             if (!(item instanceof TopLevelItem)) {
                 return;
             }
             TopLevelItem tli = (TopLevelItem) item;
             Jenkins jenkins = Jenkins.get();
+            Queue<Node> nodes = new LinkedList<>(jenkins.getNodes());
             Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
             for (Node node : jenkins.getNodes()) {
-                Computer.threadPoolForRemoting.submit(new CleanupTask(tli, node));
+                // Add node to Queue
+                nodes.add(node);
+                while(isrunning){                   
+                    // Get current used memory in bytes
+                    long usedMem = totalmem - instance.freeMemory();
+                    // Get current used memory as Percentages
+                    double usedMemPercent = usedMem / totalmem * 100;
+                    // While the maximum usage of Memory is below 85% keep spawning threads
+                    while(usedMemPercent < 85.00D){
+                        Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.poll()));
+                    }
+                    isrunning = !nodes.isEmpty();
+                }
             }
         }
 
@@ -415,7 +437,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
             Jenkins jenkins = Jenkins.get();
             Computer.threadPoolForRemoting.submit(new MoveTask(oldFullName, newFullName, jenkins));
-            for (Node node : jenkins.getNodes()) {
+            for (Node node : jenkins.getNodes()) {    
                 Computer.threadPoolForRemoting.submit(new MoveTask(oldFullName, newFullName, node));
             }
         }
