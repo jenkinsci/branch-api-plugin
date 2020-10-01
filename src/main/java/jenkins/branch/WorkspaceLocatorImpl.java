@@ -400,34 +400,38 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         @Override
         public void onDeleted(Item item) {
-            // Instantiate a Queue as Auxiliary to limit amount of threads executing at the same time
-            
             Runtime instance = Runtime.getRuntime();
             boolean isrunning = true;
             // Get totalt memory available
-            long totalmem = instance.totalMemory();
+            long totalMemory = instance.totalMemory();
+            
             if (!(item instanceof TopLevelItem)) {
                 return;
             }
             TopLevelItem tli = (TopLevelItem) item;
             Jenkins jenkins = Jenkins.get();
+            // Instantiate a Queue as Auxiliary to limit amount of threads executing at the same time
             Queue<Node> nodes = new LinkedList<>(jenkins.getNodes());
             Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
-            for (Node node : jenkins.getNodes()) {
-                // Add node to Queue
-                nodes.add(node);
+            long usedMemory = totalMemory - instance.freeMemory();
+            double usedMemoryPercent = 0.0D;
                 while(isrunning){                   
                     // Get current used memory in bytes
-                    long usedMem = totalmem - instance.freeMemory();
+                    usedMemory = totalMemory - instance.freeMemory();
                     // Get current used memory as Percentages
-                    double usedMemPercent = usedMem / totalmem * 100;
-                    // While the maximum usage of Memory is below 85% keep spawning threads
-                    while(usedMemPercent < 85.00D){
+                    usedMemoryPercent = (double)usedMemory / totalMemory * 100;
+                    // While the maximum usage of Memory is below 85% And Queue isn't empty - Keep spawning threads
+                    // If memory is exceeded break while - Check if list is empty, if not 
+                    while(usedMemoryPercent <= 85.00 && !nodes.isEmpty()){
                         Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.poll()));
+                        usedMemory = totalMemory - instance.freeMemory();
+                        usedMemoryPercent = (double)usedMemory / totalMemory * 100;
+                        LOGGER.log(Level.INFO, "Current used Memory in Percent: {0}%", usedMemoryPercent);
                     }
+                    // If the list is empty it will set isrunning to False which will terminated the Loop
                     isrunning = !nodes.isEmpty();
                 }
-            }
+            
         }
 
         @Override
