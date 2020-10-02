@@ -400,10 +400,10 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         @Override
         public void onDeleted(Item item) {
-            Runtime instance = Runtime.getRuntime();
-            boolean isrunning = true;
+//            Runtime instance = Runtime.getRuntime();
+//            boolean isrunning = true;
             // Get totalt memory available
-            long totalMemory = instance.totalMemory();
+//            long totalMemory = instance.totalMemory();
             
             if (!(item instanceof TopLevelItem)) {
                 return;
@@ -413,24 +413,25 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             // Instantiate a Queue as Auxiliary to limit amount of threads executing at the same time
             Queue<Node> nodes = new LinkedList<>(jenkins.getNodes());
             Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
-            long usedMemory = totalMemory - instance.freeMemory();
-            double usedMemoryPercent = 0.0D;
-                while(isrunning){                   
-                    // Get current used memory in bytes
-                    usedMemory = totalMemory - instance.freeMemory();
-                    // Get current used memory as Percentages
-                    usedMemoryPercent = (double)usedMemory / totalMemory * 100;
-                    // While the maximum usage of Memory is below 85% And Queue isn't empty - Keep spawning threads
-                    // If memory limit is exceeded break while - Check if list is empty, if not retry
-                    while(usedMemoryPercent <= 85.00 && !nodes.isEmpty()){
-                        Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.poll()));
-                        usedMemory = totalMemory - instance.freeMemory();
-                        usedMemoryPercent = (double)usedMemory / totalMemory * 100;
-                        LOGGER.log(Level.INFO, "Current used Memory in Percent: {0}%", usedMemoryPercent);
-                    }
-                    // If the list is empty it will set isrunning to False which will terminated the Loop
-                    isrunning = !nodes.isEmpty();
-                }
+//            long usedMemory = totalMemory - instance.freeMemory();
+//            double usedMemoryPercent = 0.0D;
+            new CleanupTaskProvisioner(tli, jenkins.getNodes()).run();
+//            while(isrunning){                   
+//                // Get current used memory in bytes
+//                usedMemory = totalMemory - instance.freeMemory();
+//                // Get current used memory as Percentages
+//                usedMemoryPercent = (double)usedMemory / totalMemory * 100;
+//                // While the maximum usage of Memory is below 85% And Queue isn't empty - Keep spawning threads
+//                // If memory limit is exceeded break while - Check if list is empty if not - retry
+//                while(usedMemoryPercent <= 85.00 && !nodes.isEmpty()){
+//                    Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.poll()));
+//                    usedMemory = totalMemory - instance.freeMemory();
+//                    usedMemoryPercent = (double)usedMemory / totalMemory * 100;
+//                    LOGGER.log(Level.INFO, "Current used Memory in Percent: {0}%", usedMemoryPercent);
+//                }
+//                    // If the list is empty it will set isrunning to False which will terminated the Loop
+//                isrunning = !nodes.isEmpty();
+//            }
             
         }
 
@@ -463,6 +464,53 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         private static synchronized void taskFinished() {
             runningTasks--;
             Deleter.class.notifyAll();
+        }
+        
+        private static class CleanupTaskProvisioner implements Runnable{
+              
+            private final TopLevelItem tli;
+            
+            private final Queue<Node> nodes;
+            
+            private final double memorySaturationLimit = 85.00;
+            
+            public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes) {
+                this.tli = tli;
+                this.nodes = new LinkedList<Node>(nodes);
+            }
+            
+            @Override
+            public void run() {
+                try {
+                    boolean isRunning = true;
+                    double usedMemoryPercent = calculateUsedMemoryPercentage();
+                    while(isRunning){                   
+                    // Get current used memory as Percentages
+                    usedMemoryPercent = calculateUsedMemoryPercentage();
+                    // While the maximum usage of Memory is below 85% And Queue isn't empty - Keep spawning threads
+                    // If memory limit is exceeded break while - Check if list is empty if not - retry
+                    while(usedMemoryPercent <= this.memorySaturationLimit && !nodes.isEmpty()){
+                        Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.poll()));
+                        usedMemoryPercent = calculateUsedMemoryPercentage();
+                        LOGGER.log(Level.INFO, "Current used Memory in Percent: {0}%", usedMemoryPercent);
+                    }
+                    // If the list is empty it will set isrunning to False which will terminated the Loop
+                    isRunning = !nodes.isEmpty();
+                    // Sleep for 2.5 seconds while waiting for Memory to be released.
+                    Thread.sleep(2500);
+                }
+                } catch (InterruptedException e) {
+                    LOGGER.log(Level.WARNING, e.getMessage());
+                }
+            }
+        }
+        
+        private static double calculateUsedMemoryPercentage(){
+            Runtime instance = Runtime.getRuntime();
+            long totalMemory = instance.totalMemory();
+            long freeMemory = instance.freeMemory();
+            long usedMemory = totalMemory - freeMemory;
+            return (double)usedMemory / totalMemory * 100;
         }
 
         private static class CleanupTask implements Runnable {
