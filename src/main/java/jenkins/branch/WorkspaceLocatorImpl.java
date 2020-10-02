@@ -416,7 +416,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
             Jenkins jenkins = Jenkins.get();
             Computer.threadPoolForRemoting.submit(new MoveTask(oldFullName, newFullName, jenkins));
-            for (Node node : jenkins.getNodes()) {    
+            for (Node node : jenkins.getNodes()) {
                 Computer.threadPoolForRemoting.submit(new MoveTask(oldFullName, newFullName, node));
             }
         }
