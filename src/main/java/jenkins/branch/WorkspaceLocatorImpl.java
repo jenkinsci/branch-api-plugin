@@ -471,7 +471,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         }
                     // If the Queue is empty it will set isRunning to False which will terminated the Loop
                     isRunning = !nodes.isEmpty();
-                }
+                    }   
                 } catch (Exception e) {
                     LOGGER.log(Level.WARNING, e.getMessage());
                 }
