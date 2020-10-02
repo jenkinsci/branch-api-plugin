@@ -447,7 +447,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             
             private final Queue<Node> nodes;
             
-            private final double memorySaturationLimit = 85.00;
+            private static final double MEMORYSATURATIONLIMIT = 85.00;
             
             public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes) {
                 this.tli = tli;
@@ -464,17 +464,15 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         usedMemoryPercent = calculateUsedMemoryPercentage();
                         // While the maximum usage of Memory is below 85% And Queue isn't empty - Keep spawning threads
                         // If memory limit is exceeded break While Loop - Check if Queue is empty if not - retry
-                        while(usedMemoryPercent <= this.memorySaturationLimit && !nodes.isEmpty()){
+                        while(usedMemoryPercent <= this.MEMORYSATURATIONLIMIT && !nodes.isEmpty()){
                             Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.poll()));
                             usedMemoryPercent = calculateUsedMemoryPercentage();
                             LOGGER.log(Level.INFO, "Current used Memory in Percent: {0}%", usedMemoryPercent);
                         }
                     // If the Queue is empty it will set isRunning to False which will terminated the Loop
                     isRunning = !nodes.isEmpty();
-                    // Sleep for 2.5 seconds while waiting for Memory to be released(Simply to reduce amount of Loops with non-sufficent memory).
-                    Thread.sleep(2500);
                 }
-                } catch (InterruptedException e) {
+                } catch (Exception e) {
                     LOGGER.log(Level.WARNING, e.getMessage());
                 }
             }
