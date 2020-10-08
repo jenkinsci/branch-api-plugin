@@ -398,7 +398,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     public static class Deleter extends ItemListener {
 
         @Override
-        public void onDeleted(Item item) {            
+        public void onDeleted(Item item) {
             if (!(item instanceof TopLevelItem)) {
                 return;
             }
