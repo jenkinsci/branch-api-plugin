@@ -129,8 +129,7 @@ public class OrganizationFolderTest {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-            assertEquals(1, projectFactories.size());
-            assertEquals(MockFactory.class, projectFactories.get(0).getClass());
+            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             top.getNavigators().add(new SingleSCMNavigator("stuff",
                     Collections.<SCMSource>singletonList(new SingleSCMSource("stuffy",
                             new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
