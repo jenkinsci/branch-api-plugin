@@ -50,12 +50,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
@@ -388,9 +391,8 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             TopLevelItem tli = (TopLevelItem) item;
             Jenkins jenkins = Jenkins.get();
             Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
-            for (Node node : jenkins.getNodes()) {
-                Computer.threadPoolForRemoting.submit(new CleanupTask(tli, node));
-            }
+            // Starts provisioner Thread which is tasked with starting cleanup Threads
+            new CleanupTaskProvisioner(tli, jenkins.getNodes()).run();
         }
 
         @Override
@@ -422,6 +424,51 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         private static synchronized void taskFinished() {
             runningTasks--;
             Deleter.class.notifyAll();
+        }
+        
+        private static class CleanupTaskProvisioner implements Runnable{
+            
+            @NonNull
+            private final TopLevelItem tli;
+            
+            @NonNull
+            private final Queue<Node> nodes;
+            
+            private final int threadLimit = Math.max(0, Integer.parseInt(System.getenv("BRANCH_API_THREAD_LIMIT")));
+
+            public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes) {
+                this.tli = tli;
+                this.nodes = new LinkedList<>(nodes);
+                if (threadLimit > 0) {
+                    LOGGER.log(Level.INFO, "ThreadLimit Loaded from Environment : {0}", threadLimit);
+                }
+            }
+            
+            @Override
+            public void run() {
+                try {
+                    while (!nodes.isEmpty()){                   
+                        if (hasFreeThreadVolume(threadLimit)) {
+                            Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.remove()));
+                        } else {
+                            Thread.sleep(1000);
+                        }
+                        LOGGER.log(Level.INFO, "LIVE THREAD COUNT : {0}", ManagementFactory.getThreadMXBean().getThreadCount());
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, e.getMessage());
+                }
+            }
+            
+            private boolean hasFreeThreadVolume(int threadLimit){
+                if (threadLimit <= 0) {
+                    return true;
+                }
+                int currentThreadCount = ManagementFactory.getThreadMXBean().getThreadCount();
+            
+                return currentThreadCount < threadLimit;
+            }
+            
         }
 
         private static class CleanupTask implements Runnable {
@@ -558,7 +605,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
 
     }
-
     /**
      * Cleans up workspaces for apparently missing jobs when a node goes online.
      * This is a counterpart to {@link Deleter},
@@ -619,6 +665,5 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
         }
 
-    }
-
+    }   
 }
