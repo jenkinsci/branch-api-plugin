@@ -63,6 +63,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import jenkins.branch.Branch;
 import jenkins.branch.BranchBuildStrategy;
 import jenkins.branch.BranchBuildStrategyDescriptor;
+import jenkins.branch.BranchIndexingCause;
 import jenkins.branch.BranchSource;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.NameEncoder;
@@ -2919,6 +2920,68 @@ public class EventsTest {
 
         @TestExtension(
                 "given_multibranch_when__build_is_skipped_then_lastBuiltRevision_is_null")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
+
+        }
+    }
+
+    @Test
+    public void given_multibranch_when_indexing_build_is_skipped_then_lastSeenRevision_is_different_to_lastBuiltRevision() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
+            prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
+            prj.getProjectFactories().replaceBy(Collections
+                    .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
+            prj.getBuildStrategies().add(new SkipBranchIndexingBuildStrategyImpl());
+
+            c.createRepository("foo");
+            c.createRepository("bar");
+            c.createRepository("manchu");
+            c.addFile("foo", "master", "adding marker", "marker.txt", "A marker".getBytes());
+            fire(new MockSCMSourceEvent(SCMEvent.Type.CREATED, c, "foo"));
+            r.waitUntilNoActivity();
+
+            BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
+            FreeStyleProject master = foo.getItem("master");
+            assertThat("The master branch was built", master.getLastBuild(), nullValue());
+            SCMRevision scmLastSeenRevision1 = foo.getProjectFactory().getLastSeenRevision(master);
+            assertNotNull(scmLastSeenRevision1);
+            assertNull(foo.getProjectFactory().getRevision(master));
+
+            c.addFile("foo", "master", "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            r.waitUntilNoActivity();
+
+            assertThat("The master branch was not built", master.getLastBuild(), notNullValue());
+            assertEquals(c.getRevision("foo", "master"), foo.getProjectFactory().getRevision(master).toString());
+
+            SCMRevision scmLastSeenRevision2 = foo.getProjectFactory().getLastSeenRevision(master);
+            assertNotNull(scmLastSeenRevision2);
+            assertThat(scmLastSeenRevision1, not(scmLastSeenRevision2));
+        }
+    }
+
+    public static class SkipBranchIndexingBuildStrategyImpl extends BranchBuildStrategy {
+        @Override
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
+                                        TaskListener listener, @NonNull Cause[] causes) {
+            // skip build on first branch indexing
+            return ! hasBranchIndexingCause(causes);
+        }
+
+        private boolean hasBranchIndexingCause(@NonNull Cause[] causes) {
+            for (Cause cause : causes) {
+                if (cause instanceof BranchIndexingCause) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @TestExtension(
+                "given_multibranch_when_indexing_build_is_skipped_then_lastSeenRevision_is_different_to_lastBuiltRevision")
         public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
 
         }
