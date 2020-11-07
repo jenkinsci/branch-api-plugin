@@ -68,7 +68,7 @@
     <revision>2.6.2</revision>
     <changelist>-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
-    <jenkins.version>2.176.4</jenkins.version>
+    <jenkins.version>2.264</jenkins.version>
     <hpi.compatibleSinceVersion>2.0.0</hpi.compatibleSinceVersion>
     <java.level>8</java.level>
   </properties>

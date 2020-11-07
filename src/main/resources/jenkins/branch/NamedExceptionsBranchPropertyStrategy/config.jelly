@@ -26,14 +26,14 @@
   <f:section title="${%Exceptions}">
   <f:block>
   <f:repeatable field="namedExceptions" add="${%Add exception}">
-    <branch:blockWrapper>
+    <div>
     <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true" />
       <f:entry title="">
          <div align="right">
            <f:repeatableDeleteButton value="${%Delete exception}"/>
          </div>
        </f:entry>
-    </branch:blockWrapper>
+    </div>
   </f:repeatable>
   </f:block>
   </f:section>
