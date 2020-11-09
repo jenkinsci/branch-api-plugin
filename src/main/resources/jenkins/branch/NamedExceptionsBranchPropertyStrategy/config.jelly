@@ -22,18 +22,18 @@
  ~ THE SOFTWARE.
  -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:branch="/lib/branch-api">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <f:section title="${%Exceptions}">
   <f:block>
   <f:repeatable field="namedExceptions" add="${%Add exception}">
-    <branch:blockWrapper>
+    <table width="100%">
     <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true" />
       <f:entry title="">
          <div align="right">
            <f:repeatableDeleteButton value="${%Delete exception}"/>
          </div>
        </f:entry>
-    </branch:blockWrapper>
+    </table>
   </f:repeatable>
   </f:block>
   </f:section>

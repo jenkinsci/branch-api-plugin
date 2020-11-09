@@ -23,18 +23,18 @@
  -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:branch="/lib/branch-api">
-  <branch:rowWrapper name="source">
-    <branch:entryWrapper>
+  <tr name="source">
+    <td colspan="3">
       <input type="hidden" name="stapler-class" value="${sourceDescriptor.clazz.name}"/>
-      <branch:blockWrapper>
+      <table width="100%">
         <j:scope>
           <j:set var="instance" value="${instance.source}"/>
           <j:set var="descriptor" value="${sourceDescriptor}"/>
           <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true"/>
         </j:scope>
-      </branch:blockWrapper>
-    </branch:entryWrapper>
-  </branch:rowWrapper>
+      </table>
+    </td>
+  </tr>
   <j:set var="descriptors" value="${descriptor.propertyStrategyDescriptors(it,sourceDescriptor)}"/>
   <j:if test="${!descriptors.isEmpty()}">
     <f:block>

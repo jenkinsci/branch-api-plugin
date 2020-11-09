@@ -28,14 +28,14 @@
     <j:choose>
       <j:when test="${instance.singleOrigin}">
         <f:entry title="${instance.navigators.get(0).descriptor.displayName}">
-          <branch:blockWrapper name="navigators">
+          <table name="navigators" width="100%">
             <j:scope>
               <j:set var="instance" value="${instance.navigators.get(0)}"/>
               <j:set var="descriptor" value="${instance.descriptor}"/>
               <f:class-entry descriptor="${descriptor}"/>
               <st:include from="${descriptor}" page="${descriptor.configPage}"/>
             </j:scope>
-          </branch:blockWrapper>
+          </table>
         </f:entry>
       </j:when>
       <j:otherwise>

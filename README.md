@@ -31,7 +31,7 @@ If you are writing a plugin that implements this API, please see [the implementa
 
 The following build environment is required to build this plugin
 
-* `java-1.8` and `maven-3.3.9`
+* `java-1.7` and `maven-3.3.9`
 
 # Build
 
