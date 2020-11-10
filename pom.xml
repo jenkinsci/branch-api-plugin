@@ -108,7 +108,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>cloudbees-folder</artifactId>
-      <version>6.15-rc617.b5ffac2bd6f5</version> <!-- TODO https://github.com/jenkinsci/cloudbees-folder-plugin/pull/165 -->
+      <version>6.15</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
