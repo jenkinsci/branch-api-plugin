@@ -31,21 +31,21 @@ THE SOFTWARE.
       caption of the 'delete' button.
     </st:attribute>
   </st:documentation>
-  <branch:blockWrapper>
+  <div>
     <j:set var="help" value="${sourceDescriptor.helpFile}" />
     <j:if test="${hasHeader}">
-      <branch:rowWrapper>
-        <branch:entryWrapper colspan="3">
+      <div class="tr">
+        <div>
           <div class="dd-handle">
             <b>${sourceDescriptor.displayName}</b>
           </div>
-        </branch:entryWrapper>
+        </div>
         <j:if test="${help!=null}">
-          <branch:entryWrapper>
+          <div>
             <a href="#" class="help-button" helpURL="${rootURL}${help}"><img src="${imagesURL}/16x16/help.png" alt="[help]" height="16" width="16"/></a>
-          </branch:entryWrapper>
+          </div>
         </j:if>
-      </branch:rowWrapper>
+      </div>
       <!-- TODO: help support is unintuitive; people should be able to see help from drop-down menu -->
       <j:if test="${help!=null}">
         <f:helpArea />
@@ -60,6 +60,6 @@ THE SOFTWARE.
         <f:repeatableDeleteButton value="${attrs.deleteCaption}" />
       </div>
     </f:block>
-  </branch:blockWrapper>
+  </div>
   <input type="hidden" name="kind" value="${descriptor.id}" />
 </j:jelly>
