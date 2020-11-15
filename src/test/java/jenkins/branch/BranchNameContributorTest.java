@@ -30,7 +30,6 @@ import hudson.model.FreeStyleProject;
 import hudson.model.TopLevelItem;
 import hudson.util.LogTaskListener;
 import integration.harness.BasicMultiBranchProject;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -76,33 +75,39 @@ public class BranchNameContributorTest {
         assertThat("The extension is registered", instance, notNullValue());
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo", MockRepositoryFlags.FORKABLE);
+            c.setPrimaryBranch("foo", "main");
             Integer cr1Num = c.openChangeRequest("foo", "master");
             Integer cr2Num = c.openChangeRequest("foo", "master", MockChangeRequestFlags.FORK);
             c.createTag("foo", "master", "v1.0");
+            c.createBranch("foo", "main");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(), new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests())));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have branches",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+                    prj.getItems(), not(is(Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject master = prj.getItem("master");
             FreeStyleProject cr1 = prj.getItem("CR-" + cr1Num);
             FreeStyleProject cr2 = prj.getItem("CR-" + cr2Num);
             FreeStyleProject tag = prj.getItem("v1.0");
+            FreeStyleProject primaryBranch = prj.getItem("main");
             assertThat("We now have the master branch", master, notNullValue());
             assertThat("We now have the origin CR branch", cr1, notNullValue());
             assertThat("We now have the form CR branch", cr2, notNullValue());
             assertThat("We now have the tag branch", tag, notNullValue());
+            assertThat("We now have the primary branch", primaryBranch, notNullValue());
             EnvVars env = new EnvVars();
             instance.buildEnvironmentFor(master, env, new LogTaskListener(LOGGER, Level.FINE));
-            assertThat(env.keySet(), contains(is("BRANCH_NAME")));
+            assertThat(env.keySet(), containsInAnyOrder(is("BRANCH_NAME"), is("BRANCH_IS_PRIMARY")));
             assertThat(env.get("BRANCH_NAME"), is("master"));
+            assertThat(env.get("BRANCH_IS_PRIMARY"), is("false"));
 
             env = new EnvVars();
             instance.buildEnvironmentFor(cr1, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
                     is("BRANCH_NAME"),
+                    is("BRANCH_IS_PRIMARY"),
                     is("CHANGE_ID"),
                     is("CHANGE_TARGET"),
                     is("CHANGE_TITLE"),
@@ -113,6 +118,7 @@ public class BranchNameContributorTest {
                     is("CHANGE_AUTHOR_DISPLAY_NAME")
             ));
             assertThat(env.get("BRANCH_NAME"), is("CR-" + cr1Num));
+            assertThat(env.get("BRANCH_IS_PRIMARY"), is("false"));
             assertThat(env.get("CHANGE_ID"), is(cr1Num.toString()));
             assertThat(env.get("CHANGE_TARGET"), is("master"));
             assertThat(env.get("CHANGE_BRANCH"), is("CR-" + cr1Num));
@@ -126,6 +132,7 @@ public class BranchNameContributorTest {
             instance.buildEnvironmentFor(cr2, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
                     is("BRANCH_NAME"),
+                    is("BRANCH_IS_PRIMARY"),
                     is("CHANGE_ID"),
                     is("CHANGE_TARGET"),
                     is("CHANGE_TITLE"),
@@ -137,6 +144,7 @@ public class BranchNameContributorTest {
                     is("CHANGE_AUTHOR_DISPLAY_NAME")
             ));
             assertThat(env.get("BRANCH_NAME"), is("CR-" + cr2Num));
+            assertThat(env.get("BRANCH_IS_PRIMARY"), is("false"));
             assertThat(env.get("CHANGE_ID"), is(cr2Num.toString()));
             assertThat(env.get("CHANGE_TARGET"), is("master"));
             assertThat(env.get("CHANGE_BRANCH"), is("CR-" + cr2Num));
@@ -151,16 +159,27 @@ public class BranchNameContributorTest {
             instance.buildEnvironmentFor(tag, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
                     is("BRANCH_NAME"),
+                    is("BRANCH_IS_PRIMARY"),
                     is("TAG_NAME"),
                     is("TAG_TIMESTAMP"),
                     is("TAG_UNIXTIME"),
                     is("TAG_DATE")
             ));
             assertThat(env.get("BRANCH_NAME"), is("v1.0"));
+            assertThat(env.get("BRANCH_IS_PRIMARY"), is("false"));
             assertThat(env.get("TAG_NAME"), is("v1.0"));
             assertThat(env.get("TAG_TIMESTAMP"), not(is("")));
             assertThat(env.get("TAG_UNIXTIME"), not(is("")));
             assertThat(env.get("TAG_DATE"), not(is("")));
+
+            env = new EnvVars();
+            instance.buildEnvironmentFor(primaryBranch, env, new LogTaskListener(LOGGER, Level.FINE));
+            assertThat(env.keySet(), containsInAnyOrder(
+                    is("BRANCH_NAME"),
+                    is("BRANCH_IS_PRIMARY")
+            ));
+            assertThat(env.get("BRANCH_NAME"), is("main"));
+            assertThat(env.get("BRANCH_IS_PRIMARY"), is("true"));
         }
     }
 
