@@ -42,7 +42,7 @@ import jenkins.scm.api.mixin.ChangeRequestSCMHead2;
 import jenkins.scm.api.mixin.TagSCMHead;
 
 /**
- * Defines the environment variable {@code BRANCH_NAME} for multibranch builds.
+ * Defines the environment variable {@code BRANCH_NAME} and {@code BRANCH_IS_PRIMARY} for multibranch builds.
  * Also defines {@code CHANGE_*} variables for {@link ChangeRequestSCMHead} instances and 
  * {@code TAG_*} variables for {@link TagSCMHead} instances.
  */
