@@ -23,7 +23,7 @@ THE SOFTWARE.
 -->
 
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:branch="/lib/branch-api">
   <st:documentation>
     inner tag for each branch source
 
@@ -31,21 +31,21 @@ THE SOFTWARE.
       caption of the 'delete' button.
     </st:attribute>
   </st:documentation>
-  <table style="width:100%">
+  <div>
     <j:set var="help" value="${sourceDescriptor.helpFile}" />
     <j:if test="${hasHeader}">
-      <tr>
-        <td colspan="3">
+      <div class="tr">
+        <div>
           <div class="dd-handle">
             <b>${sourceDescriptor.displayName}</b>
           </div>
-        </td>
+        </div>
         <j:if test="${help!=null}">
-          <td>
+          <div>
             <a href="#" class="help-button" helpURL="${rootURL}${help}"><img src="${imagesURL}/16x16/help.png" alt="[help]" height="16" width="16"/></a>
-          </td>
+          </div>
         </j:if>
-      </tr>
+      </div>
       <!-- TODO: help support is unintuitive; people should be able to see help from drop-down menu -->
       <j:if test="${help!=null}">
         <f:helpArea />
@@ -60,6 +60,6 @@ THE SOFTWARE.
         <f:repeatableDeleteButton value="${attrs.deleteCaption}" />
       </div>
     </f:block>
-  </table>
+  </div>
   <input type="hidden" name="kind" value="${descriptor.id}" />
 </j:jelly>

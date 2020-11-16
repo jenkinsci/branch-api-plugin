@@ -31,7 +31,7 @@ If you are writing a plugin that implements this API, please see [the implementa
 
 The following build environment is required to build this plugin
 
-* `java-1.7` and `maven-3.3.9`
+* `java-1.8` and `maven-3.3.9`
 
 # Build
 
@@ -60,8 +60,7 @@ Jobs triggered by SCM Events try to capture their origin.
 
 The origin is available as a tool-tip on the build cause:  
   
-![](docs/Screen_Shot_2017-03-16_at_14.11.57.png){.confluence-embedded-image
-.confluence-content-image-border width="300"}
+![](docs/Screen_Shot_2017-03-16_at_14.11.57.png)
 
 This can be very helpful to quickly identify where events that trigger
 builds are coming from.
