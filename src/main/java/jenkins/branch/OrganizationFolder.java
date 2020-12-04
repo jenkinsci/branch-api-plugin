@@ -616,10 +616,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     @Override
     public List<SCMSource> getSCMSources() {
         Set<SCMSource> result = new HashSet<>();
-        for (MultiBranchProject<?,?> child : getItems()) {
-            if (child.isBuildable()) {
-                result.addAll(child.getSCMSources());
-            }
+        for (MultiBranchProject<?,?> child : getItems(MultiBranchProject::isBuildable)) {
+            result.addAll(child.getSCMSources());
         }
         return new ArrayList<>(result);
     }
