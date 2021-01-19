@@ -37,74 +37,18 @@ import jenkins.branch.BranchProjectFactoryDescriptor;
 import jenkins.branch.MultiBranchProject;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-public class BasicBranchProjectFactory extends BranchProjectFactory<FreeStyleProject, FreeStyleBuild> {
-
-    /**
-     * Set the quiet period on projects produced by this factor to this this value.
-     *
-     * Defaults to 0 to speed up tests.  In most cases, we are not interested in testing that quiet period is honored.
-     *
-     * If set to -1, the Jenkins-provided quietPeriod will be used.
-     */
-    public static int quietPeriodSeconds = 0;
+public class HealthReportingBranchProjectFactory extends BasicBranchProjectFactory {
 
     @DataBoundConstructor
-    public BasicBranchProjectFactory() {
+    public HealthReportingBranchProjectFactory() {
     }
 
     @Override
     public FreeStyleProject newInstance(Branch branch) {
         FreeStyleProject job = new FreeStyleProject(getOwner(), branch.getEncodedName());
+        job.getBuildersList().add(new MockHealthReportBuildStep());
         setBranch(job, branch);
-        if (quietPeriodSeconds >= 0) {
-            try {
-                job.setQuietPeriod(quietPeriodSeconds);
-            } catch(IOException e) {
-                e.printStackTrace();
-            }
-        }
         return job;
-    }
-
-    @Override
-    public Branch getBranch(FreeStyleProject project) {
-        return project.getProperty(BasicBranchProperty.class).getBranch();
-    }
-
-    @Override
-    public FreeStyleProject setBranch(FreeStyleProject project, Branch branch) {
-        BulkChange bc = new BulkChange(project);
-        try {
-            BasicBranchProperty prop = project.getProperty(BasicBranchProperty.class);
-            if (prop == null) {
-                project.addProperty(new BasicBranchProperty(branch));
-            } else {
-                prop.setBranch(branch);
-            }
-            assert project.getProperty(BasicBranchProperty.class).getBranch().equals(branch);
-            if (branch instanceof Branch.Dead) {
-                if (!project.isDisabled()) {
-                    project.disable();
-                }
-            } else {
-                if (project.isDisabled()) {
-                    project.enable();
-                }
-            }
-            bc.commit();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            bc.abort();
-        }
-        return project;
-    }
-
-
-    @Override
-    public boolean isProject(Item item) {
-        return item instanceof FreeStyleProject
-                && ((FreeStyleProject) item).getProperty(BasicBranchProperty.class) != null;
     }
 
     @Extension
@@ -117,7 +61,7 @@ public class BasicBranchProjectFactory extends BranchProjectFactory<FreeStylePro
 
         @Override
         public String getDisplayName() {
-            return "BasicBranchProjectFactory";
+            return "HealthReportingBranchProjectFactory";
         }
 
     }

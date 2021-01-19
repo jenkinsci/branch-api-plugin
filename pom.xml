@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.1</version>
+    <version>4.15</version>
     <relativePath />
   </parent>
 
@@ -58,16 +58,18 @@
   </developers>
 
   <scm>
-    <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
-    <url>http://github.com/jenkinsci/${project.artifactId}-plugin</url>
+    <connection>scm:git:git://github.com/${gitHubRepo}.git</connection>
+    <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+    <url>http://github.com/${gitHubRepo}</url>
     <tag>${scmTag}</tag>
   </scm>
 
   <properties>
-    <revision>2.5.9</revision>
+    <revision>2.6.4</revision>
     <changelist>-SNAPSHOT</changelist>
-    <jenkins.version>2.176.4</jenkins.version>
+    <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
+    <jenkins.version>2.264</jenkins.version>
+    <hpi.compatibleSinceVersion>2.0.0</hpi.compatibleSinceVersion>
     <java.level>8</java.level>
   </properties>
 
@@ -90,7 +92,7 @@
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
         <artifactId>bom-2.176.x</artifactId>
-        <version>9</version>
+        <version>16</version>
         <scope>import</scope>
         <type>pom</type>
       </dependency>
@@ -106,6 +108,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>cloudbees-folder</artifactId>
+      <version>6.15</version>
     </dependency>
     <!-- test dependencies -->
     <dependency>
@@ -144,13 +147,6 @@
 
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.jenkins-ci.tools</groupId>
-        <artifactId>maven-hpi-plugin</artifactId>
-        <configuration>
-          <compatibleSinceVersion>2.0.0</compatibleSinceVersion>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
