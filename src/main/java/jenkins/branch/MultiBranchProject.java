@@ -592,8 +592,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 try {
                     sourceActions.put(source.getId(), source.fetchActions(null, listener));
                 } catch (IOException | InterruptedException | RuntimeException e) {
-                    printStackTrace(e, listener.error("[%tc] Could not update folder level actions from source %s",
-                            System.currentTimeMillis(), source.getId()));
+                    listener.error("[%tc] Could not update folder level actions from source %s",
+                            System.currentTimeMillis(), source.getId());
                     throw e;
                 }
             }
@@ -613,17 +613,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     try {
                         bc.commit();
                     } catch (IOException | RuntimeException e) {
-                        printStackTrace(e, listener.error("[%tc] Could not persist folder level actions",
-                                System.currentTimeMillis()));
+                        listener.error("[%tc] Could not persist folder level actions",
+                                System.currentTimeMillis());
                         throw e;
                     }
                     if (saveProject) {
                         try {
                             save();
                         } catch (IOException | RuntimeException e) {
-                            printStackTrace(e, listener.error(
+                            listener.error(
                                     "[%tc] Could not persist folder level configuration changes",
-                                    System.currentTimeMillis()));
+                                    System.currentTimeMillis());
                             throw e;
                         }
                     }
@@ -636,8 +636,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     source.fetch(new SCMHeadObserverImpl(source, observer, listener, _factory,
                             new IndexingCauseFactory(), null), listener);
                 } catch (IOException | InterruptedException | RuntimeException e) {
-                    printStackTrace(e, listener.error("[%tc] Could not fetch branches from source %s",
-                            System.currentTimeMillis(), source.getId()));
+                    listener.error("[%tc] Could not fetch branches from source %s",
+                            System.currentTimeMillis(), source.getId());
                     throw e;
                 }
             }
@@ -1355,7 +1355,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         } catch (IOException e) {
                             printStackTrace(e, listener.error(e.getMessage()));
                         } catch (InterruptedException e) {
-                            printStackTrace(e, listener.error(e.getMessage()));
+                            listener.error(e.getMessage());
                             throw e;
                         } finally {
                             long end = System.currentTimeMillis();
@@ -1368,8 +1368,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         printStackTrace(e, global.error("[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp));
                     } catch (InterruptedException e) {
-                        printStackTrace(e, global.error("[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp));
+                        global.error("[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
+                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp);
                         throw e;
                     }
                 }
@@ -1618,7 +1618,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         } catch (IOException e) {
                             printStackTrace(e, listener.error(e.getMessage()));
                         } catch (InterruptedException e) {
-                            printStackTrace(e, listener.error(e.getMessage()));
+                            listener.error(e.getMessage());
                             throw e;
                         } finally {
                             long end = System.currentTimeMillis();
@@ -1633,10 +1633,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
                                 eventOrigin, eventTimestamp));
                     } catch (InterruptedException e) {
-                        printStackTrace(e, global.error(
+                        global.error(
                                 "[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
                                 System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                                eventOrigin, eventTimestamp));
+                                eventOrigin, eventTimestamp);
                         throw e;
                     }
                 } else {
@@ -1686,7 +1686,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             } catch (IOException e) {
                                 printStackTrace(e, listener.error(e.getMessage()));
                             } catch (InterruptedException e) {
-                                printStackTrace(e, listener.error(e.getMessage()));
+                                listener.error(e.getMessage());
                                 throw e;
                             } finally {
                                 long end = System.currentTimeMillis();
@@ -1702,11 +1702,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
                                     eventOrigin, eventTimestamp));
                         } catch (InterruptedException e) {
-                            printStackTrace(e, global.error(
+                            global.error(
                                     "[%tc] %s was interrupted while processing %s %s event from %s with "
                                             + "timestamp %tc",
                                     System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                                    eventOrigin, eventTimestamp));
+                                    eventOrigin, eventTimestamp);
                             throw e;
                         }
                     }
@@ -1802,7 +1802,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     } catch (IOException e) {
                                         printStackTrace(e, listener.error(e.getMessage()));
                                     } catch (InterruptedException e) {
-                                        printStackTrace(e, listener.error(e.getMessage()));
+                                        listener.error(e.getMessage());
                                         throw e;
                                     }
                                 } catch (IOException e) {
@@ -1813,12 +1813,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                             eventDescription, event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
-                                    printStackTrace(e, global.error(
+                                    global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
                                             eventDescription, event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
+                                            event.getOrigin(), event.getTimestamp());
                                     throw e;
                                 }
                             }

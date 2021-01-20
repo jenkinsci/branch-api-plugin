@@ -514,17 +514,17 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     try {
                         bc.commit();
                     } catch (IOException | RuntimeException e) {
-                        printStackTrace(e, listener.error("[%tc] Could not persist folder level actions",
-                                System.currentTimeMillis()));
+                        listener.error("[%tc] Could not persist folder level actions",
+                                System.currentTimeMillis());
                         throw e;
                     }
                     if (saveProject) {
                         try {
                             save();
                         } catch (IOException | RuntimeException e) {
-                            printStackTrace(e, listener.error(
+                            listener.error(
                                     "[%tc] Could not persist folder level configuration changes",
-                                    System.currentTimeMillis()));
+                                    System.currentTimeMillis());
                             throw e;
                         }
                     }
@@ -541,8 +541,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 try {
                     navigator.visitSources(new SCMSourceObserverImpl(listener, observer, navigator, (SCMSourceEvent<?>) null));
                 } catch (IOException | InterruptedException | RuntimeException e) {
-                    printStackTrace(e, listener.error("[%tc] Could not fetch sources from navigator %s",
-                            System.currentTimeMillis(), navigator));
+                    listener.error("[%tc] Could not fetch sources from navigator %s",
+                            System.currentTimeMillis(), navigator);
                     throw e;
                 }
             }
@@ -1166,7 +1166,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     } catch (IOException e) {
                                         printStackTrace(e, listener.error(e.getMessage()));
                                     } catch (InterruptedException e) {
-                                        printStackTrace(e, listener.error(e.getMessage()));
+                                        listener.error(e.getMessage());
                                         throw e;
                                     } finally {
                                         long end = System.currentTimeMillis();
@@ -1184,12 +1184,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                             globalEventDescription, event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
-                                    printStackTrace(e, global.error(
+                                    global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
                                             globalEventDescription, event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
+                                            event.getOrigin(), event.getTimestamp());
                                     throw e;
                                 }
                             }
@@ -1246,7 +1246,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                             printStackTrace(e,
                                                     listener.error("Could not fetch metadata from %s", navigator));
                                         } catch (InterruptedException e) {
-                                            printStackTrace(e, listener.error(e.getMessage()));
+                                            listener.error(e.getMessage());
                                             throw e;
                                         }
                                     }
@@ -1285,12 +1285,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                             event.getClass().getName(), event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
-                                    printStackTrace(e, global.error(
+                                    global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
                                             event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
+                                            event.getOrigin(), event.getTimestamp());
                                     throw e;
                                 }
                             }
@@ -1356,7 +1356,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                             }
                                         }
                                     } catch (InterruptedException e) {
-                                        printStackTrace(e, listener.error(e.getMessage()));
+                                        listener.error(e.getMessage());
                                         throw e;
                                     } finally {
                                         long end = System.currentTimeMillis();
@@ -1375,12 +1375,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                             event.getClass().getName(), event.getType().name(),
                                             event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
-                                    printStackTrace(e, global.error(
+                                    global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
                                             event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
+                                            event.getOrigin(), event.getTimestamp());
                                     throw e;
                                 }
                             }
@@ -1507,7 +1507,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     } catch (InterruptedException | IOException x) {
                         throw x;
                     } catch (Exception x) {
-                        x.printStackTrace(listener.error("Failed to create or update a subproject " + projectName));
+                        printStackTrace(x, listener.error("Failed to create or update a subproject " + projectName));
                     }
                 }
 
