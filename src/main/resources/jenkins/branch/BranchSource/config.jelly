@@ -22,7 +22,7 @@
  ~ THE SOFTWARE.
  -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:branch="/lib/branch-api">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <div class="tr" name="source">
     <div>
       <input type="hidden" name="stapler-class" value="${sourceDescriptor.clazz.name}"/>
@@ -38,7 +38,7 @@
   <j:set var="descriptors" value="${descriptor.propertyStrategyDescriptors(it,sourceDescriptor)}"/>
   <j:if test="${!descriptors.isEmpty()}">
     <f:block>
-      <branch:dropdownDescriptorSelector field="strategy" title="Property strategy" descriptors="${descriptors}"/>
+      <f:dropdownDescriptorSelector field="strategy" title="Property strategy" descriptors="${descriptors}"/>
     </f:block>
   </j:if>
   <j:set var="descriptors" value="${descriptor.buildStrategiesDescriptors(it,sourceDescriptor)}"/>

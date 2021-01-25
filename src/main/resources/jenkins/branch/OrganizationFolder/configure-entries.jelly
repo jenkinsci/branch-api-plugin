@@ -23,7 +23,7 @@
  ~ THE SOFTWARE.
  -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:st="jelly:stapler" xmlns:branch="/lib/branch-api">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:st="jelly:stapler">
   <f:section title="${%Projects}">
     <j:choose>
       <j:when test="${instance.singleOrigin}">
@@ -51,7 +51,7 @@
     <j:set var="descriptors" value="${descriptor.propertyStrategyDescriptors()}"/>
     <j:if test="${!descriptors.isEmpty()}">
       <f:block>
-        <branch:dropdownDescriptorSelector field="strategy" title="Property strategy" descriptors="${descriptors}"/>
+        <f:dropdownDescriptorSelector field="strategy" title="Property strategy" descriptors="${descriptors}"/>
       </f:block>
     </j:if>
     <j:set var="descriptors" value="${descriptor.getPropertyType(instance,'buildStrategies').applicableItemDescriptors}"/>
