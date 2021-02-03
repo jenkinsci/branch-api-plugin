@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.Date;
 import jenkins.scm.api.SCMHeadOrigin;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.metadata.ContributorMetadataAction;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
@@ -57,10 +58,14 @@ public class BranchNameContributor extends EnvironmentContributor {
             BranchProjectFactory projectFactory = ((MultiBranchProject) parent).getProjectFactory();
             if (projectFactory.isProject(j)) {
                 Branch branch = projectFactory.getBranch(j);
+                SCMRevision rev = projectFactory.getRevision(j);
                 SCMHead head = branch.getHead();
                 // Note: not using Branch.name, since in the future that could be something different
                 // than SCMHead.name, which is what we really want here.
                 envs.put("BRANCH_NAME", head.getName());
+                if (rev != null) {
+                    envs.put("CHANGE_REVISION", rev.toString());
+                }
                 if (head instanceof ChangeRequestSCMHead) {
                     envs.putIfNotNull("CHANGE_ID", ((ChangeRequestSCMHead) head).getId());
                     SCMHead target = ((ChangeRequestSCMHead) head).getTarget();
@@ -83,6 +88,7 @@ public class BranchNameContributor extends EnvironmentContributor {
                         envs.putIfNotNull("CHANGE_AUTHOR_DISPLAY_NAME", cma.getContributorDisplayName());
                         envs.putIfNotNull("CHANGE_AUTHOR_EMAIL", cma.getContributorEmail());
                     }
+
                 }
                 if (head instanceof TagSCMHead) {
                     envs.put("TAG_NAME", head.getName());
@@ -90,6 +96,7 @@ public class BranchNameContributor extends EnvironmentContributor {
                     envs.putIfNotNull("TAG_UNIXTIME", Long.toString(((TagSCMHead) head).getTimestamp()/1000L));
                     envs.putIfNotNull("TAG_DATE", new Date(((TagSCMHead) head).getTimestamp()).toString());
                 }
+
             }
         }
     }

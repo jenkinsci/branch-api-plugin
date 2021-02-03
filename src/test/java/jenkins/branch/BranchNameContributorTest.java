@@ -78,6 +78,7 @@ public class BranchNameContributorTest {
             c.createRepository("foo", MockRepositoryFlags.FORKABLE);
             Integer cr1Num = c.openChangeRequest("foo", "master");
             Integer cr2Num = c.openChangeRequest("foo", "master", MockChangeRequestFlags.FORK);
+            String rev = c.getRevision("foo", "master");
             c.createTag("foo", "master", "v1.0");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
@@ -91,19 +92,25 @@ public class BranchNameContributorTest {
             FreeStyleProject cr2 = prj.getItem("CR-" + cr2Num);
             FreeStyleProject tag = prj.getItem("v1.0");
             assertThat("We now have the master branch", master, notNullValue());
+            assertThat("We now have the revision", rev, notNullValue());
             assertThat("We now have the origin CR branch", cr1, notNullValue());
             assertThat("We now have the form CR branch", cr2, notNullValue());
             assertThat("We now have the tag branch", tag, notNullValue());
             EnvVars env = new EnvVars();
             instance.buildEnvironmentFor(master, env, new LogTaskListener(LOGGER, Level.FINE));
-            assertThat(env.keySet(), contains(is("BRANCH_NAME")));
+            assertThat(env.keySet(), containsInAnyOrder(
+                    is("BRANCH_NAME"),
+                    is("CHANGE_REVISION")
+                    ));
             assertThat(env.get("BRANCH_NAME"), is("master"));
+            assertThat(env.get("CHANGE_REVISION"), is(rev));
 
             env = new EnvVars();
             instance.buildEnvironmentFor(cr1, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
                     is("BRANCH_NAME"),
                     is("CHANGE_ID"),
+                    is("CHANGE_REVISION"),
                     is("CHANGE_TARGET"),
                     is("CHANGE_TITLE"),
                     is("CHANGE_URL"),
@@ -128,6 +135,7 @@ public class BranchNameContributorTest {
                     is("BRANCH_NAME"),
                     is("CHANGE_ID"),
                     is("CHANGE_TARGET"),
+                    is("CHANGE_REVISION"),
                     is("CHANGE_TITLE"),
                     is("CHANGE_URL"),
                     is("CHANGE_BRANCH"),
