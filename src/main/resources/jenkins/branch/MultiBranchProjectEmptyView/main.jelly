@@ -22,21 +22,39 @@
  ~ THE SOFTWARE.
  -->
 <?jelly escape-by-default='true'?>
-<div xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-  <div style="margin: 20px 0; padding: 10px 30px 20px 30px; background: #f8f8f8; border-radius: 10px; max-width: 55em;">
-    <h1>This folder is empty</h1>
+<div xmlns:st="jelly:stapler" xmlns:l="/lib/layout">
 
-    <p>
-      There are no branches found that contain buildable projects.
-      Jenkins automatically builds and manages projects in branches that
-      contain recognizable projects.
-    </p>
+  <div class="empty-state-block">
+    <section class="empty-state-section">
+      <h2>This folder is empty</h2>
 
-    <st:include it="${it.owner.projectFactory}" page="getting-started" optional="true" />
+      <p>
+        There are no branches found that contain buildable projects.
+        Jenkins automatically builds and manages projects in branches that
+        contain recognizable projects.
+      </p>
 
-    <p>
-      <a href="./configure">Configure the project</a> for a buildable repository or
-      <a href="./indexing">re-index branches</a> if the repository has since been configured.
-    </p>
+      <st:include it="${it.owner.projectFactory}" page="getting-started" optional="true" />
+
+      <ul class="empty-state-section-list">
+        <li class="content-block">
+          <a href="./configure" class="content-block__link">
+            <span>Configure the project</span>
+            <span class="trailing-icon">
+              <l:svgIcon class="icon-sm" href="${imagesURL}/material-icons/svg-sprite-navigation-symbol.svg#ic_arrow_forward_24px" />
+            </span>
+          </a>
+        </li>
+        <li class="content-block">
+          <a href="./indexing" class="content-block__link">
+            <span>Re-index branches</span>
+            <span class="trailing-icon">
+              <l:svgIcon class="icon-sm" href="${imagesURL}/material-icons/svg-sprite-navigation-symbol.svg#ic_arrow_forward_24px" />
+            </span>
+          </a>
+        </li>
+        <st:include it="${it.owner.projectFactory}" page="getting-started-links" optional="true" />
+      </ul>
+    </section>
   </div>
 </div>
