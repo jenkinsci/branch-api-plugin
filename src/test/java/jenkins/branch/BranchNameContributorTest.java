@@ -99,15 +99,14 @@ public class BranchNameContributorTest {
             assertThat("We now have the primary branch", primaryBranch, notNullValue());
             EnvVars env = new EnvVars();
             instance.buildEnvironmentFor(master, env, new LogTaskListener(LOGGER, Level.FINE));
-            assertThat(env.keySet(), containsInAnyOrder(is("BRANCH_NAME"), is("BRANCH_IS_PRIMARY")));
+            assertThat(env.keySet(), contains(is("BRANCH_NAME")));
             assertThat(env.get("BRANCH_NAME"), is("master"));
-            assertThat(env.get("BRANCH_IS_PRIMARY"), is("false"));
+            assertThat(env.keySet(), not(contains(is("BRANCH_IS_PRIMARY"))));
 
             env = new EnvVars();
             instance.buildEnvironmentFor(cr1, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
                     is("BRANCH_NAME"),
-                    is("BRANCH_IS_PRIMARY"),
                     is("CHANGE_ID"),
                     is("CHANGE_TARGET"),
                     is("CHANGE_TITLE"),
@@ -118,7 +117,7 @@ public class BranchNameContributorTest {
                     is("CHANGE_AUTHOR_DISPLAY_NAME")
             ));
             assertThat(env.get("BRANCH_NAME"), is("CR-" + cr1Num));
-            assertThat(env.get("BRANCH_IS_PRIMARY"), is("false"));
+            assertThat(env.keySet(), not(contains(is("BRANCH_IS_PRIMARY"))));
             assertThat(env.get("CHANGE_ID"), is(cr1Num.toString()));
             assertThat(env.get("CHANGE_TARGET"), is("master"));
             assertThat(env.get("CHANGE_BRANCH"), is("CR-" + cr1Num));
@@ -132,7 +131,6 @@ public class BranchNameContributorTest {
             instance.buildEnvironmentFor(cr2, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
                     is("BRANCH_NAME"),
-                    is("BRANCH_IS_PRIMARY"),
                     is("CHANGE_ID"),
                     is("CHANGE_TARGET"),
                     is("CHANGE_TITLE"),
@@ -144,7 +142,7 @@ public class BranchNameContributorTest {
                     is("CHANGE_AUTHOR_DISPLAY_NAME")
             ));
             assertThat(env.get("BRANCH_NAME"), is("CR-" + cr2Num));
-            assertThat(env.get("BRANCH_IS_PRIMARY"), is("false"));
+            assertThat(env.keySet(), not(contains(is("BRANCH_IS_PRIMARY"))));
             assertThat(env.get("CHANGE_ID"), is(cr2Num.toString()));
             assertThat(env.get("CHANGE_TARGET"), is("master"));
             assertThat(env.get("CHANGE_BRANCH"), is("CR-" + cr2Num));
@@ -159,14 +157,13 @@ public class BranchNameContributorTest {
             instance.buildEnvironmentFor(tag, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
                     is("BRANCH_NAME"),
-                    is("BRANCH_IS_PRIMARY"),
                     is("TAG_NAME"),
                     is("TAG_TIMESTAMP"),
                     is("TAG_UNIXTIME"),
                     is("TAG_DATE")
             ));
             assertThat(env.get("BRANCH_NAME"), is("v1.0"));
-            assertThat(env.get("BRANCH_IS_PRIMARY"), is("false"));
+            assertThat(env.keySet(), not(contains(is("BRANCH_IS_PRIMARY"))));
             assertThat(env.get("TAG_NAME"), is("v1.0"));
             assertThat(env.get("TAG_TIMESTAMP"), not(is("")));
             assertThat(env.get("TAG_UNIXTIME"), not(is("")));
