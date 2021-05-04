@@ -34,6 +34,7 @@ import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.thoughtworks.xstream.XStreamException;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.BulkChange;
 import hudson.Extension;
 import hudson.Util;
@@ -113,6 +114,7 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.export.Exported;
+import jenkins.util.SystemProperties;
 
 import static hudson.Functions.printStackTrace;
 
@@ -125,6 +127,10 @@ import static hudson.Functions.printStackTrace;
 public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         R extends Run<P, R>>
         extends ComputedFolder<P> implements SCMSourceOwner, IconSpec {
+
+    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Accessible via System Groovy Scripts")
+    private static /* not final */ boolean FIRE_SCM_SOURCE_BUILDS_AFTER_SAVE =
+        SystemProperties.getBoolean(MultiBranchProject.class.getName() + ".fireSCMSourceBuildsAfterSave", true);
 
     /**
      * Our logger.
@@ -233,7 +239,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
             }
         }
-        if (Items.currentlyUpdatingByXml()) {
+        if (Items.currentlyUpdatingByXml() && FIRE_SCM_SOURCE_BUILDS_AFTER_SAVE) {
             fireSCMSourceAfterSave(getSCMSources());
             if (isBuildable()) {
                 scheduleBuild();
