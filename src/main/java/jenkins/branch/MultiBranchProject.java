@@ -76,6 +76,8 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
@@ -100,6 +102,7 @@ import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.mixin.TagSCMHead;
+import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.impl.NullSCMSource;
 import jenkins.triggers.SCMTriggerItem;
 import net.sf.json.JSONObject;
@@ -2006,6 +2009,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     || !Util.getDigestOf(Items.XSTREAM2.toXML(branch.getScm()))
                     .equals(Util.getDigestOf(Items.XSTREAM2.toXML(origBranch.getScm())));
             _factory.decorate(_factory.setBranch(project, branch));
+
+            String displayName = getProjectDisplayName(project, rawName);
+            try {
+                needSave = needSave || !Objects.equals(displayName, project.getDisplayNameOrNull());
+                project.setDisplayName(displayName);
+            } catch (IOException e) {
+                listener.getLogger().format("DisplayName update failed for (%s) to '%s': %s", rawName, displayName, e.getMessage());
+            }
+
             if (rebuild) {
                 needSave = true;
                 listener.getLogger().format(
@@ -2072,9 +2084,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             // performs the save
             BulkChange bc = new BulkChange(project);
             try {
-                if (project.getDisplayNameOrNull() == null && !rawName.equals(encodedName)) {
-                    project.setDisplayName(rawName);
-                }
+                project.setDisplayName(getProjectDisplayName(project, rawName));
             } catch (IOException e) {
                 // ignore even if it does happen we didn't want a save
             } finally {
@@ -2085,6 +2095,43 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             // ok it is now up to the observer to ensure it does the actual save.
             observer.created(project);
             doAutomaticBuilds(head, revision, rawName, project, revisionActions, null, null);
+        }
+
+        private String getProjectDisplayName(@NonNull P project, @NonNull String rawName) {
+            MultiBranchProjectDisplayNamingStrategy naming = MultiBranchProjectDisplayNamingStrategy.RAW;
+            List<SCMSourceTrait> traits = source.getTraits();
+            if (null != traits) {
+                Optional<SCMSourceTrait> trait = traits.stream()
+                    .filter(t -> t instanceof MultiBranchProjectDisplayNamingTrait)
+                    .findFirst();
+
+                if (trait.isPresent()) {
+                    naming = ((MultiBranchProjectDisplayNamingTrait)trait.get()).getDisplayNamingStrategy();
+                }
+            }
+
+            String displayName = "";
+            if (naming.isShowRawName()) {
+                displayName += rawName;
+            }
+
+            if (naming.isShowDisplayName()) {
+                ObjectMetadataAction action = project.getAction(ObjectMetadataAction.class);
+                if (action != null) {
+                    String objectDisplayName = action.getObjectDisplayName();
+                    if (!StringUtils.isBlank(objectDisplayName) && !rawName.equals(objectDisplayName)) {
+                        if (!StringUtils.isBlank(displayName)) {
+                            displayName += ": ";
+                        }
+                        displayName += objectDisplayName;
+                    }
+                }
+            }
+
+            if (StringUtils.isBlank(displayName) || displayName.equals(project.getName())) {
+                return null;
+            }
+            return displayName;
         }
 
         private boolean changesDetected(@NonNull SCMRevision revision, @NonNull P project, SCMRevision scmLastBuiltRevision) {
