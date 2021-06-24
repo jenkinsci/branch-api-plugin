@@ -23,19 +23,19 @@
  ~ THE SOFTWARE.
  -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:st="jelly:stapler" xmlns:branch="/lib/branch-api">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:st="jelly:stapler">
   <f:section title="${%Projects}">
     <j:choose>
       <j:when test="${instance.singleOrigin}">
         <f:entry title="${instance.navigators.get(0).descriptor.displayName}">
-          <table name="navigators" width="100%">
+          <div name="navigators">
             <j:scope>
               <j:set var="instance" value="${instance.navigators.get(0)}"/>
               <j:set var="descriptor" value="${instance.descriptor}"/>
               <f:class-entry descriptor="${descriptor}"/>
               <st:include from="${descriptor}" page="${descriptor.configPage}"/>
             </j:scope>
-          </table>
+          </div>
         </f:entry>
       </j:when>
       <j:otherwise>
@@ -51,7 +51,7 @@
     <j:set var="descriptors" value="${descriptor.propertyStrategyDescriptors()}"/>
     <j:if test="${!descriptors.isEmpty()}">
       <f:block>
-        <branch:dropdownDescriptorSelector field="strategy" title="Property strategy" descriptors="${descriptors}"/>
+        <f:dropdownDescriptorSelector field="strategy" title="Property strategy" descriptors="${descriptors}"/>
       </f:block>
     </j:if>
     <j:set var="descriptors" value="${descriptor.getPropertyType(instance,'buildStrategies').applicableItemDescriptors}"/>

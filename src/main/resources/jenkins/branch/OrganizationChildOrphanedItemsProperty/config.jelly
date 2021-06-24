@@ -24,7 +24,7 @@ THE SOFTWARE.
 -->
 
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:st="jelly:stapler">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:st="jelly:stapler" xmlns:branch="/lib/branch-api">
   <f:section title="${descriptor.displayName}">
     <f:description>${%This is the orphaned item strategy that the children of this organization folder will use. Does not apply to grandchildren.}</f:description>
     <j:set var="orphanedItemStrategyDescriptors" value="${descriptor.strategyDescriptors}"/>
@@ -32,12 +32,12 @@ THE SOFTWARE.
       <j:choose>
         <j:when test="${orphanedItemStrategyDescriptors.size() == 1}">
           <j:scope>
-            <table name="strategy" width="100%">
+            <div name="strategy">
               <j:set var="descriptor" value="${orphanedItemStrategyDescriptors.get(0)}"/>
               <j:set var="instance" value="${instance.strategy}"/>
               <f:class-entry descriptor="${descriptor}"/>
               <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true"/>
-            </table>
+            </div>
           </j:scope>
         </j:when>
         <j:otherwise>

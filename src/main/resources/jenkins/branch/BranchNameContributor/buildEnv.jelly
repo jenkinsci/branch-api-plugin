@@ -28,6 +28,9 @@ THE SOFTWARE.
     <t:buildEnvVar name="BRANCH_NAME">
         <j:out value="${%blurb.BRANCH_NAME}"/>
     </t:buildEnvVar>
+    <t:buildEnvVar name="BRANCH_IS_PRIMARY">
+        <j:out value="${%blurb.BRANCH_IS_PRIMARY}"/>
+    </t:buildEnvVar>
     <t:buildEnvVar name="CHANGE_ID">
         <j:out value="${%blurb.CHANGE_ID}"/>
     </t:buildEnvVar>
