@@ -64,8 +64,6 @@ public class BranchNameContributor extends EnvironmentContributor {
                 envs.put("BRANCH_NAME", head.getName());
                 if (branch.getAction(PrimaryInstanceMetadataAction.class) != null) {
                     envs.put("BRANCH_IS_PRIMARY", "true");
-                } else {
-                    envs.put("BRANCH_IS_PRIMARY", "false");
                 }
                 if (head instanceof ChangeRequestSCMHead) {
                     envs.putIfNotNull("CHANGE_ID", ((ChangeRequestSCMHead) head).getId());
