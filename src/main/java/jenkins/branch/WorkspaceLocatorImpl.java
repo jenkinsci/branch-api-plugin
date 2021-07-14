@@ -330,11 +330,16 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     private static final Pattern GOOD_RAW_WORKSPACE_DIR = Pattern.compile("(.+)[/\\\\][$][{]ITEM_FULL_?NAME[}][/\\\\]?");
     static @CheckForNull FilePath getWorkspaceRoot(Node node) {
         if (node instanceof Jenkins) {
-            Matcher m = GOOD_RAW_WORKSPACE_DIR.matcher(((Jenkins) node).getRawWorkspaceDir());
+            String rawWorkspaceDir = ((Jenkins) node).getRawWorkspaceDir();
+            Matcher m = GOOD_RAW_WORKSPACE_DIR.matcher(rawWorkspaceDir);
             if (m.matches()) {
                 return new FilePath(new File(m.group(1).replace("${JENKINS_HOME}", ((Jenkins) node).getRootDir().getAbsolutePath())));
             } else {
-                LOGGER.log(Level.WARNING, "JENKINS-2111 path sanitization ineffective when using legacy Workspace Root Directory ‘{0}’; switch to ‘$'{'JENKINS_HOME'}'/workspace/$'{'ITEM_FULL_NAME'}'’ as in JENKINS-8446 / JENKINS-21942", ((Jenkins) node).getRawWorkspaceDir());
+                if (rawWorkspaceDir.startsWith("${ITEM_ROOTDIR}/")) {
+                    LOGGER.log(Level.WARNING, "JENKINS-2111 path sanitization ineffective when using legacy Workspace Root Directory ‘{0}’; switch to ‘$'{'JENKINS_HOME'}'/workspace/$'{'ITEM_FULL_NAME'}'’ as in JENKINS-8446 / JENKINS-21942", rawWorkspaceDir);
+                } else {
+                    LOGGER.log(Level.FINE, "JENKINS-2111 path sanitization ineffective when using unrecognized Workspace Root Directory ‘{0}’; switch to ‘$'{'JENKINS_HOME'}'/workspace/$'{'ITEM_FULL_NAME'}'’", rawWorkspaceDir);
+                }
                 return null;
             }
         } else if (node instanceof Slave) {
