@@ -108,6 +108,7 @@ import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.Icon;
 import org.jenkins.ui.icon.IconSet;
 import org.jenkins.ui.icon.IconSpec;
+import org.jenkinsci.Symbol;
 import org.jvnet.localizer.LocaleProvider;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -742,6 +743,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * Our descriptor
      */
     @Extension
+    @Symbol("organizationFolder")
     public static class DescriptorImpl extends AbstractFolderDescriptor {
 
         /**
