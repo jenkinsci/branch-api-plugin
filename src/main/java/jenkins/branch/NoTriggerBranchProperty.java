@@ -24,6 +24,7 @@
 
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Action;
 import hudson.model.Cause;
@@ -31,11 +32,13 @@ import hudson.model.CauseAction;
 import hudson.model.Job;
 import hudson.model.Queue;
 import hudson.model.Run;
+import hudson.util.ListBoxModel;
 import java.util.List;
 import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Suppresses builds due to either {@link BranchIndexingCause} or {@link BranchEventCause}.
@@ -45,8 +48,44 @@ import org.kohsuke.stapler.DataBoundConstructor;
 @Restricted(NoExternalUse.class)
 public class NoTriggerBranchProperty extends BranchProperty {
 
+    /**
+     * All builds triggered by SCM are suppressed.
+     *
+     * @since 2.6.5
+     */
+    public static final String ALL = "all";
+    /**
+     * Only builds triggered by {@link BranchIndexingCause} are suppressed.
+     *
+     * @since 2.6.5
+     */
+    public static final String INDEXING = "indexing";
+    /**
+     * Only builds triggered by {@link BranchEventCause} are suppressed.
+     *
+     * @since 2.6.5
+     */
+    public static final String EVENTS = "events";
+
+    private String strategyId = ALL;
+
     @DataBoundConstructor
     public NoTriggerBranchProperty() {}
+
+    /**
+     * Gets the strategy id which determines which builds should be suppressed.
+     *
+     * @return the strategy id.
+     * @since 2.6.5
+     */
+    public String getStrategyId() {
+        return strategyId;
+    }
+
+    @DataBoundSetter
+    public void setStrategyId(String strategyId) {
+        this.strategyId = strategyId;
+    }
 
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
@@ -61,6 +100,15 @@ public class NoTriggerBranchProperty extends BranchProperty {
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();
         }
 
+        @NonNull
+        @Restricted(NoExternalUse.class)
+        public ListBoxModel doFillStrategyIdItems() {
+            ListBoxModel items = new ListBoxModel();
+            items.add(Messages.NoTriggerBranchProperty_strategy_all(), ALL);
+            items.add(Messages.NoTriggerBranchProperty_strategy_indexing(), INDEXING);
+            items.add(Messages.NoTriggerBranchProperty_strategy_events(), EVENTS);
+            return items;
+        }
     }
 
     @Extension
@@ -72,7 +120,9 @@ public class NoTriggerBranchProperty extends BranchProperty {
             for (Action action :  actions) {
                 if (action instanceof CauseAction) {
                     for (Cause c : ((CauseAction) action).getCauses()) {
-                        if (c instanceof BranchIndexingCause || c instanceof BranchEventCause) {
+                        boolean indexingCause = c instanceof BranchIndexingCause;
+                        boolean eventCause = c instanceof BranchEventCause;
+                        if (indexingCause || eventCause) {
                             if (p instanceof Job) {
                                 Job<?,?> j = (Job) p;
                                 if (j.getParent() instanceof MultiBranchProject) {
@@ -83,7 +133,12 @@ public class NoTriggerBranchProperty extends BranchProperty {
                                     } else {
                                         for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
                                             if (prop instanceof NoTriggerBranchProperty) {
-                                                return false;
+                                                NoTriggerBranchProperty triggerProperty = (NoTriggerBranchProperty) prop;
+                                                boolean suppressIndexing = !EVENTS.equals(triggerProperty.getStrategyId());
+                                                boolean suppressEvents = !INDEXING.equals(triggerProperty.getStrategyId());
+                                                if ((indexingCause && suppressIndexing) || (eventCause && suppressEvents)) {
+                                                    return false;
+                                                }
                                             }
                                         }
                                     }
@@ -95,7 +150,5 @@ public class NoTriggerBranchProperty extends BranchProperty {
             }
             return true;
         }
-
     }
-
 }
