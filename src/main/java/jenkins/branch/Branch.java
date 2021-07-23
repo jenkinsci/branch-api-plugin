@@ -141,8 +141,11 @@ public class Branch {
      * @return the name of the branch.
      */
     public String getName() {
-        // TODO this could include a uniquifying prefix defined in BranchSource
-        return head.getName();
+        CustomNameBranchProperty customName = (CustomNameBranchProperty)this.properties.stream()
+            .filter(p -> CustomNameBranchProperty.class.isInstance(p)).findFirst().orElse(null);
+        return customName != null
+            ? customName.generateName(head.getName())
+            : head.getName();
     }
 
     /**
