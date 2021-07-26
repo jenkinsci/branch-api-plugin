@@ -105,7 +105,6 @@ import jenkins.scm.impl.NullSCMSource;
 import jenkins.triggers.SCMTriggerItem;
 import net.sf.json.JSONObject;
 import org.acegisecurity.Authentication;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.IconSpec;
@@ -1151,7 +1150,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          */
         @Restricted(NoExternalUse.class)
         public StreamTaskListener globalEventsListener() {
-            return new StreamBuildListener(globalEvents.get(), Charsets.UTF_8);
+            return new StreamBuildListener(globalEvents.get(), StandardCharsets.UTF_8);
         }
 
         /**

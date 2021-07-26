@@ -102,7 +102,7 @@ import net.sf.json.JSONObject;
 
 import org.acegisecurity.AccessDeniedException;
 import org.acegisecurity.Authentication;
-import org.apache.commons.io.Charsets;
+import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.Icon;
@@ -1088,7 +1088,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Restricted(NoExternalUse.class)
         public StreamTaskListener globalEventsListener() {
-            return new StreamBuildListener(globalEvents.get(), Charsets.UTF_8);
+            return new StreamBuildListener(globalEvents.get(), StandardCharsets.UTF_8);
         }
 
         /**
