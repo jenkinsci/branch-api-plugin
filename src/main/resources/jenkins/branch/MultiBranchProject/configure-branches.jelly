@@ -25,6 +25,7 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:p="/lib/hudson/project" xmlns:branch="/lib/branch-api">
   <f:section title="${%Branch Sources}">
     <f:block>
+      <!-- TODO can this just use a standard f:repeatableHeteroProperty instead? -->
       <branch:branchSourceSelector field="sources" hasHeader="true"
                                    sourceDescriptors="${descriptor.getSCMSourceDescriptors(true)}"
                                    addCaption="${%Add source}" deleteCaption="${%Delete source}"/>
