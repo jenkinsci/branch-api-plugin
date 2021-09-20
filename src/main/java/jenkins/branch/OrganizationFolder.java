@@ -323,6 +323,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         return super.getItem(NameEncoder.encode(projectName));
     }
 
+    /**
+     * @deprecated Directly check {@link List#size} of {@link #getSCMNavigators} if desired.
+     */
+    @Deprecated
+    public boolean isSingleOrigin() {
+        return navigators.size() == 1;
+    }
+
     public DescribableList<SCMNavigator,SCMNavigatorDescriptor> getNavigators() {
         return navigators;
     }
