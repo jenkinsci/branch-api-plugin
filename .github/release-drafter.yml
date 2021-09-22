@@ -13,7 +13,10 @@ categories:
   - title: '🧰 Maintenance'
     label: 'chore'
   - title: 🚨 Removed
-    label: removed  
+    label: removed
+  # Default label used by Dependabot
+  - title: 📦 Dependency updates
+    label: dependencies  
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 template: |
   ## Changes
