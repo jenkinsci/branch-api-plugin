@@ -23,10 +23,22 @@
  */
 package jenkins.branch;
 
+import java.io.IOException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import javax.annotation.CheckForNull;
+
+import org.jvnet.tiger_types.Types;
+
 import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
 import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
+
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Descriptor;
@@ -34,22 +46,19 @@ import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
-import java.io.IOException;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
-import org.jvnet.tiger_types.Types;
 
 /**
- * <p>The {@link Descriptor} for {@link MultiBranchProject}s.</p>
+ * <p>
+ * The {@link Descriptor} for {@link MultiBranchProject}s.
+ * </p>
  *
- * <p>Compatible {@link hudson.scm.SCM}s displayed by {@link jenkins.scm.impl.SingleSCMSource} (via their
- * {@link hudson.scm.SCMDescriptor}) can be defined by overriding {@link #isApplicable(Descriptor)}:</p>
+ * <p>
+ * Compatible {@link hudson.scm.SCM}s displayed by {@link jenkins.scm.impl.SingleSCMSource} (via their
+ * {@link hudson.scm.SCMDescriptor}) can be defined by overriding {@link #isApplicable(Descriptor)}:
+ * </p>
+ * 
  * <pre>
  * &#64;Override
  * public boolean isApplicable(Descriptor descriptor) {
@@ -76,12 +85,14 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     /**
      * Explicit constructor to use when type inference fails.
      *
-     * @param clazz        the {@link MultiBranchProject} that this descriptor is for.
-     * @param projectClass the {@link Job} type that the {@link MultiBranchProject} creates.
+     * @param clazz
+     *            the {@link MultiBranchProject} that this descriptor is for.
+     * @param projectClass
+     *            the {@link Job} type that the {@link MultiBranchProject} creates.
      * @since 2.0
      */
     protected MultiBranchProjectDescriptor(Class<? extends MultiBranchProject<?, ?>> clazz,
-                                           Class<? extends Job> projectClass) {
+            Class<? extends Job> projectClass) {
         super(clazz);
         this.projectClass = projectClass;
     }
@@ -89,7 +100,8 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     /**
      * Semi explicit constructor to use when the descriptor is not an inner class of the {@link MultiBranchProject}.
      *
-     * @param clazz the {@link MultiBranchProject} that this descriptor is for.
+     * @param clazz
+     *            the {@link MultiBranchProject} that this descriptor is for.
      * @since 2.0
      */
     protected MultiBranchProjectDescriptor(Class<? extends MultiBranchProject<?, ?>> clazz) {
@@ -98,8 +110,8 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     }
 
     /**
-     * Fully inferring constructor to use when the descriptor is an inner class of the {@link MultiBranchProject}
-     * and type parameter inference works because it just should work.
+     * Fully inferring constructor to use when the descriptor is an inner class of the {@link MultiBranchProject} and
+     * type parameter inference works because it just should work.
      *
      * @since 2.0
      */
@@ -111,7 +123,8 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     /**
      * Infers the base class of projects that the specified {@link MultiBranchProject} creates.
      *
-     * @param clazz the specified {@link MultiBranchProject}.
+     * @param clazz
+     *            the specified {@link MultiBranchProject}.
      * @return the base class of project that the specified {@link MultiBranchProject} creates.
      */
     private static Class<? extends Job> inferProjectClass(Class<? extends MultiBranchProject> clazz) {
@@ -156,8 +169,9 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     /**
      * Gets the {@link SCMSourceDescriptor}s.
      *
-     * @param onlyUserInstantiable {@code true} retains only those {@link jenkins.scm.api.SCMSource} types that
-     *                             are instantiable by the user.
+     * @param onlyUserInstantiable
+     *            {@code true} retains only those {@link jenkins.scm.api.SCMSource} types that are instantiable by the
+     *            user.
      * @return the list of {@link SCMSourceDescriptor}s.
      */
     @SuppressWarnings("unused") // used by stapler
@@ -176,7 +190,8 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     public List<BranchProjectFactoryDescriptor> getProjectFactoryDescriptors() {
         List<BranchProjectFactoryDescriptor> result = new ArrayList<>();
         for (BranchProjectFactoryDescriptor descriptor : ExtensionList.lookup(BranchProjectFactoryDescriptor.class)) {
-            if (descriptor.isApplicable(getClazz()) && descriptor.getProjectClass().isAssignableFrom(getProjectClass())) {
+            if (descriptor.isApplicable(getClazz())
+                    && descriptor.getProjectClass().isAssignableFrom(getProjectClass())) {
                 result.add(descriptor);
             }
         }
@@ -188,7 +203,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      *
      * @return the {@link BranchSource.DescriptorImpl}.
      */
-    @SuppressWarnings({"unused", "unchecked"}) // used by stapler
+    @SuppressWarnings({ "unused", "unchecked" }) // used by stapler
     @NonNull
     public Descriptor<BranchSource> getBranchSourceDescriptor() {
         return Jenkins.getActiveInstance().getDescriptorOrDie(BranchSource.class);
@@ -200,8 +215,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     @Override
     public List<FolderIconDescriptor> getIconDescriptors() {
         return Collections.<FolderIconDescriptor>singletonList(
-                Jenkins.getActiveInstance().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class)
-        );
+                Jenkins.getActiveInstance().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class));
     }
 
     /**
@@ -209,24 +223,24 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      */
     @Override
     public boolean isIconConfigurable() {
-        return false;
+        return true;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     @NonNull
-    public <I extends TopLevelItem> ChildNameGenerator<AbstractFolder<I>,I> childNameGenerator() {
-        return (ChildNameGenerator<AbstractFolder<I>, I>)ChildNameGeneratorImpl.INSTANCE;
+    public <I extends TopLevelItem> ChildNameGenerator<AbstractFolder<I>, I> childNameGenerator() {
+        return ChildNameGeneratorImpl.INSTANCE;
     }
 
-    public static class ChildNameGeneratorImpl<P extends Job<P, R> & TopLevelItem,
-            R extends Run<P, R>> extends ChildNameGenerator<MultiBranchProject<P,R>,P> {
+    public static class ChildNameGeneratorImpl<P extends Job<P, R> & TopLevelItem, R extends Run<P, R>>
+            extends ChildNameGenerator<MultiBranchProject<P, R>, P> {
 
-        /*package*/ static final ChildNameGeneratorImpl INSTANCE = new ChildNameGeneratorImpl();
+        /* package */ static final ChildNameGeneratorImpl INSTANCE = new ChildNameGeneratorImpl();
 
         @Override
         @CheckForNull
-        public String itemNameFromItem(@NonNull MultiBranchProject<P,R> parent, @NonNull P item) {
+        public String itemNameFromItem(@NonNull MultiBranchProject<P, R> parent, @NonNull P item) {
             BranchProjectFactory<P, R> factory = parent.getProjectFactory();
             if (factory.isProject(item)) {
                 return NameEncoder.encode(factory.getBranch(item).getName());
@@ -240,7 +254,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
 
         @Override
         @CheckForNull
-        public String dirNameFromItem(@NonNull MultiBranchProject<P,R> parent, @NonNull P item) {
+        public String dirNameFromItem(@NonNull MultiBranchProject<P, R> parent, @NonNull P item) {
             BranchProjectFactory<P, R> factory = parent.getProjectFactory();
             if (factory.isProject(item)) {
                 return NameMangler.apply(factory.getBranch(item).getName());

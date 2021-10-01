@@ -24,7 +24,44 @@
 
 package jenkins.branch;
 
-import antlr.ANTLRException;
+import static hudson.Functions.printStackTrace;
+import static jenkins.scm.api.SCMEvent.Type.CREATED;
+import static jenkins.scm.api.SCMEvent.Type.UPDATED;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import javax.servlet.ServletException;
+
+import org.acegisecurity.AccessDeniedException;
+import org.acegisecurity.Authentication;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.jenkins.ui.icon.Icon;
+import org.jenkins.ui.icon.IconSet;
+import org.jenkins.ui.icon.IconSpec;
+import org.jenkinsci.Symbol;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
+
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
@@ -37,6 +74,8 @@ import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.thoughtworks.xstream.XStreamException;
+
+import antlr.ANTLRException;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
@@ -60,24 +99,6 @@ import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.util.DescribableList;
 import hudson.util.StreamTaskListener;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.TransientActionFactory;
 import jenkins.scm.api.SCMEvent;
@@ -95,29 +116,11 @@ import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import net.sf.json.JSONObject;
 
-import org.acegisecurity.AccessDeniedException;
-import org.acegisecurity.Authentication;
-import java.nio.charset.StandardCharsets;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.jenkins.ui.icon.Icon;
-import org.jenkins.ui.icon.IconSet;
-import org.jenkins.ui.icon.IconSpec;
-import org.jenkinsci.Symbol;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
-
-import static hudson.Functions.printStackTrace;
-import static jenkins.scm.api.SCMEvent.Type.CREATED;
-import static jenkins.scm.api.SCMEvent.Type.UPDATED;
-
 /**
  * A folder-like collection of {@link MultiBranchProject}s, one per repository.
  */
-@SuppressWarnings({"unchecked", "rawtypes"}) // mistakes in various places
-public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<?,?>>
+@SuppressWarnings({ "unchecked", "rawtypes" }) // mistakes in various places
+public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<?, ?>>
         implements SCMNavigatorOwner, IconSpec {
 
     /**
@@ -127,17 +130,19 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * Our navigators.
      */
-    private final DescribableList<SCMNavigator,SCMNavigatorDescriptor> navigators = new DescribableList<>(this);
+    private final DescribableList<SCMNavigator, SCMNavigatorDescriptor> navigators = new DescribableList<>(this);
     /**
      * Our project factories.
      */
-    private final DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor> projectFactories = new DescribableList<>(this);
+    private final DescribableList<MultiBranchProjectFactory, MultiBranchProjectFactoryDescriptor> projectFactories = new DescribableList<>(
+            this);
     /**
      * The rules for automatic building of branches.
      *
      * @since 2.0.12
      */
-    private DescribableList<BranchBuildStrategy, BranchBuildStrategyDescriptor> buildStrategies = new DescribableList<>(this);
+    private DescribableList<BranchBuildStrategy, BranchBuildStrategyDescriptor> buildStrategies = new DescribableList<>(
+            this);
 
     /**
      * The branches properties.
@@ -151,7 +156,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      *
      * @since 2.0
      */
-    private transient /*almost final*/ State state = new State(this);
+    private transient /* almost final */ State state = new State(this);
 
     /**
      * The navigator digest used to detect if we need to trigger a rescan on save.
@@ -195,8 +200,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     public void onCreatedFromScratch() {
         super.onCreatedFromScratch();
 
-        if( projectFactories.isEmpty() ) {
-            for (MultiBranchProjectFactoryDescriptor d : ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class)) {
+        if (projectFactories.isEmpty()) {
+            for (MultiBranchProjectFactoryDescriptor d : ExtensionList
+                    .lookup(MultiBranchProjectFactoryDescriptor.class)) {
                 MultiBranchProjectFactory f = d.newInstance();
                 if (f != null) {
                     projectFactories.add(f);
@@ -313,13 +319,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * Returns the child job with the specified project name or {@code null} if no such child job exists.
      *
-     * @param projectName the name of the project.
-     * @return the child job or {@code null} if no such job exists or if the requesting user does ave permission to
-     * view it.
+     * @param projectName
+     *            the name of the project.
+     * @return the child job or {@code null} if no such job exists or if the requesting user does ave permission to view
+     *         it.
      * @since 2.0.0
      */
     @edu.umd.cs.findbugs.annotations.CheckForNull
-    public MultiBranchProject<?,?> getItemByProjectName(@NonNull String projectName) {
+    public MultiBranchProject<?, ?> getItemByProjectName(@NonNull String projectName) {
         return super.getItem(NameEncoder.encode(projectName));
     }
 
@@ -331,7 +338,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         return navigators.size() == 1;
     }
 
-    public DescribableList<SCMNavigator,SCMNavigatorDescriptor> getNavigators() {
+    public DescribableList<SCMNavigator, SCMNavigatorDescriptor> getNavigators() {
         return navigators;
     }
 
@@ -344,7 +351,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         return navigators;
     }
 
-    public DescribableList<MultiBranchProjectFactory,MultiBranchProjectFactoryDescriptor> getProjectFactories() {
+    public DescribableList<MultiBranchProjectFactory, MultiBranchProjectFactoryDescriptor> getProjectFactories() {
         return projectFactories;
     }
 
@@ -361,7 +368,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * Sets the branch property strategy.
      *
-     * @param strategy chosen.
+     * @param strategy
+     *            chosen.
      * @since 2.5.9
      */
     public void setStrategy(BranchPropertyStrategy strategy) {
@@ -382,13 +390,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * {@inheritDoc}
      */
     @Override
-    protected void submit(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException, Descriptor.FormException {
+    protected void submit(StaplerRequest req, StaplerResponse rsp)
+            throws IOException, ServletException, Descriptor.FormException {
         super.submit(req, rsp);
 
         JSONObject json = req.getSubmittedForm();
         navigators.rebuildHetero(req, json, ExtensionList.lookup(SCMNavigatorDescriptor.class), "navigators");
-        projectFactories.rebuildHetero(req, json, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
-        buildStrategies.rebuildHetero(req, json, ExtensionList.lookup(BranchBuildStrategyDescriptor.class), "buildStrategies");
+        projectFactories.rebuildHetero(req, json, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class),
+                "projectFactories");
+        buildStrategies.rebuildHetero(req, json, ExtensionList.lookup(BranchBuildStrategyDescriptor.class),
+                "buildStrategies");
         strategy = req.bindJSON(BranchPropertyStrategy.class, json.getJSONObject("strategy"));
 
         for (SCMNavigator n : navigators) {
@@ -458,7 +469,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * {@inheritDoc}
      */
     @Override
-    protected void computeChildren(final ChildObserver<MultiBranchProject<?,?>> observer, final TaskListener listener) throws IOException, InterruptedException {
+    protected void computeChildren(final ChildObserver<MultiBranchProject<?, ?>> observer, final TaskListener listener)
+            throws IOException, InterruptedException {
         // capture the current digests to prevent unnecessary rescan if re-saving after scan
         try {
             navDigest = Util.getDigestOf(Items.XSTREAM2.toXML(navigators));
@@ -507,16 +519,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     try {
                         bc.commit();
                     } catch (IOException | RuntimeException e) {
-                        listener.error("[%tc] Could not persist folder level actions",
-                                System.currentTimeMillis());
+                        listener.error("[%tc] Could not persist folder level actions", System.currentTimeMillis());
                         throw e;
                     }
                     if (saveProject) {
                         try {
                             save();
                         } catch (IOException | RuntimeException e) {
-                            listener.error(
-                                    "[%tc] Could not persist folder level configuration changes",
+                            listener.error("[%tc] Could not persist folder level configuration changes",
                                     System.currentTimeMillis());
                             throw e;
                         }
@@ -532,10 +542,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 listener.getLogger().format("[%tc] Consulting %s%n", System.currentTimeMillis(),
                         navigator.getDescriptor().getDisplayName());
                 try {
-                    navigator.visitSources(new SCMSourceObserverImpl(listener, observer, navigator, (SCMSourceEvent<?>) null));
+                    navigator.visitSources(
+                            new SCMSourceObserverImpl(listener, observer, navigator, (SCMSourceEvent<?>) null));
                 } catch (IOException | InterruptedException | RuntimeException e) {
-                    listener.error("[%tc] Could not fetch sources from navigator %s",
-                            System.currentTimeMillis(), navigator);
+                    listener.error("[%tc] Could not fetch sources from navigator %s", System.currentTimeMillis(),
+                            navigator);
                     throw e;
                 }
             }
@@ -588,13 +599,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
-     * Get the term used in the UI to represent the source for this kind of
-     * {@link Item}. Must start with a capital letter.
+     * Get the term used in the UI to represent the source for this kind of {@link Item}. Must start with a capital
+     * letter.
+     * 
      * @return term used in the UI to represent the souce
      */
     public String getSourcePronoun() {
         Set<String> result = new TreeSet<>();
-        for (SCMNavigator navigator: navigators) {
+        for (SCMNavigator navigator : navigators) {
             String pronoun = Util.fixEmptyAndTrim(navigator.getPronoun());
             if (pronoun != null) {
                 result.add(pronoun);
@@ -609,7 +621,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     @Override
     public List<SCMSource> getSCMSources() {
         Set<SCMSource> result = new HashSet<>();
-        for (MultiBranchProject<?,?> child : getItems(MultiBranchProject::isBuildable)) {
+        for (MultiBranchProject<?, ?> child : getItems(MultiBranchProject::isBuildable)) {
             result.addAll(child.getSCMSources());
         }
         return new ArrayList<>(result);
@@ -640,8 +652,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
-     * Will create an specialized view when there are no repositories or branches found, which contain a Jenkinsfile
-     * or other MARKER file.
+     * Will create an specialized view when there are no repositories or branches found, which contain a Jenkinsfile or
+     * other MARKER file.
      */
     @Override
     public View getPrimaryView() {
@@ -727,9 +739,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
     }
 
-    private static final Set<Permission> SUPPRESSED_PERMISSIONS =
-        Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE)));
+    private static final Set<Permission> SUPPRESSED_PERMISSIONS = Collections.unmodifiableSet(
+            new HashSet<>(Arrays.asList(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE)));
 
     /**
      * Our descriptor
@@ -766,9 +777,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
 
         /**
-         * Gets all the {@link BranchPropertyStrategyDescriptor} instances applicable to the specified project and source.
+         * Gets all the {@link BranchPropertyStrategyDescriptor} instances applicable to the specified project and
+         * source.
          *
-         * @return all the {@link BranchPropertyStrategyDescriptor} instances  applicable to the specified project and
+         * @return all the {@link BranchPropertyStrategyDescriptor} instances applicable to the specified project and
          *         source.
          */
         public List<BranchPropertyStrategyDescriptor> propertyStrategyDescriptors() {
@@ -805,8 +817,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public List<FolderIconDescriptor> getIconDescriptors() {
             return Collections.<FolderIconDescriptor>singletonList(
-                    Jenkins.get().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class)
-            );
+                    Jenkins.get().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class));
         }
 
         /**
@@ -814,7 +825,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Override
         public boolean isIconConfigurable() {
-            return false;
+            return true;
         }
 
         @Override
@@ -824,26 +835,19 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         }
 
         static {
-            IconSet.icons.addIcon(
-                    new Icon("icon-branch-api-organization-folder icon-sm",
-                            "plugin/branch-api/images/16x16/organization-folder.png",
-                            Icon.ICON_SMALL_STYLE));
-            IconSet.icons.addIcon(
-                    new Icon("icon-branch-api-organization-folder icon-md",
-                            "plugin/branch-api/images/24x24/organization-folder.png",
-                            Icon.ICON_MEDIUM_STYLE));
-            IconSet.icons.addIcon(
-                    new Icon("icon-branch-api-organization-folder icon-lg",
-                            "plugin/branch-api/images/32x32/organization-folder.png",
-                            Icon.ICON_LARGE_STYLE));
-            IconSet.icons.addIcon(
-                    new Icon("icon-branch-api-organization-folder icon-xlg",
-                            "plugin/branch-api/images/48x48/organization-folder.png",
-                            Icon.ICON_XLARGE_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-branch-api-organization-folder icon-sm",
+                    "plugin/branch-api/images/16x16/organization-folder.png", Icon.ICON_SMALL_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-branch-api-organization-folder icon-md",
+                    "plugin/branch-api/images/24x24/organization-folder.png", Icon.ICON_MEDIUM_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-branch-api-organization-folder icon-lg",
+                    "plugin/branch-api/images/32x32/organization-folder.png", Icon.ICON_LARGE_STYLE));
+            IconSet.icons.addIcon(new Icon("icon-branch-api-organization-folder icon-xlg",
+                    "plugin/branch-api/images/48x48/organization-folder.png", Icon.ICON_XLARGE_STYLE));
         }
     }
 
-    private static class ChildNameGeneratorImpl extends ChildNameGenerator<OrganizationFolder, MultiBranchProject<?,?>> {
+    private static class ChildNameGeneratorImpl
+            extends ChildNameGenerator<OrganizationFolder, MultiBranchProject<?, ?>> {
 
         private static final ChildNameGeneratorImpl INSTANCE = new ChildNameGeneratorImpl();
 
@@ -907,7 +911,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Override
         public String getDisplayName() {
-            return Messages.OrganizationFolder_OrganizationScan_displayName(((OrganizationFolder)getParent()).getSourcePronoun());
+            return Messages.OrganizationFolder_OrganizationScan_displayName(
+                    ((OrganizationFolder) getParent()).getSourcePronoun());
         }
 
         @Override
@@ -918,10 +923,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             } finally {
                 long end = System.currentTimeMillis();
                 LOGGER.log(Level.INFO, "{0} #{1,time,yyyyMMdd.HHmmss} organization scan action completed: {2} in {3}",
-                        new Object[]{
-                                getParent().getFullName(), start, getResult(), Util.getTimeSpanString(end - start)
-                        }
-                );
+                        new Object[] { getParent().getFullName(), start, getResult(),
+                                Util.getTimeSpanString(end - start) });
             }
         }
 
@@ -957,17 +960,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 public File get() {
                     return eventsFile;
                 }
-            },
-                    250, TimeUnit.MILLISECONDS,
-                    1024,
-                    true,
-                    32 * 1024,
-                    5
-            );
+            }, 250, TimeUnit.MILLISECONDS, 1024, true, 32 * 1024, 5);
         }
 
         /**
          * The {@link TaskListener} for events that we cannot assign to an organization folder.
+         * 
          * @return The {@link TaskListener} for events that we cannot assign to an organization folder.
          */
         @Restricted(NoExternalUse.class)
@@ -981,12 +979,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public void onSCMHeadEvent(SCMHeadEvent<?> event) {
             try (StreamTaskListener global = globalEventsListener()) {
-                String globalEventDescription = StringUtils.defaultIfBlank(event.description(), event.getClass().getName());
+                String globalEventDescription = StringUtils.defaultIfBlank(event.description(),
+                        event.getClass().getName());
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                        System.currentTimeMillis(),
-                        globalEventDescription,
-                        event.getType().name(),
-                        event.getOrigin(), event.getTimestamp());
+                        System.currentTimeMillis(), globalEventDescription, event.getType().name(), event.getOrigin(),
+                        event.getTimestamp());
                 int matchCount = 0;
                 if (CREATED == event.getType() || UPDATED == event.getType()) {
                     try {
@@ -995,11 +992,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 if (LOGGER.isLoggable(Level.FINER)) {
                                     LOGGER.log(Level.FINER,
                                             "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
-                                            new Object[]{
-                                                    globalEventDescription,
-                                                    event.getType().name(), event.getTimestamp(), p.getFullName()
-                                            }
-                                    );
+                                            new Object[] { globalEventDescription, event.getType().name(),
+                                                    event.getTimestamp(), p.getFullName() });
                                 }
                                 continue;
                             }
@@ -1022,29 +1016,24 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             for (SCMSource s : p.getSCMSources()) {
                                 if (event.isMatch(s)) {
                                     // already have a source that will see this
-                                    global.getLogger()
-                                            .format("Project %s already has a corresponding sub-project%n",
-                                                    p.getFullName());
+                                    global.getLogger().format("Project %s already has a corresponding sub-project%n",
+                                            p.getFullName());
                                     navigator = null;
                                     break;
                                 }
                             }
                             if (navigator != null) {
-                                global.getLogger()
-                                        .format("Project %s does not have a corresponding sub-project%n",
-                                                p.getFullName());
-                                String localEventDescription = StringUtils.defaultIfBlank(
-                                        event.descriptionFor(navigator),
-                                        globalEventDescription
-                                );
+                                global.getLogger().format("Project %s does not have a corresponding sub-project%n",
+                                        p.getFullName());
+                                String localEventDescription = StringUtils
+                                        .defaultIfBlank(event.descriptionFor(navigator), globalEventDescription);
                                 try (StreamTaskListener listener = p.getComputation().createEventsListener();
-                                     ChildObserver childObserver = p.openEventsChildObserver()) {
+                                        ChildObserver childObserver = p.openEventsChildObserver()) {
                                     long start = System.currentTimeMillis();
-                                    listener.getLogger()
-                                            .format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                                    start, localEventDescription, event.getType().name(),
-                                                    event.getOrigin(),
-                                                    event.getTimestamp());
+                                    listener.getLogger().format(
+                                            "[%tc] Received %s %s event from %s with timestamp %tc%n", start,
+                                            localEventDescription, event.getType().name(), event.getOrigin(),
+                                            event.getTimestamp());
                                     try {
                                         navigator.visitSources(
                                                 p.new SCMSourceObserverImpl(listener, childObserver, navigator, event),
@@ -1057,40 +1046,40 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     } finally {
                                         long end = System.currentTimeMillis();
                                         listener.getLogger().format(
-                                                "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                                end, localEventDescription, event.getType().name(),
-                                                event.getOrigin(), event.getTimestamp(),
-                                                Util.getTimeSpanString(end - start));
+                                                "[%tc] %s %s event from %s with timestamp %tc processed in %s%n", end,
+                                                localEventDescription, event.getType().name(), event.getOrigin(),
+                                                event.getTimestamp(), Util.getTimeSpanString(end - start));
                                     }
                                 } catch (IOException e) {
                                     printStackTrace(e, global.error(
                                             "[%tc] %s encountered an error while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            globalEventDescription, event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
+                                            globalEventDescription, event.getType().name(), event.getOrigin(),
+                                            event.getTimestamp()));
                                 } catch (InterruptedException e) {
                                     global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            globalEventDescription, event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp());
+                                            globalEventDescription, event.getType().name(), event.getOrigin(),
+                                            event.getTimestamp());
                                     throw e;
                                 }
                             }
                         }
                     } catch (InterruptedException e) {
-                        printStackTrace(e, global.error(
-                                "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), globalEventDescription, event.getType().name(),
-                                event.getOrigin(), event.getTimestamp()));
+                        printStackTrace(e,
+                                global.error(
+                                        "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
+                                        System.currentTimeMillis(), globalEventDescription, event.getType().name(),
+                                        event.getOrigin(), event.getTimestamp()));
                     }
                 }
-                global.getLogger()
-                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), globalEventDescription, event.getType().name(),
-                                event.getOrigin(), event.getTimestamp(), matchCount);
+                global.getLogger().format(
+                        "[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
+                        System.currentTimeMillis(), globalEventDescription, event.getType().name(), event.getOrigin(),
+                        event.getTimestamp(), matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -1141,7 +1130,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                         boolean saveProject = false;
                                         for (List<Action> actions : navigatorActions.values()) {
                                             for (Action a : actions) {
-                                                // undo any hacks that attached the contributed actions without attribution
+                                                // undo any hacks that attached the contributed actions without
+                                                // attribution
 
                                                 saveProject = p.removeActions(a.getClass()) || saveProject;
                                             }
@@ -1168,30 +1158,31 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                                     + "timestamp %tc",
 
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
+                                            event.getClass().getName(), event.getType().name(), event.getOrigin(),
+                                            event.getTimestamp()));
                                 } catch (InterruptedException e) {
                                     global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp());
+                                            event.getClass().getName(), event.getType().name(), event.getOrigin(),
+                                            event.getTimestamp());
                                     throw e;
                                 }
                             }
                         }
                     } catch (InterruptedException e) {
-                        printStackTrace(e, global.error(
-                                "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                                event.getOrigin(), event.getTimestamp()));
+                        printStackTrace(e,
+                                global.error(
+                                        "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
+                                        System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                                        event.getOrigin(), event.getTimestamp()));
                     }
                 }
-                global.getLogger()
-                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                                event.getOrigin(), event.getTimestamp(), matchCount);
+                global.getLogger().format(
+                        "[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
+                        System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                        event.getOrigin(), event.getTimestamp(), matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -1221,21 +1212,18 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             if (haveMatch) {
                                 matchCount++;
                                 try (StreamTaskListener listener = p.getComputation().createEventsListener();
-                                     ChildObserver childObserver = p.openEventsChildObserver()) {
+                                        ChildObserver childObserver = p.openEventsChildObserver()) {
                                     long start = System.currentTimeMillis();
-                                    listener.getLogger()
-                                            .format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                                    start, event.getClass().getName(), event.getType().name(),
-                                                    event.getOrigin(), event.getTimestamp());
+                                    listener.getLogger().format(
+                                            "[%tc] Received %s %s event from %s with timestamp %tc%n", start,
+                                            event.getClass().getName(), event.getType().name(), event.getOrigin(),
+                                            event.getTimestamp());
                                     try {
                                         for (SCMNavigator n : p.getSCMNavigators()) {
                                             if (event.isMatch(n)) {
                                                 try {
-                                                    n.visitSources(
-                                                            p.new SCMSourceObserverImpl(listener, childObserver, n,
-                                                                    event),
-                                                            event
-                                                    );
+                                                    n.visitSources(p.new SCMSourceObserverImpl(listener, childObserver,
+                                                            n, event), event);
                                                 } catch (IOException e) {
                                                     printStackTrace(e, listener.error(e.getMessage()));
                                                 }
@@ -1247,10 +1235,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                     } finally {
                                         long end = System.currentTimeMillis();
                                         listener.getLogger().format(
-                                                "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                                end, event.getClass().getName(), event.getType().name(),
-                                                event.getOrigin(), event.getTimestamp(),
-                                                Util.getTimeSpanString(end - start));
+                                                "[%tc] %s %s event from %s with timestamp %tc processed in %s%n", end,
+                                                event.getClass().getName(), event.getType().name(), event.getOrigin(),
+                                                event.getTimestamp(), Util.getTimeSpanString(end - start));
                                     }
                                 } catch (IOException e) {
                                     printStackTrace(e, global.error(
@@ -1258,30 +1245,31 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                                     + "timestamp %tc",
 
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
+                                            event.getClass().getName(), event.getType().name(), event.getOrigin(),
+                                            event.getTimestamp()));
                                 } catch (InterruptedException e) {
                                     global.error(
                                             "[%tc] %s was interrupted while processing %s %s event from %s with "
                                                     + "timestamp %tc",
                                             System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp());
+                                            event.getClass().getName(), event.getType().name(), event.getOrigin(),
+                                            event.getTimestamp());
                                     throw e;
                                 }
                             }
                         }
                     } catch (InterruptedException e) {
-                        printStackTrace(e, global.error(
-                                "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                                event.getOrigin(), event.getTimestamp()));
+                        printStackTrace(e,
+                                global.error(
+                                        "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
+                                        System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                                        event.getOrigin(), event.getTimestamp()));
                     }
                 }
-                global.getLogger()
-                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                                event.getOrigin(), event.getTimestamp(), matchCount);
+                global.getLogger().format(
+                        "[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
+                        System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                        event.getOrigin(), event.getTimestamp(), matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -1296,7 +1284,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         private final SCMNavigator navigator;
 
         public SCMSourceObserverImpl(TaskListener listener, ChildObserver<MultiBranchProject<?, ?>> observer,
-                                     SCMNavigator navigator, SCMEvent<?> event) {
+                SCMNavigator navigator, SCMEvent<?> event) {
             this.listener = listener;
             this.observer = observer;
             this.navigator = navigator;
@@ -1335,7 +1323,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     for (SCMSource source : sources) {
                         BranchSource branchSource = new BranchSource(source);
                         branchSource.setBuildStrategies(buildStrategies);
-                        branchSource.setStrategy(strategy); 
+                        branchSource.setStrategy(strategy);
                         branchSources.add(branchSource);
                     }
                     return branchSources;
@@ -1349,13 +1337,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
                 private boolean recognizes(Map<String, Object> attributes, MultiBranchProjectFactory candidateFactory)
                         throws IOException, InterruptedException {
-                    return candidateFactory.recognizes(
-                                    OrganizationFolder.this,
-                                    projectName,
-                                    sources,
-                                    attributes,
-                                    event instanceof SCMHeadEvent ? (SCMHeadEvent<?>) event : null,
-                                    listener);
+                    return candidateFactory.recognizes(OrganizationFolder.this, projectName, sources, attributes,
+                            event instanceof SCMHeadEvent ? (SCMHeadEvent<?>) event : null, listener);
                 }
 
                 @Override
@@ -1365,7 +1348,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         Map<String, Object> attributes = Collections.<String, Object>emptyMap();
                         for (MultiBranchProjectFactory candidateFactory : projectFactories) {
                             boolean recognizes = recognizes(attributes, candidateFactory);
-                            LOGGER.fine(() -> candidateFactory + " recognizes " + projectName + " with " + attributes + "? " + recognizes);
+                            LOGGER.fine(() -> candidateFactory + " recognizes " + projectName + " with " + attributes
+                                    + "? " + recognizes);
                             if (recognizes) {
                                 factory = candidateFactory;
                                 break;
@@ -1397,21 +1381,21 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     }
                 }
 
-                private void completeExisting(MultiBranchProjectFactory factory, Map<String, Object> attributes, MultiBranchProject<?, ?> existing, boolean wasBuildable, boolean wasDisabled) throws IOException, InterruptedException {
+                private void completeExisting(MultiBranchProjectFactory factory, Map<String, Object> attributes,
+                        MultiBranchProject<?, ?> existing, boolean wasBuildable, boolean wasDisabled)
+                        throws IOException, InterruptedException {
                     BulkChange bc = new BulkChange(existing);
                     try {
                         existing.setSourcesList(createBranchSources());
                         factory.updateExistingProject(existing, attributes, listener);
-                        ProjectNameProperty property =
-                                existing.getProperties().get(ProjectNameProperty.class);
+                        ProjectNameProperty property = existing.getProperties().get(ProjectNameProperty.class);
                         if (property == null || !projectName.equals(property.getName())) {
                             existing.getProperties().remove(ProjectNameProperty.class);
                             existing.addProperty(new ProjectNameProperty(projectName));
                         }
                         for (AbstractFolderProperty<?> folderProperty : getProperties()) {
                             if (folderProperty instanceof OrganizationFolderProperty) {
-                                ((OrganizationFolderProperty) folderProperty).applyDecoration(existing,
-                                        listener);
+                                ((OrganizationFolderProperty) folderProperty).applyDecoration(existing, listener);
                             }
                         }
                     } finally {
@@ -1426,24 +1410,22 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     }
                 }
 
-                private void completeNew(MultiBranchProjectFactory factory, Map<String, Object> attributes, String folderName) throws IOException, InterruptedException {
+                private void completeNew(MultiBranchProjectFactory factory, Map<String, Object> attributes,
+                        String folderName) throws IOException, InterruptedException {
                     if (!observer.mayCreate(folderName)) {
                         listener.getLogger()
                                 .println("Ignoring duplicate child " + projectName + " named " + folderName);
                         return;
                     }
                     MultiBranchProject<?, ?> project;
-                    try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                            OrganizationFolder.this, folderName, projectName
-                    )) {
+                    try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(OrganizationFolder.this,
+                            folderName, projectName)) {
                         if (getItem(folderName) != null) {
-                            throw new IllegalStateException(
-                                    "JENKINS-42511: attempted to redundantly create " + folderName + " in "
-                                            + OrganizationFolder.this);
+                            throw new IllegalStateException("JENKINS-42511: attempted to redundantly create "
+                                    + folderName + " in " + OrganizationFolder.this);
                         }
-                        project = factory.createNewProject(
-                                OrganizationFolder.this, folderName, sources, attributes, listener
-                        );
+                        project = factory.createNewProject(OrganizationFolder.this, folderName, sources, attributes,
+                                listener);
                     }
                     BulkChange bc = new BulkChange(project);
                     try {
@@ -1452,7 +1434,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         }
                         project.addProperty(new ProjectNameProperty(projectName));
                         project.getSourcesList().addAll(createBranchSources());
-                        for (AbstractFolderProperty<?> property: getProperties()) {
+                        for (AbstractFolderProperty<?> property : getProperties()) {
                             if (property instanceof OrganizationFolderProperty) {
                                 ((OrganizationFolderProperty) property).applyDecoration(project, listener);
                             }
@@ -1487,7 +1469,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             if (event instanceof SCMNavigatorEvent) {
                 return new BranchEventCause(event, ((SCMNavigatorEvent) event).descriptionFor(navigator));
             }
-            if (event != null){
+            if (event != null) {
                 return new BranchEventCause(event, event.description());
             }
             return new BranchIndexingCause();
@@ -1511,7 +1493,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public Collection<? extends Action> createFor(@Nonnull OrganizationFolder target) {
             List<Action> result = new ArrayList<>();
-            for (List<Action> actions: target.state.getActions().values()) {
+            for (List<Action> actions : target.state.getActions().values()) {
                 result.addAll(actions);
             }
             return result;
@@ -1526,9 +1508,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     private static class State implements Saveable {
         private final transient OrganizationFolder owner;
         /**
-         * The {@link SCMNavigator#fetchActions(SCMNavigatorOwner, SCMNavigatorEvent, TaskListener)} for each {@link SCMNavigator} keyed by the digest of the {@link SCMNavigator}.
+         * The {@link SCMNavigator#fetchActions(SCMNavigatorOwner, SCMNavigatorEvent, TaskListener)} for each
+         * {@link SCMNavigator} keyed by the digest of the {@link SCMNavigator}.
          */
-        private final Map<String,List<Action>> actions = new HashMap<>();
+        private final Map<String, List<Action>> actions = new HashMap<>();
 
         private State(OrganizationFolder owner) {
             this.owner = owner;
@@ -1576,7 +1559,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         public Map<SCMNavigator, List<Action>> getActions() {
             List<SCMNavigator> navigators = owner.getSCMNavigators();
             Map<SCMNavigator, List<Action>> result = new HashMap<>(navigators.size());
-            for (SCMNavigator navigator: navigators) {
+            for (SCMNavigator navigator : navigators) {
                 result.put(navigator, Collections.unmodifiableList(Util.fixNull(actions.get(navigator.getId()))));
             }
             return result;
@@ -1584,7 +1567,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
         public void setActions(Map<SCMNavigator, List<Action>> actions) {
             Set<String> keys = new HashSet<>();
-            for (Map.Entry<SCMNavigator, List<Action>> entry: actions.entrySet()) {
+            for (Map.Entry<SCMNavigator, List<Action>> entry : actions.entrySet()) {
                 String id = entry.getKey().getId();
                 this.actions.put(id, new ArrayList<>(Util.fixNull(entry.getValue())));
                 keys.add(id);
