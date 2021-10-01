@@ -825,7 +825,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Override
         public boolean isIconConfigurable() {
-            return true;
+            return false;
         }
 
         @Override
