@@ -33,9 +33,11 @@ import hudson.model.Queue;
 import hudson.model.Run;
 import java.util.List;
 import org.jenkinsci.Symbol;
+import org.jvnet.localizer.Localizable;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Suppresses builds due to either {@link BranchIndexingCause} or {@link BranchEventCause}.
@@ -45,8 +47,25 @@ import org.kohsuke.stapler.DataBoundConstructor;
 @Restricted(NoExternalUse.class)
 public class NoTriggerBranchProperty extends BranchProperty {
 
+    private SuppressionStrategy strategy = SuppressionStrategy.ALL;
+
     @DataBoundConstructor
     public NoTriggerBranchProperty() {}
+
+    /**
+     * Gets the strategy which determines which builds should be suppressed.
+     *
+     * @return the suppression strategy.
+     * @since 2.7.1
+     */
+    public SuppressionStrategy getStrategy() {
+        return strategy;
+    }
+
+    @DataBoundSetter
+    public void setStrategy(SuppressionStrategy strategy) {
+        this.strategy = strategy;
+    }
 
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
@@ -60,7 +79,6 @@ public class NoTriggerBranchProperty extends BranchProperty {
         public String getDisplayName() {
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();
         }
-
     }
 
     @Extension
@@ -72,7 +90,9 @@ public class NoTriggerBranchProperty extends BranchProperty {
             for (Action action :  actions) {
                 if (action instanceof CauseAction) {
                     for (Cause c : ((CauseAction) action).getCauses()) {
-                        if (c instanceof BranchIndexingCause || c instanceof BranchEventCause) {
+                        boolean indexingCause = c instanceof BranchIndexingCause;
+                        boolean eventCause = c instanceof BranchEventCause;
+                        if (indexingCause || eventCause) {
                             if (p instanceof Job) {
                                 Job<?,?> j = (Job) p;
                                 if (j.getParent() instanceof MultiBranchProject) {
@@ -83,7 +103,12 @@ public class NoTriggerBranchProperty extends BranchProperty {
                                     } else {
                                         for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
                                             if (prop instanceof NoTriggerBranchProperty) {
-                                                return false;
+                                                NoTriggerBranchProperty triggerProperty = (NoTriggerBranchProperty) prop;
+                                                boolean suppressIndexing = SuppressionStrategy.EVENTS != triggerProperty.getStrategy();
+                                                boolean suppressEvents = SuppressionStrategy.INDEXING != triggerProperty.getStrategy();
+                                                if ((indexingCause && suppressIndexing) || (eventCause && suppressEvents)) {
+                                                    return false;
+                                                }
                                             }
                                         }
                                     }
@@ -95,7 +120,40 @@ public class NoTriggerBranchProperty extends BranchProperty {
             }
             return true;
         }
-
     }
 
+    /**
+     * Strategy which determines which builds should be suppressed.
+     * @since 2.7.1
+     */
+    public enum SuppressionStrategy {
+        /**
+         * All builds triggered by SCM are suppressed.
+         *
+         * @since 2.7.1
+         */
+        ALL(Messages._NoTriggerBranchProperty_strategy_all()),
+        /**
+         * Only builds triggered by {@link BranchIndexingCause} are suppressed.
+         *
+         * @since 2.7.1
+         */
+        INDEXING(Messages._NoTriggerBranchProperty_strategy_indexing()),
+        /**
+         * Only builds triggered by {@link BranchEventCause} are suppressed.
+         *
+         * @since 2.7.1
+         */
+        EVENTS(Messages._NoTriggerBranchProperty_strategy_events());
+
+        private final Localizable displayName;
+
+        SuppressionStrategy(Localizable displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName.toString();
+        }
+    }
 }
