@@ -25,7 +25,6 @@
 package jenkins.branch;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -355,7 +354,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         // TODO still in beta: byte[] sha256 = Hashing.sha256().hashString(name).asBytes();
         byte[] sha256;
         try {
-            sha256 = MessageDigest.getInstance("SHA-256").digest(name.getBytes(Charsets.UTF_16LE));
+            sha256 = MessageDigest.getInstance("SHA-256").digest(name.getBytes(StandardCharsets.UTF_16LE));
         } catch (NoSuchAlgorithmException x) {
             throw new AssertionError("https://docs.oracle.com/javase/7/docs/technotes/guides/security/StandardNames.html#MessageDigest", x);
         }
