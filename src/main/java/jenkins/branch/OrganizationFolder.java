@@ -44,7 +44,6 @@ import hudson.ExtensionList;
 import hudson.Util;
 import hudson.XmlFile;
 import hudson.console.ModelHyperlinkNote;
-import hudson.init.InitMilestone;
 import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.Descriptor;
@@ -70,7 +69,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -90,14 +88,11 @@ import jenkins.scm.api.SCMNavigatorDescriptor;
 import jenkins.scm.api.SCMNavigatorEvent;
 import jenkins.scm.api.SCMNavigatorOwner;
 import jenkins.scm.api.SCMSource;
-import jenkins.scm.api.SCMSourceCategory;
 import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceObserver;
 import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
-import jenkins.scm.impl.SingleSCMNavigator;
-import jenkins.scm.impl.UncategorizedSCMSourceCategory;
 import net.sf.json.JSONObject;
 
 import org.acegisecurity.AccessDeniedException;
@@ -109,7 +104,6 @@ import org.jenkins.ui.icon.Icon;
 import org.jenkins.ui.icon.IconSet;
 import org.jenkins.ui.icon.IconSpec;
 import org.jenkinsci.Symbol;
-import org.jvnet.localizer.LocaleProvider;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
@@ -330,12 +324,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
-     * Returns {@code true} if this is a single origin {@link OrganizationFolder}.
-     *
-     * @return {@code true} if this is a single origin {@link OrganizationFolder}.
+     * @deprecated Directly check {@link List#size} of {@link #getSCMNavigators} if desired.
      */
+    @Deprecated
     public boolean isSingleOrigin() {
-        // JENKINS-41171 we expect everything except for rare legacy instances to be single origin.
         return navigators.size() == 1;
     }
 
@@ -751,17 +743,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Override
         public String getDisplayName() {
-            if (Jenkins.get().getInitLevel().compareTo(InitMilestone.EXTENSIONS_AUGMENTED) > 0) {
-                List<SCMNavigatorDescriptor> navs = remove(ExtensionList.lookup(SCMNavigatorDescriptor.class),
-                        SingleSCMNavigator.DescriptorImpl.class);
-                if (navs.size() == 1) {
-                    return Messages.OrganizationFolder_DisplayName(StringUtils.defaultIfBlank(
-                            navs.get(0).getPronoun(),
-                            Messages.OrganizationFolder_DefaultPronoun())
-                    );
-                }
-            }
-            return Messages.OrganizationFolder_DisplayName(Messages._OrganizationFolder_DefaultPronoun());
+            return Messages.OrganizationFolder_DisplayName();
         }
 
         /**
@@ -801,32 +783,12 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         @NonNull
         public String getDescription() {
-            if (Jenkins.get().getInitLevel().compareTo(InitMilestone.EXTENSIONS_AUGMENTED) > 0) {
-                List<SCMNavigatorDescriptor> navs = remove(ExtensionList.lookup(SCMNavigatorDescriptor.class),
-                        SingleSCMNavigator.DescriptorImpl.class);
-                SCMSourceCategory uncategorized = genericScmSourceCategory(navs);
-
-                Locale locale = LocaleProvider.getLocale();
-                return Messages.OrganizationFolder_Description(orJoinDisplayName(ExtensionList.lookup(MultiBranchProjectDescriptor.class)),
-                        uncategorized.getDisplayName().toString(locale).toLowerCase(locale), orJoinDisplayName(navs));
-            }
-            Locale locale = LocaleProvider.getLocale();
-            return Messages.OrganizationFolder_Description(Messages.OrganizationFolder_DefaultProject(),
-                    UncategorizedSCMSourceCategory.DEFAULT.getDisplayName().toString(locale).toLowerCase(locale),
-                    Messages.OrganizationFolder_DefaultPronoun()
-            );
+            return Messages.OrganizationFolder_Description();
         }
 
         @Override
         public String getIconFilePathPattern() {
-            List<SCMNavigatorDescriptor> descriptors =
-                    remove(ExtensionList.lookup(SCMNavigatorDescriptor.class),
-                            SingleSCMNavigator.DescriptorImpl.class);
-            if (descriptors.size() == 1) {
-                return descriptors.get(0).getIconFilePathPattern();
-            } else {
-                return "plugin/branch-api/images/:size/organization-folder.png";
-            }
+            return "plugin/branch-api/images/:size/organization-folder.png";
         }
 
         /**
@@ -834,85 +796,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Override
         public String getIconClassName() {
-            List<SCMNavigatorDescriptor> descriptors =
-                    remove(ExtensionList.lookup(SCMNavigatorDescriptor.class),
-                            SingleSCMNavigator.DescriptorImpl.class);
-            if (descriptors.size() == 1) {
-                return descriptors.get(0).getIconClassName();
-            } else {
-                return "icon-branch-api-organization-folder";
-            }
-        }
-
-        /**
-         * Joins the {@link Descriptor#getDisplayName()} in a chain of "or".
-         * @param navs the {@link Descriptor}s.
-         * @return a string representing a disjoint list of the display names.
-         */
-        private static String orJoinDisplayName(List<? extends Descriptor> navs) {
-            String providers;
-            switch (navs.size()) {
-                case 1:
-                    providers = navs.get(0).getDisplayName();
-                    break;
-                case 2:
-                    providers = Messages.OrganizationFolder_OrJoin2(navs.get(0).getDisplayName(),
-                            navs.get(1).getDisplayName());
-                    break;
-                case 3:
-                    providers = Messages.OrganizationFolder_OrJoinN_Last(Messages.OrganizationFolder_OrJoinN_First(
-                            navs.get(0).getDisplayName(), navs.get(1).getDisplayName()),
-                            navs.get(2).getDisplayName());
-                    break;
-                default:
-                    String wip = Messages.OrganizationFolder_OrJoinN_First(
-                            navs.get(0).getDisplayName(), navs.get(1).getDisplayName());
-                    for (int i = 2; i < navs.size() - 2; i++) {
-                        wip = Messages.OrganizationFolder_OrJoinN_Middle(wip, navs.get(i).getDisplayName());
-                    }
-                    providers = Messages.OrganizationFolder_OrJoinN_Last(wip,
-                            navs.get(navs.size() - 1).getDisplayName());
-                    break;
-            }
-            return providers;
-        }
-
-        /**
-         * Creates a filtered sublist.
-         *
-         * @param <T> the type to remove from the base list
-         * @param base the base list
-         * @param type the type to remove from the base list
-         * @return the list will all instances of the supplied type removed.
-         */
-        @Nonnull
-        public static <T> List<T> remove(@Nonnull Iterable<T> base, @Nonnull Class<? extends T> type) {
-            List<T> r = new ArrayList<>();
-            for (T i : base) {
-                if (!type.isInstance(i))
-                    r.add(i);
-            }
-            return r;
-        }
-
-        /**
-         * Gets the {@link SCMSourceCategory#isUncategorized()} of a list of {@link SCMNavigatorDescriptor} instances.
-         * @param descriptors the {@link SCMNavigatorDescriptor} instances.
-         * @return the {@link SCMSourceCategory}.
-         */
-        private SCMSourceCategory genericScmSourceCategory(List<? extends SCMNavigatorDescriptor> descriptors) {
-            List<SCMSourceCategory> sourceCategories = new ArrayList<>();
-            for (SCMNavigatorDescriptor d: descriptors) {
-                sourceCategories.addAll(d.getCategories());
-            }
-            SCMSourceCategory uncategorized = UncategorizedSCMSourceCategory.DEFAULT;
-            for (SCMSourceCategory c: SCMSourceCategory.simplify(SCMSourceCategory.addUncategorizedIfMissing(sourceCategories)).values()) {
-                if (c.isUncategorized()) {
-                    uncategorized = c;
-                    break;
-                }
-            }
-            return uncategorized;
+            return "icon-branch-api-organization-folder";
         }
 
         /**
