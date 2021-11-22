@@ -24,11 +24,9 @@
 
 package jenkins.branch;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -310,7 +308,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     // Avoiding WeakHashMap<Node, T> since Slave overrides hashCode/equals
-    private final LoadingCache<Node, Object> nodeLocks = CacheBuilder.newBuilder().weakKeys().build(new CacheLoader<Node, Object>() {
+    private final LoadingCache<Node, Object> nodeLocks = Caffeine.newBuilder().weakKeys().build(new CacheLoader<Node, Object>() {
         @Override
         public Object load(Node node) throws Exception {
             // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
@@ -320,11 +318,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
     });
     private static Object lockFor(Node node) {
-        try {
-            return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.get(node);
-        } catch (ExecutionException x) {
-            throw new AssertionError(x);
-        }
+        return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.get(node);
     }
 
     private static final Pattern GOOD_RAW_WORKSPACE_DIR = Pattern.compile("(.+)[/\\\\][$][{]ITEM_FULL_?NAME[}][/\\\\]?");
@@ -355,7 +349,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         // TODO still in beta: byte[] sha256 = Hashing.sha256().hashString(name).asBytes();
         byte[] sha256;
         try {
-            sha256 = MessageDigest.getInstance("SHA-256").digest(name.getBytes(Charsets.UTF_16LE));
+            sha256 = MessageDigest.getInstance("SHA-256").digest(name.getBytes(StandardCharsets.UTF_16LE));
         } catch (NoSuchAlgorithmException x) {
             throw new AssertionError("https://docs.oracle.com/javase/7/docs/technotes/guides/security/StandardNames.html#MessageDigest", x);
         }
@@ -428,7 +422,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
         private static int runningTasks;
 
-        @VisibleForTesting
+        // Visible for testing
         static synchronized void waitForTasksToFinish() throws InterruptedException {
             while (runningTasks > 0) {
                 Deleter.class.wait();

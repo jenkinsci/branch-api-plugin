@@ -110,6 +110,10 @@
       <artifactId>cloudbees-folder</artifactId>
       <version>6.16</version>
     </dependency>
+    <dependency>
+      <groupId>io.jenkins.plugins</groupId>
+      <artifactId>caffeine-api</artifactId>
+    </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>org.mockito</groupId>
