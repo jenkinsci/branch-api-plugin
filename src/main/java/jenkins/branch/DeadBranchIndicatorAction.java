@@ -31,7 +31,7 @@ import hudson.model.Job;
 import hudson.model.Run;
 import jenkins.model.TransientActionFactory;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -53,9 +53,9 @@ public class DeadBranchIndicatorAction extends InvisibleAction {
             return Job.class;
         }
 
-        @Nonnull
+        @NonNull
         @Override
-        public Collection<? extends Action> createFor(@Nonnull Job job) {
+        public Collection<? extends Action> createFor(@NonNull Job job) {
             if (job.getParent() instanceof MultiBranchProject) {
                 MultiBranchProject p = (MultiBranchProject) job.getParent();
                 BranchProjectFactory factory = p.getProjectFactory();
@@ -78,9 +78,9 @@ public class DeadBranchIndicatorAction extends InvisibleAction {
             return Run.class;
         }
 
-        @Nonnull
+        @NonNull
         @Override
-        public Collection<? extends Action> createFor(@Nonnull Run target) {
+        public Collection<? extends Action> createFor(@NonNull Run target) {
             final Job job = target.getParent();
             if (job.getParent() instanceof MultiBranchProject) {
                 MultiBranchProject p = (MultiBranchProject) job.getParent();
