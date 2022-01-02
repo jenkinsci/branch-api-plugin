@@ -24,6 +24,7 @@
 
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Action;
 import hudson.model.Cause;
@@ -47,7 +48,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 @Restricted(NoExternalUse.class)
 public class NoTriggerBranchProperty extends BranchProperty {
 
-    private SuppressionStrategy strategy = SuppressionStrategy.ALL;
+    private SuppressionStrategy strategy;
 
     @DataBoundConstructor
     public NoTriggerBranchProperty() {}
@@ -58,7 +59,11 @@ public class NoTriggerBranchProperty extends BranchProperty {
      * @return the suppression strategy.
      * @since 2.7.1
      */
+    @NonNull
     public SuppressionStrategy getStrategy() {
+        if (strategy == null) {
+            return SuppressionStrategy.ALL;
+        }
         return strategy;
     }
 

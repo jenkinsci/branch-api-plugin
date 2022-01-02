@@ -31,10 +31,10 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.queue.QueueTaskFuture;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.List;
 import jenkins.branch.NoTriggerBranchProperty.SuppressionStrategy;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
@@ -48,6 +48,8 @@ import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMSource;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.ReaderInputStream;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
@@ -59,8 +61,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 public class NoTriggerBranchPropertyTest {
-
-    private static final SuppressionStrategy DONT_SUPPRESS_ANYTHING = null;
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
@@ -129,26 +129,9 @@ public class NoTriggerBranchPropertyTest {
 
     @Issue("JENKINS-63673")
     @Test
-    public void suppressNothing() throws Exception {
-        try (MockSCMController controller = MockSCMController.create()) {
-            TestSuppressionProject project = new TestSuppressionProject(controller, DONT_SUPPRESS_ANYTHING);
-            assertThat(project.getNextBuildNumber(), is(1));
-            project.triggerIndexing();
-            assertThat(project.getNextBuildNumber(), is(2));
-            project.triggerEvent();
-            assertThat(project.getNextBuildNumber(), is(3));
-            project.triggerEvent();
-            assertThat(project.getNextBuildNumber(), is(4));
-            project.triggerIndexing();
-            assertThat(project.getNextBuildNumber(), is(5));
-        }
-    }
-
-    @Issue("JENKINS-63673")
-    @Test
     public void suppressAll() throws Exception {
         try (MockSCMController controller = MockSCMController.create()) {
-            TestSuppressionProject project = new TestSuppressionProject(controller, SuppressionStrategy.ALL);
+            ProjectWrapper project = createProject(controller, SuppressionStrategy.ALL);
             assertThat(project.getNextBuildNumber(), is(1));
             project.triggerIndexing();
             assertThat(project.getNextBuildNumber(), is(1));
@@ -165,7 +148,7 @@ public class NoTriggerBranchPropertyTest {
     @Test
     public void suppressIndexing() throws Exception {
         try (MockSCMController controller = MockSCMController.create()) {
-            TestSuppressionProject project = new TestSuppressionProject(controller, SuppressionStrategy.INDEXING);
+            ProjectWrapper project = createProject(controller, SuppressionStrategy.INDEXING);
             assertThat(project.getNextBuildNumber(), is(1));
             project.triggerIndexing();
             assertThat(project.getNextBuildNumber(), is(1));
@@ -182,7 +165,7 @@ public class NoTriggerBranchPropertyTest {
     @Test
     public void suppressEvents() throws Exception {
         try (MockSCMController controller = MockSCMController.create()) {
-            TestSuppressionProject project = new TestSuppressionProject(controller, SuppressionStrategy.EVENTS);
+            ProjectWrapper project = createProject(controller, SuppressionStrategy.EVENTS);
             assertThat(project.getNextBuildNumber(), is(1));
             project.triggerIndexing();
             assertThat(project.getNextBuildNumber(), is(2));
@@ -195,29 +178,61 @@ public class NoTriggerBranchPropertyTest {
         }
     }
 
-    private class TestSuppressionProject {
+    private ProjectWrapper createProject(MockSCMController controller, SuppressionStrategy strategy) throws Exception {
+        String repositoryName = "verify-suppression";
+        controller.createRepository(repositoryName);
+        MultiBranchImpl project = r.jenkins.createProject(MultiBranchImpl.class, "verifySuppressionJob");
+        SCMSource source = new MockSCMSource(controller, repositoryName, new MockSCMDiscoverBranches());
+        BranchSource branchSource = new BranchSource(source);
+        NoTriggerBranchProperty property = new NoTriggerBranchProperty();
+        property.setStrategy(strategy);
+        branchSource.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[] {property}));
+        project.getSourcesList().add(branchSource);
+        r.configRoundtrip(project);
+        return new ProjectWrapper(r, project, controller, repositoryName);
+    }
 
-        private static final String REPOSITORY = "verify-suppression";
+    @Issue("JENKINS-63673")
+    @Test
+    public void suppressAllWhenJobCreatedBeforeAddingTheSuppressionStrategyParameter() throws Exception {
+        try (MockSCMController controller = MockSCMController.create()) {
+            String repositoryName = "repoName";
+            controller.createRepository(repositoryName);
+            InputStream configStream = NoTriggerBranchPropertyTest.class.getResourceAsStream("NoTriggerBranchPropertyTest/old-job.xml");
+            String configXml = IOUtils.toString(configStream, StandardCharsets.UTF_8)
+                    .replace("CONTROLLER_ID_PLACEHOLDER", controller.getId())
+                    .replace("REPOSITORY_NAME_PLACEHOLDER", repositoryName);
+            InputStream configReader = new ReaderInputStream(new StringReader(configXml), StandardCharsets.UTF_8);
+            MultiBranchImpl loadedProject = (MultiBranchImpl) r.jenkins.createProjectFromXML("oldJob", configReader);
+            r.waitUntilNoActivity();
+
+            ProjectWrapper project = new ProjectWrapper(r, loadedProject, controller, repositoryName);
+            assertThat(project.getNextBuildNumber(), is(1));
+            project.triggerIndexing();
+            assertThat(project.getNextBuildNumber(), is(1));
+            project.triggerEvent();
+            assertThat(project.getNextBuildNumber(), is(1));
+            project.triggerEvent();
+            assertThat(project.getNextBuildNumber(), is(1));
+            project.triggerIndexing();
+            assertThat(project.getNextBuildNumber(), is(1));
+        }
+    }
+
+    private static class ProjectWrapper {
+
         private static final String BRANCH_NAME = "master";
 
-        private final MockSCMController controller;
+        private final JenkinsRule jenkinsRule;
         private final MultiBranchImpl project;
+        private final MockSCMController controller;
+        private final String repositoryName;
 
-        public TestSuppressionProject(MockSCMController controller, SuppressionStrategy strategy) throws Exception {
+        public ProjectWrapper(JenkinsRule jenkinsRule, MultiBranchImpl project, MockSCMController controller, String repositoryName) {
+            this.jenkinsRule = jenkinsRule;
+            this.project = project;
             this.controller = controller;
-            controller.createRepository(REPOSITORY);
-            project = r.jenkins.createProject(MultiBranchImpl.class, "verifySuppressionJob");
-            SCMSource source = new MockSCMSource(controller, REPOSITORY, new MockSCMDiscoverBranches());
-            BranchSource branchSource = new BranchSource(source);
-            List<BranchProperty> branchProperties = new ArrayList<>();
-            if (DONT_SUPPRESS_ANYTHING != strategy) {
-                NoTriggerBranchProperty property = new NoTriggerBranchProperty();
-                property.setStrategy(strategy);
-                branchProperties.add(property);
-            }
-            branchSource.setStrategy(new DefaultBranchPropertyStrategy(branchProperties.toArray(new BranchProperty[0])));
-            project.getSourcesList().add(branchSource);
-            r.configRoundtrip(project);
+            this.repositoryName = repositoryName;
         }
 
         public int getNextBuildNumber() {
@@ -227,21 +242,21 @@ public class NoTriggerBranchPropertyTest {
         public void triggerIndexing() throws Exception {
             bumpHeadRevision();
             project.scheduleBuild2(0).getFuture().get();
-            r.waitUntilNoActivity();
+            jenkinsRule.waitUntilNoActivity();
             showComputation(project);
         }
 
         public void triggerEvent() throws Exception {
             long watermark = SCMEvents.getWatermark();
             String revision = bumpHeadRevision();
-            SCMHeadEvent.fireNow(new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, controller, REPOSITORY, BRANCH_NAME, revision));
+            SCMHeadEvent.fireNow(new MockSCMHeadEvent("test", SCMEvent.Type.UPDATED, controller, repositoryName, BRANCH_NAME, revision));
             SCMEvents.awaitAll(watermark);
-            r.waitUntilNoActivity();
+            jenkinsRule.waitUntilNoActivity();
         }
 
-        private String bumpHeadRevision() throws UnsupportedEncodingException, IOException {
-            controller.addFile(REPOSITORY, BRANCH_NAME, "add new file", Long.toString(System.currentTimeMillis()), "text".getBytes("UTF-8"));
-            return controller.getRevision(REPOSITORY, BRANCH_NAME);
+        private String bumpHeadRevision() throws IOException {
+            controller.addFile(repositoryName, BRANCH_NAME, "add new file", Long.toString(System.currentTimeMillis()), "text".getBytes("UTF-8"));
+            return controller.getRevision(repositoryName, BRANCH_NAME);
         }
     }
 }
