@@ -95,9 +95,7 @@ public class NoTriggerBranchProperty extends BranchProperty {
             for (Action action :  actions) {
                 if (action instanceof CauseAction) {
                     for (Cause c : ((CauseAction) action).getCauses()) {
-                        boolean indexingCause = c instanceof BranchIndexingCause;
-                        boolean eventCause = c instanceof BranchEventCause;
-                        if (indexingCause || eventCause) {
+                        if (c instanceof BranchIndexingCause || c instanceof BranchEventCause) {
                             if (p instanceof Job) {
                                 Job<?,?> j = (Job) p;
                                 if (j.getParent() instanceof MultiBranchProject) {
@@ -109,9 +107,7 @@ public class NoTriggerBranchProperty extends BranchProperty {
                                         for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
                                             if (prop instanceof NoTriggerBranchProperty) {
                                                 NoTriggerBranchProperty triggerProperty = (NoTriggerBranchProperty) prop;
-                                                boolean suppressIndexing = SuppressionStrategy.EVENTS != triggerProperty.getStrategy();
-                                                boolean suppressEvents = SuppressionStrategy.INDEXING != triggerProperty.getStrategy();
-                                                if ((indexingCause && suppressIndexing) || (eventCause && suppressEvents)) {
+                                                if (triggerProperty.getStrategy().shouldSuppress(c)) {
                                                     return false;
                                                 }
                                             }
@@ -159,6 +155,20 @@ public class NoTriggerBranchProperty extends BranchProperty {
 
         public String getDisplayName() {
             return displayName.toString();
+        }
+
+        public boolean shouldSuppress(Cause cause) {
+            boolean indexing = cause instanceof BranchIndexingCause;
+            boolean events = cause instanceof BranchEventCause;
+            if (!indexing && !events) {
+                String className = cause != null ? cause.getClass().getName() : "null";
+                throw new IllegalArgumentException("Unsupported cause type: " + className);
+            }
+
+            if (this == ALL || (indexing && this == INDEXING) || (events && this == EVENTS)) {
+                return true;
+            }
+            return false;
         }
     }
 }
