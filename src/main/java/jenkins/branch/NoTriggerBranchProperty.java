@@ -57,7 +57,6 @@ public class NoTriggerBranchProperty extends BranchProperty {
      * Gets the strategy which determines which builds should be suppressed.
      *
      * @return the suppression strategy.
-     * @since 2.7.1
      */
     @NonNull
     public SuppressionStrategy getStrategy() {
@@ -125,25 +124,18 @@ public class NoTriggerBranchProperty extends BranchProperty {
 
     /**
      * Strategy which determines which builds should be suppressed.
-     * @since 2.7.1
      */
     public enum SuppressionStrategy {
         /**
          * All builds triggered by SCM are suppressed.
-         *
-         * @since 2.7.1
          */
         ALL(Messages._NoTriggerBranchProperty_strategy_all()),
         /**
          * Only builds triggered by {@link BranchIndexingCause} are suppressed.
-         *
-         * @since 2.7.1
          */
         INDEXING(Messages._NoTriggerBranchProperty_strategy_indexing()),
         /**
          * Only builds triggered by {@link BranchEventCause} are suppressed.
-         *
-         * @since 2.7.1
          */
         EVENTS(Messages._NoTriggerBranchProperty_strategy_events());
 
