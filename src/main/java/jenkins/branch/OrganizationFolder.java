@@ -788,7 +788,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
         @Override
         public String getIconFilePathPattern() {
-            return "plugin/branch-api/images/:size/organization-folder.png";
+            return "plugin/branch-api/images/organization-folder.svg";
         }
 
         /**
@@ -814,7 +814,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Override
         public boolean isIconConfigurable() {
-            return false;
+            return true;
         }
 
         @Override
@@ -826,19 +826,19 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         static {
             IconSet.icons.addIcon(
                     new Icon("icon-branch-api-organization-folder icon-sm",
-                            "plugin/branch-api/images/16x16/organization-folder.png",
+                            "plugin/branch-api/images/organization-folder.svg",
                             Icon.ICON_SMALL_STYLE));
             IconSet.icons.addIcon(
                     new Icon("icon-branch-api-organization-folder icon-md",
-                            "plugin/branch-api/images/24x24/organization-folder.png",
+                            "plugin/branch-api/images/organization-folder.svg",
                             Icon.ICON_MEDIUM_STYLE));
             IconSet.icons.addIcon(
                     new Icon("icon-branch-api-organization-folder icon-lg",
-                            "plugin/branch-api/images/32x32/organization-folder.png",
+                            "plugin/branch-api/images/organization-folder.svg",
                             Icon.ICON_LARGE_STYLE));
             IconSet.icons.addIcon(
                     new Icon("icon-branch-api-organization-folder icon-xlg",
-                            "plugin/branch-api/images/48x48/organization-folder.png",
+                            "plugin/branch-api/images/organization-folder.svg",
                             Icon.ICON_XLARGE_STYLE));
         }
     }
