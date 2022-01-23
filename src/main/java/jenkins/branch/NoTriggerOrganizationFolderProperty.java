@@ -21,44 +21,69 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.Action;
-import hudson.model.Cause;
-import hudson.model.CauseAction;
 import hudson.model.Job;
-import hudson.model.Queue;
 import hudson.util.FormValidation;
-import java.util.List;
+import java.util.Collections;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.NoTriggerProperty;
+import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy;
+import org.jenkinsci.Symbol;
 import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Defines {@link NoTriggerBranchProperty} on selected branches.
  */
 //@Restricted(NoExternalUse.class)
-public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<OrganizationFolder> {
+public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<OrganizationFolder> implements NoTriggerProperty {
 
-    /** Regexp of branch names to trigger. */
     private final String branches;
+    private SuppressionStrategy strategy;
 
     @DataBoundConstructor
     public NoTriggerOrganizationFolderProperty(String branches) {
         this.branches = branches;
     }
-    
+
     public String getBranches() {
         return branches;
     }
 
+    @NonNull
+    @Override
+    public String getTriggeredBranchesRegex() {
+        // backward compatibility, allow all by default
+        if (branches == null) {
+            return ".*";
+        }
+        return branches;
+    }
+
+    @NonNull
+    @Override
+    public SuppressionStrategy getStrategy() {
+        if (strategy == null) {
+            return SuppressionStrategy.NONE;
+        }
+        return strategy;
+    }
+
+    @DataBoundSetter
+    public void setStrategy(NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy strategy) {
+        this.strategy = strategy;
+    }
+
     @Extension
+    @Symbol("suppressFolderAutomaticTriggering")
     public static class DescriptorImpl extends AbstractFolderPropertyDescriptor {
 
         @Override
@@ -74,48 +99,19 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
                 return FormValidation.error(x.getMessage());
             }
         }
-
     }
 
     @Extension
-    public static class Dispatcher extends Queue.QueueDecisionHandler {
+    public static class Dispatcher extends NoTriggerMultiBranchQueueDecisionHandler {
 
-        @SuppressWarnings({"unchecked", "rawtypes"}) // untypable
+        @NonNull
         @Override
-        public boolean shouldSchedule(Queue.Task p, List<Action> actions) {
-            for (Action action :  actions) {
-                if (action instanceof CauseAction) {
-                    for (Cause c : ((CauseAction) action).getCauses()) {
-                        if (c instanceof BranchIndexingCause || c instanceof BranchEventCause) {
-                            if (p instanceof Job) {
-                                Job<?,?> j = (Job) p;
-
-                                if (j.getParent() instanceof MultiBranchProject) {
-                                    OverrideIndexTriggersJobProperty overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
-                                    if (overrideProp != null) {
-                                        return overrideProp.getEnableTriggers();
-                                    } else {
-                                        MultiBranchProject mbp = (MultiBranchProject) j.getParent();
-                                        if (mbp.getParent() instanceof OrganizationFolder) {
-                                            NoTriggerOrganizationFolderProperty prop = ((OrganizationFolder) mbp.getParent()).getProperties().get(NoTriggerOrganizationFolderProperty.class);
-                                            if (prop != null) {
-                                                // Not necessarily the same as j.getName(), which may be encoded:
-                                                String name = mbp.getProjectFactory().getBranch(j).getName();
-                                                if (!name.matches(prop.getBranches())) {
-                                                    return false;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        protected Iterable<? extends Object> getJobProperties(MultiBranchProject project, Job job) {
+            if (project.getParent() instanceof OrganizationFolder) {
+                return ((OrganizationFolder) project.getParent()).getProperties();
             }
-            return true;
+            return Collections.emptyList();
         }
-
     }
 
     @Extension

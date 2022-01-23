@@ -21,24 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.Action;
-import hudson.model.Cause;
-import hudson.model.CauseAction;
 import hudson.model.Job;
-import hudson.model.Queue;
 import hudson.model.Run;
-import java.util.List;
+import hudson.util.FormValidation;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.NoTriggerProperty;
+import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy;
 import org.jenkinsci.Symbol;
-import org.jvnet.localizer.Localizable;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Suppresses builds due to either {@link BranchIndexingCause} or {@link BranchEventCause}.
@@ -46,22 +45,36 @@ import org.kohsuke.stapler.DataBoundSetter;
  * of changes in the underlying SCM.
  */
 @Restricted(NoExternalUse.class)
-public class NoTriggerBranchProperty extends BranchProperty {
+public class NoTriggerBranchProperty extends BranchProperty implements NoTriggerProperty {
 
+    private String triggeredBranchesRegex;
     private SuppressionStrategy strategy;
 
     @DataBoundConstructor
-    public NoTriggerBranchProperty() {}
+    public NoTriggerBranchProperty() {
+        // empty
+    }
 
-    /**
-     * Gets the strategy which determines which builds should be suppressed.
-     *
-     * @return the suppression strategy.
-     */
     @NonNull
+    @Override
+    public String getTriggeredBranchesRegex() {
+        // backward compatibility, skip all by default
+        if (triggeredBranchesRegex == null) {
+            return "^$";
+        }
+        return triggeredBranchesRegex;
+    }
+
+    @DataBoundSetter
+    public void setTriggeredBranchesRegex(String branches) {
+        this.triggeredBranchesRegex = triggeredBranchesRegex;
+    }
+
+    @NonNull
+    @Override
     public SuppressionStrategy getStrategy() {
         if (strategy == null) {
-            return SuppressionStrategy.ALL;
+            return SuppressionStrategy.NONE;
         }
         return strategy;
     }
@@ -76,91 +89,32 @@ public class NoTriggerBranchProperty extends BranchProperty {
         return null;
     }
 
-    @Symbol("suppressAutomaticTriggering")
     @Extension
+    @Symbol("suppressAutomaticTriggering")
     public static class DescriptorImpl extends BranchPropertyDescriptor {
+
         @Override
         public String getDisplayName() {
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();
         }
+
+        public FormValidation doCheckBranches(@QueryParameter String value) {
+            try {
+                Pattern.compile(value);
+                return FormValidation.ok();
+            } catch (PatternSyntaxException x) {
+                return FormValidation.error(x.getMessage());
+            }
+        }
     }
 
     @Extension
-    public static class Dispatcher extends Queue.QueueDecisionHandler {
+    public static class Dispatcher extends NoTriggerMultiBranchQueueDecisionHandler {
 
-        @SuppressWarnings({"unchecked", "rawtypes"}) // untypable
+        @NonNull
         @Override
-        public boolean shouldSchedule(Queue.Task p, List<Action> actions) {
-            for (Action action :  actions) {
-                if (action instanceof CauseAction) {
-                    for (Cause c : ((CauseAction) action).getCauses()) {
-                        if (c instanceof BranchIndexingCause || c instanceof BranchEventCause) {
-                            if (p instanceof Job) {
-                                Job<?,?> j = (Job) p;
-                                if (j.getParent() instanceof MultiBranchProject) {
-
-                                    OverrideIndexTriggersJobProperty overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
-                                    if (overrideProp != null) {
-                                        return overrideProp.getEnableTriggers();
-                                    } else {
-                                        for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
-                                            if (prop instanceof NoTriggerBranchProperty) {
-                                                NoTriggerBranchProperty triggerProperty = (NoTriggerBranchProperty) prop;
-                                                if (triggerProperty.getStrategy().shouldSuppress(c)) {
-                                                    return false;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return true;
-        }
-    }
-
-    /**
-     * Strategy which determines which builds should be suppressed.
-     */
-    public enum SuppressionStrategy {
-        /**
-         * All builds triggered by SCM are suppressed.
-         */
-        ALL(Messages._NoTriggerBranchProperty_strategy_all()),
-        /**
-         * Only builds triggered by {@link BranchIndexingCause} are suppressed.
-         */
-        INDEXING(Messages._NoTriggerBranchProperty_strategy_indexing()),
-        /**
-         * Only builds triggered by {@link BranchEventCause} are suppressed.
-         */
-        EVENTS(Messages._NoTriggerBranchProperty_strategy_events());
-
-        private final Localizable displayName;
-
-        SuppressionStrategy(Localizable displayName) {
-            this.displayName = displayName;
-        }
-
-        public String getDisplayName() {
-            return displayName.toString();
-        }
-
-        public boolean shouldSuppress(Cause cause) {
-            boolean indexing = cause instanceof BranchIndexingCause;
-            boolean events = cause instanceof BranchEventCause;
-            if (!indexing && !events) {
-                String className = cause != null ? cause.getClass().getName() : "null";
-                throw new IllegalArgumentException("Unsupported cause type: " + className);
-            }
-
-            if (this == ALL || (indexing && this == INDEXING) || (events && this == EVENTS)) {
-                return true;
-            }
-            return false;
+        protected Iterable<? extends Object> getJobProperties(MultiBranchProject project, Job job) {
+            return project.getProjectFactory().getBranch(job).getProperties();
         }
     }
 }
