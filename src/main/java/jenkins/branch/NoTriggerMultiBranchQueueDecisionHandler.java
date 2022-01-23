@@ -70,14 +70,13 @@ public abstract class NoTriggerMultiBranchQueueDecisionHandler extends Queue.Que
             if (!(cause instanceof BranchIndexingCause || cause instanceof BranchEventCause)) {
                 continue;
             }
-            Iterable<?> properties = getJobProperties((MultiBranchProject) job.getParent(), job);
 
-            OverrideIndexTriggersJobProperty overrideTriggersProperty = findProperty(OverrideIndexTriggersJobProperty.class, properties);
+            OverrideIndexTriggersJobProperty overrideTriggersProperty = job.getProperty(OverrideIndexTriggersJobProperty.class);
             if (overrideTriggersProperty != null) {
                 return Optional.of(overrideTriggersProperty.getEnableTriggers());
             }
 
-            NoTriggerProperty noTriggerProperty = findProperty(NoTriggerProperty.class, properties);
+            NoTriggerProperty noTriggerProperty = findNoTriggerProperty(job);
             if (noTriggerProperty == null) {
                 return Optional.of(Boolean.TRUE);
             }
@@ -86,24 +85,24 @@ public abstract class NoTriggerMultiBranchQueueDecisionHandler extends Queue.Que
         return Optional.empty();
     }
 
+    private NoTriggerProperty findNoTriggerProperty(Job job) {
+        for (Object property : getBranchProperties((MultiBranchProject) job.getParent(), job)) {
+            if (property instanceof NoTriggerProperty) {
+                return (NoTriggerProperty) property;
+            }
+        }
+        return null;
+    }
+
     /**
-     * Returns all job properties.
+     * Returns properties associated with the branch represented by the job.
      *
      * @param project the project to which the job belongs to.
      * @param job     the job of which the properties are returned.
      * @return the job properties.
      */
     @NonNull
-    protected abstract Iterable<? extends Object> getJobProperties(MultiBranchProject project, Job job);
-
-    private static <T> T findProperty(Class<T> clazz, Iterable<?> properties) {
-        for (Object property : properties) {
-            if (clazz.isAssignableFrom(property.getClass())) {
-                return (T) property;
-            }
-        }
-        return null;
-    }
+    protected abstract Iterable<? extends Object> getBranchProperties(MultiBranchProject project, Job job);
 
     private static boolean shouldSuppressBuild(Job<?, ?> job, Cause cause, NoTriggerProperty property) {
         if (!getBranchNameOf(job).matches(property.getTriggeredBranchesRegex())) {

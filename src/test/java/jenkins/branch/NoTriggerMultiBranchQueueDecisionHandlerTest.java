@@ -65,7 +65,7 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         Task task = mock(Task.class);
         List<Action> actions = mock(List.class);
 
-        boolean result = createHandlerWithoutProperties().shouldSchedule(task, actions);
+        boolean result = createHandler().shouldSchedule(task, actions);
 
         assertThat(result, is(Boolean.TRUE));
         verifyNoInteractions(actions);
@@ -78,7 +78,7 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         when(job.getParent()).thenReturn(folder);
         List<Action> actions = mock(List.class);
 
-        boolean result = createHandlerWithoutProperties().shouldSchedule((Task) job, actions);
+        boolean result = createHandler().shouldSchedule((Task) job, actions);
 
         assertThat(result, is(Boolean.TRUE));
         verifyNoInteractions(actions);
@@ -87,20 +87,20 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
     @Test
     public void scheduleWhenNoCauseActionsExist() {
         JobImpl job = mockMultiBranchJob();
-        NoTriggerMultiBranchQueueDecisionHandler handler = spy(createHandlerWithoutProperties());
+        NoTriggerMultiBranchQueueDecisionHandler handler = spy(createHandler());
         List<Action> actions = Arrays.asList(mock(Action.class), mock(Action.class));
 
         boolean result = handler.shouldSchedule(job, actions);
 
         assertThat(result, is(Boolean.TRUE));
-        verify(handler, never()).getJobProperties((MultiBranchProject) job.getParent(), job);
+        verify(handler, never()).getBranchProperties((MultiBranchProject) job.getParent(), job);
     }
 
     @Test
     @Parameters({BRANCH_INDEXING_CAUSE_ID, BRANCH_EVENT_CAUSE_ID})
     public void scheduleWhenNoPropertiesAreSet(String causeTypeId) {
         JobImpl job = mockMultiBranchJob();
-        NoTriggerMultiBranchQueueDecisionHandler handler = spy(createHandlerWithoutProperties());
+        NoTriggerMultiBranchQueueDecisionHandler handler = spy(createHandler());
         List<Action> actions = new ArrayList<>();
         actions.add(mock(Action.class));
         actions.add(mockCauseAction(mock(Cause.class), createCause(causeTypeId)));
@@ -111,7 +111,7 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         boolean result = handler.shouldSchedule(job, actions);
 
         assertThat(result, is(Boolean.TRUE));
-        verify(handler).getJobProperties((MultiBranchProject) job.getParent(), job);
+        verify(handler).getBranchProperties((MultiBranchProject) job.getParent(), job);
         verify(handler, never()).processAction(job, skippedAction);
     }
 
@@ -125,8 +125,9 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
     public void overrideIndexTriggersJobPropertyTakesPrecedenceOverNoTriggerProperty(String causeTypeId, boolean override) {
         JobImpl job = mockMultiBranchJob();
         OverrideIndexTriggersJobProperty overrideTriggersProperty = new OverrideIndexTriggersJobProperty(override);
+        when(job.getProperty(OverrideIndexTriggersJobProperty.class)).thenReturn(overrideTriggersProperty);
         NoTriggerProperty noTriggerProperty = mock(NoTriggerProperty.class);
-        NoTriggerMultiBranchQueueDecisionHandler handler = spy(createHandler(overrideTriggersProperty, noTriggerProperty));
+        NoTriggerMultiBranchQueueDecisionHandler handler = spy(createHandler(noTriggerProperty));
         List<Action> actions = new ArrayList<>();
         actions.add(mock(Action.class));
         actions.add(mockCauseAction(mock(Cause.class), createCause(causeTypeId)));
@@ -213,17 +214,12 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         assertThat(result, is(Boolean.TRUE));
     }
 
-    private static NoTriggerMultiBranchQueueDecisionHandler createHandlerWithoutProperties() {
+    private static NoTriggerMultiBranchQueueDecisionHandler createHandler() {
         return new NoTriggerMultiBranchQueueDecisionHandlerImpl(Collections.emptyList());
     }
 
-    private static NoTriggerMultiBranchQueueDecisionHandler createHandler(Object property, Object... properties) {
-        List<Object> allProperties = new ArrayList<>(1 + properties.length);
-        allProperties.add(property);
-        for (Object prop : properties) {
-            allProperties.add(prop);
-        }
-        return new NoTriggerMultiBranchQueueDecisionHandlerImpl(allProperties);
+    private static NoTriggerMultiBranchQueueDecisionHandler createHandler(NoTriggerProperty property) {
+        return new NoTriggerMultiBranchQueueDecisionHandlerImpl(Arrays.asList(property));
     }
 
     private static JobImpl mockMultiBranchJob(String branchName) {
@@ -271,7 +267,7 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
 
         @NonNull
         @Override
-        protected Iterable<? extends Object> getJobProperties(MultiBranchProject project, Job job) {
+        protected Iterable<? extends Object> getBranchProperties(MultiBranchProject project, Job job) {
             assertThat(project, notNullValue());
             assertThat(job, notNullValue());
             assertThat(job.getParent(), is(project));

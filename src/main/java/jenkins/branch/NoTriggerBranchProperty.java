@@ -113,7 +113,7 @@ public class NoTriggerBranchProperty extends BranchProperty implements NoTrigger
 
         @NonNull
         @Override
-        protected Iterable<? extends Object> getJobProperties(MultiBranchProject project, Job job) {
+        protected Iterable<? extends Object> getBranchProperties(MultiBranchProject project, Job job) {
             return project.getProjectFactory().getBranch(job).getProperties();
         }
     }

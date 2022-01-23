@@ -106,7 +106,7 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
 
         @NonNull
         @Override
-        protected Iterable<? extends Object> getJobProperties(MultiBranchProject project, Job job) {
+        protected Iterable<? extends Object> getBranchProperties(MultiBranchProject project, Job job) {
             if (project.getParent() instanceof OrganizationFolder) {
                 return ((OrganizationFolder) project.getParent()).getProperties();
             }
