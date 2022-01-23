@@ -66,7 +66,7 @@ public class NoTriggerBranchProperty extends BranchProperty implements NoTrigger
     }
 
     @DataBoundSetter
-    public void setTriggeredBranchesRegex(String branches) {
+    public void setTriggeredBranchesRegex(String triggeredBranchesRegex) {
         this.triggeredBranchesRegex = triggeredBranchesRegex;
     }
 
