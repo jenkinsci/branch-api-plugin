@@ -56,7 +56,7 @@ public abstract class NoTriggerMultiBranchQueueDecisionHandler extends Queue.Que
         return true;
     }
 
-    private boolean isMultiBranchJob(Queue.Task task) {
+    private static boolean isMultiBranchJob(Queue.Task task) {
         if (!(task instanceof Job)) {
             return false;
         }
