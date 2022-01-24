@@ -98,7 +98,7 @@ public class NoTriggerBranchProperty extends BranchProperty implements NoTrigger
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();
         }
 
-        public FormValidation doCheckBranches(@QueryParameter String value) {
+        public FormValidation doCheckTriggeredBranchesRegex(@QueryParameter String value) {
             try {
                 Pattern.compile(value);
                 return FormValidation.ok();
