@@ -2018,7 +2018,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     listener.getLogger()
                             .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
 
-
                     needSave = true;
                     // get the previous seen revision
                     SCMRevision scmLastSeenRevision = lastSeenRevisionOrDefault(project, scmLastBuiltRevision);
@@ -2105,7 +2104,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     }
                 }
             }
-
             return changesDetected;
         }
 
@@ -2223,7 +2221,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             .format("Setting job as built - either buildstrategies or actually built - either way we shouldnt build the same commit again");
 
                     } catch (IOException e) {
-                        printStackTrace(e, listener.error("Could not update last revision hash observeExisting"));
+                        printStackTrace(e, listener.error("Could not update last revision hash doAutomaticBuilds"));
                     }
                 }
             }
@@ -2233,7 +2231,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 printStackTrace(e, listener.error("Could not update last seen revision hash"));
             }
         }
-
 
         /**
          * Tests if the specified buildStrategies say to update the last built revision.
@@ -2265,7 +2262,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 return false;
             }
         }
-
 
         /**
          * Tests if the specified {@link SCMHead} should be automatically built when discovered / modified.
