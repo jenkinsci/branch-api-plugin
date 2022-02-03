@@ -2217,8 +2217,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     try {
                         listener.getLogger().format("Updating revision hash so it will not be built again %n");
                         _factory.setRevisionHash(project, revision);
-                        listener.getLogger()
-                            .format("Setting job as built - either buildstrategies or actually built - either way we shouldnt build the same commit again");
 
                     } catch (IOException e) {
                         printStackTrace(e, listener.error("Could not update last revision hash doAutomaticBuilds"));
