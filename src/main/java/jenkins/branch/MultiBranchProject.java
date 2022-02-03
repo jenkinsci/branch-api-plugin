@@ -2023,21 +2023,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     // get the previous seen revision
                     SCMRevision scmLastSeenRevision = lastSeenRevisionOrDefault(project, scmLastBuiltRevision);
                     doAutomaticBuilds(head, revision, rawName, project, revisionActions, scmLastBuiltRevision, scmLastSeenRevision);
-                    
-                    //We need to save the revision here so we dont get in a loop
-                    //Imagine a buildstrategy said dont build - but changes detected always is true - it puts jenkins into a loop
-                    //This probably wont be merged - but we need a discussion why this isnt valid.
-                    //Either it was chosen not to be built or it did build - either way we want to gaurantee it doesnt build the same thing again right?
-                    //At least I feel I can say the above comment with this specific code path.
-                    try {
-                        _factory.setRevisionHash(project, revision);
-                        listener.getLogger()
-                            .format("Setting job as built - either buildstrategies or actually built - either way we shouldnt build the same commit again");
-
-                    } catch (IOException e) {
-                        printStackTrace(e, listener.error("Could not update last revision hash observeExisting"));
-                    }
-
 
                 } else {
                     listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
@@ -2224,6 +2209,23 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 );
             } else {
                 listener.getLogger().format("No automatic build triggered for %s%n", rawName);
+
+                //Should we update the last Build revision with no build performed?
+                if(isUpdatingLastBuiltRevisionWithNoBuild()){
+                    //We need to save the revision here so we dont get in a loop
+                    //Imagine a buildstrategy said dont build - but changes detected always is true - it puts jenkins into a loop
+                    //Either it was chosen not to be built or it did build - either way we want to gaurantee it doesnt build the same thing again right?
+                    //At least let a plugin owner extend and change behavior even if the default is do not update the last built revision.
+                    try {
+                        listener.getLogger().format("Updating revision hash so it will not be built again %n");
+                        _factory.setRevisionHash(project, revision);
+                        listener.getLogger()
+                            .format("Setting job as built - either buildstrategies or actually built - either way we shouldnt build the same commit again");
+
+                    } catch (IOException e) {
+                        printStackTrace(e, listener.error("Could not update last revision hash observeExisting"));
+                    }
+                }
             }
             try {
                 _factory.setLastSeenRevisionHash(project, revision);
@@ -2231,6 +2233,39 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 printStackTrace(e, listener.error("Could not update last seen revision hash"));
             }
         }
+
+
+        /**
+         * Tests if the specified buildStrategies say to update the last built revision.
+         * @return {@code true} if we are updating using setRevisionHash.
+         */
+        private boolean isUpdatingLastBuiltRevisionWithNoBuild() {
+            BranchSource branchSource = null;
+            for (BranchSource s: MultiBranchProject.this.sources) {
+                if (s.getSource().getId().equals(source.getId())) {
+                    branchSource = s;
+                    break;
+                }
+            }
+            if (branchSource == null) {
+                // no match, means default to False
+                return false;
+            }
+            List<BranchBuildStrategy> buildStrategies = branchSource.getBuildStrategies();
+            if (buildStrategies.isEmpty()) {
+                // we will use default behaviour, return False
+                return false;
+            } else {
+                for (BranchBuildStrategy s: buildStrategies) {
+                    if (s.updatingLastBuiltRevisionWithNoBuild()) {
+                        //IF it is ever true, return
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
 
         /**
          * Tests if the specified {@link SCMHead} should be automatically built when discovered / modified.

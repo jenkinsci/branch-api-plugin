@@ -274,6 +274,33 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
         return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener);
     }
 
+
+
+
+
+    /**
+     * API:Should we update last built revision if we did not do a build?
+     *
+     * @return {@code true} if and only if we should consider whatever commit we received as built.
+     */
+    @SuppressWarnings("deprecation")
+    public final boolean updatingLastBuiltRevisionWithNoBuild() {
+        return isUpdatingLastBuiltRevisionWithNoBuild(new LogTaskListener(Logger.getLogger(getClass().getName()), Level.INFO));
+    }
+
+    /**
+     * SPI: Should we update last built revision if we did not do a build?
+     *
+     * @param listener     the TaskListener to be used
+     * @return {@code true} if and only if we should consider whatever commit we received as built.
+     */
+    @Restricted(ProtectedExternally.class)
+    public boolean isUpdatingLastBuiltRevisionWithNoBuild(@NonNull TaskListener listener) {
+        return false;
+    }
+
+
+
     /**
      * {@inheritDoc}
      */
