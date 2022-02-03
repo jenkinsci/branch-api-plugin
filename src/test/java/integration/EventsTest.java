@@ -2907,6 +2907,46 @@ public class EventsTest {
         }
     }
 
+        @Test
+    public void given_multibranch_when__build_is_skipped_then_lastBuiltRevision_is_updated() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
+            source.setBuildStrategies(Collections.<BranchBuildStrategy>singletonList(new SkipAndUpdateRevisionHashBuildStrategyImpl()));
+            prj.getSourcesList().add(source);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
+            FreeStyleProject master = prj.getItem("master");
+            r.waitUntilNoActivity();
+            assertThat("The master branch was built", master.getLastBuild(), nullValue());
+            SCMRevision scmLastSeenRevision1 = prj.getProjectFactory().getLastSeenRevision(master);
+            assertNotNull(scmLastSeenRevision1);
+            assertNotNull(prj.getProjectFactory().getRevision(master));
+        }
+    }
+
+    public static class SkipAndUpdateRevisionHashBuildStrategyImpl extends BranchBuildStrategy {
+        @Override
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
+                                        TaskListener listener) {
+            return false;
+        }
+
+        @Override
+        public boolean isUpdatingLastBuiltRevisionWithNoBuild(TaskListener listener){
+            return true;
+        }
+
+        @TestExtension(
+                "given_multibranch_when__build_is_skipped_then_lastBuiltRevision_is_updated")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
+
+        }
+    }
+
     public static class SkipIAllBuildStrategyImpl extends BranchBuildStrategy {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
