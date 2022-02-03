@@ -2018,10 +2018,26 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     listener.getLogger()
                             .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
 
+
                     needSave = true;
                     // get the previous seen revision
                     SCMRevision scmLastSeenRevision = lastSeenRevisionOrDefault(project, scmLastBuiltRevision);
                     doAutomaticBuilds(head, revision, rawName, project, revisionActions, scmLastBuiltRevision, scmLastSeenRevision);
+                    
+                    //We need to save the revision here so we dont get in a loop
+                    //Imagine a buildstrategy said dont build - but changes detected always is true - it puts jenkins into a loop
+                    //This probably wont be merged - but we need a discussion why this isnt valid.
+                    //Either it was chosen not to be built or it did build - either way we want to gaurantee it doesnt build the same thing again right?
+                    //At least I feel I can say the above comment with this specific code path.
+                    try {
+                        _factory.setRevisionHash(project, revision);
+                        listener.getLogger()
+                            .format("Setting job as built - either buildstrategies or actually built - either way we shouldnt build the same commit again");
+
+                    } catch (IOException e) {
+                        printStackTrace(e, listener.error("Could not update last revision hash observeExisting"));
+                    }
+
 
                 } else {
                     listener.getLogger().format("No changes detected: %s (still at %s)%n", rawName, revision);
@@ -2104,6 +2120,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     }
                 }
             }
+
             return changesDetected;
         }
 
