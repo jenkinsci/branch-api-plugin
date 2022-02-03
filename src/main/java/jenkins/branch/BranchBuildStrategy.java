@@ -274,10 +274,6 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
         return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener);
     }
 
-
-
-
-
     /**
      * API:Should we update last built revision if we did not do a build?
      *
@@ -298,8 +294,6 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
     public boolean isUpdatingLastBuiltRevisionWithNoBuild(@NonNull TaskListener listener) {
         return false;
     }
-
-
 
     /**
      * {@inheritDoc}
