@@ -649,7 +649,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        TaskListener listener, @CheckForNull SCMEvent scmEvent) {
             return true;
         }
 
@@ -700,7 +700,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, @CheckForNull SCMEvent scmEvent) {
             return head instanceof ChangeRequestSCMHead;
         }
 
@@ -716,7 +716,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, @CheckForNull SCMEvent scmEvent) {
             if (head instanceof ChangeRequestSCMHead) {
                 try {
                     return currRevision.equals(source.getTrustedRevision(currRevision, listener));
@@ -1083,7 +1083,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, @CheckForNull SCMEvent scmEvent) {
             return currRevision instanceof MockSCMRevision
                     && approved.contains(((MockSCMRevision) currRevision).getHash());
         }
@@ -1149,7 +1149,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, @CheckForNull SCMEvent scmEvent) {
             if (currRevision instanceof ChangeRequestSCMRevision) {
                 ChangeRequestSCMRevision<?> currCR = (ChangeRequestSCMRevision<?>) currRevision;
                 if (lastBuiltRevision instanceof ChangeRequestSCMRevision) {
@@ -2866,7 +2866,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        TaskListener listener, @CheckForNull SCMEvent scmEvent) {
            if (lastSeenRevision != null) {
                return true;
            }
@@ -2907,7 +2907,7 @@ public class EventsTest {
         }
     }
 
-        @Test
+    @Test
     public void given_multibranch_when__build_is_skipped_then_lastBuiltRevision_is_updated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2926,12 +2926,49 @@ public class EventsTest {
         }
     }
 
+    @Test
+    public void given_multibranch_when_build_is_skipped_due_to_use_of_scmevent() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("foo");
+            BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
+            prj.setCriteria(null);
+            BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
+            source.setBuildStrategies(Collections.<BranchBuildStrategy>singletonList(new UseSCMEventBuildStrategy()));
+            prj.getSourcesList().add(source);
+            c.addFile("foo", "master", "adding file", "file", new byte[0]);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", c.getRevision("foo", "master")));
+            FreeStyleProject master = prj.getItem("master");
+            r.waitUntilNoActivity();
+            assertThat("The master branch was not built", master.getLastBuild(), notNullValue());
+            assertNotNull(prj.getProjectFactory().getRevision(master));
+        }
+    }
+
+    public static class UseSCMEventBuildStrategy extends BranchBuildStrategy {
+        @Override
+        public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
+                                        TaskListener listener, @CheckForNull SCMEvent scmEvent) {
+            //Assume not null
+            //Returns effective true
+            return scmEvent.getTimestamp() >= 0;
+        }
+
+
+        @TestExtension(
+                "given_multibranch_when_build_is_skipped_due_to_use_of_scmevent")
+        public static class DescriptorImpl extends BranchBuildStrategyDescriptor {
+
+        }
+    }
+
     public static class SkipAndUpdateRevisionHashBuildStrategyImpl extends BranchBuildStrategy {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        TaskListener listener, @CheckForNull SCMEvent scmEvent) {
             return false;
         }
 
@@ -2952,7 +2989,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        TaskListener listener, @CheckForNull SCMEvent scmEvent) {
             return false;
         }
 
