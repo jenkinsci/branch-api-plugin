@@ -209,7 +209,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      */
     @Override
     public boolean isIconConfigurable() {
-        return false;
+        return true;
     }
 
     @SuppressWarnings("unchecked")
