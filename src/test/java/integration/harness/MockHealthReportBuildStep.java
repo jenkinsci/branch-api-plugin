@@ -9,7 +9,7 @@ import hudson.model.HealthReportingAction;
 import hudson.tasks.Builder;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.util.NonLocalizable;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;

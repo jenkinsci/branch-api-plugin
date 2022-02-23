@@ -32,7 +32,7 @@ import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.Map;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.MultiBranchProjectFactory;
 import jenkins.branch.MultiBranchProjectFactoryDescriptor;
@@ -77,7 +77,7 @@ public class BasicMultiBranchProjectFactory extends MultiBranchProjectFactory.By
     @Extension
     public static class DescriptorImpl extends MultiBranchProjectFactoryDescriptor {
 
-        @Nonnull
+        @NonNull
         @Override
         public String getDisplayName() {
             return "BasicMultiBranchProjectFactory";
