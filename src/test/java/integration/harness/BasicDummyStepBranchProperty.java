@@ -36,7 +36,7 @@ import hudson.model.Run;
 import hudson.tasks.BatchFile;
 import hudson.tasks.Shell;
 import java.util.List;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.branch.BranchProperty;
 import jenkins.branch.BranchPropertyDescriptor;
 import jenkins.branch.JobDecorator;
@@ -76,7 +76,7 @@ public class BasicDummyStepBranchProperty extends BranchProperty {
 
     @Extension
     public static class DescriptorImpl extends BranchPropertyDescriptor {
-        @Nonnull
+        @NonNull
         @Override
         public String getDisplayName() {
             return "BasicDummyStepBranchProperty";

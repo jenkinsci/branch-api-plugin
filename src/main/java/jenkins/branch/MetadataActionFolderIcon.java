@@ -30,7 +30,7 @@ import com.cloudbees.hudson.plugins.folder.FolderIconDescriptor;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Hudson;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.metadata.AvatarMetadataAction;
 import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -158,7 +158,7 @@ public class MetadataActionFolderIcon extends FolderIcon {
         /**
          * {@inheritDoc}
          */
-        @Nonnull
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Metadata Folder Icon";

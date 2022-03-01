@@ -75,8 +75,8 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.TransientActionFactory;
@@ -431,7 +431,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * {@inheritDoc}
      */
-    @Nonnull
+    @NonNull
     @Override
     protected FolderComputation<MultiBranchProject<?, ?>> createComputation(
             @CheckForNull FolderComputation<MultiBranchProject<?, ?>> previous) {
@@ -1507,9 +1507,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             return OrganizationFolder.class;
         }
 
-        @Nonnull
+        @NonNull
         @Override
-        public Collection<? extends Action> createFor(@Nonnull OrganizationFolder target) {
+        public Collection<? extends Action> createFor(@NonNull OrganizationFolder target) {
             List<Action> result = new ArrayList<>();
             for (List<Action> actions: target.state.getActions().values()) {
                 result.addAll(actions);

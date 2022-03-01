@@ -83,7 +83,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
@@ -2319,9 +2319,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         /**
          * {@inheritDoc}
          */
-        @Nonnull
+        @NonNull
         @Override
-        public Collection<? extends Action> createFor(@Nonnull MultiBranchProject target) {
+        public Collection<? extends Action> createFor(@NonNull MultiBranchProject target) {
             List<Action> result = new ArrayList<>();
             MultiBranchProject<?, ?> project = target;
             for (BranchSource b : project.getSources()) {

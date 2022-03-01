@@ -25,7 +25,7 @@
 package jenkins.branch;
 
 import hudson.model.Descriptor;
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 
 /**
  * A kind of {@link MultiBranchProjectFactory}.
