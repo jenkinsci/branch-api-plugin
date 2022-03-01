@@ -2209,7 +2209,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 listener.getLogger().format("No automatic build triggered for %s%n", rawName);
 
                 //Should we update the last Build revision with no build performed?
-                if(isUpdatingLastBuiltRevisionWithNoBuild()){
+                if (isUpdatingLastBuiltRevisionWithNoBuild()) {
                     //We need to save the revision here so we dont get in a loop
                     //Imagine a buildstrategy said dont build - but changes detected always is true - it puts jenkins into a loop
                     //Either it was chosen not to be built or it did build - either way we want to gaurantee it doesnt build the same thing again right?
