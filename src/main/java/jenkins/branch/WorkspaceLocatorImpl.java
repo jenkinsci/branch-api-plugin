@@ -425,15 +425,15 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             runningTasks--;
             Deleter.class.notifyAll();
         }
-        
+
         private static class CleanupTaskProvisioner implements Runnable{
-            
+
             @NonNull
             private final TopLevelItem tli;
-            
+
             @NonNull
             private final Queue<Node> nodes;
-            
+
             private final int threadLimit = Math.max(0, Integer.parseInt(System.getenv("BRANCH_API_THREAD_LIMIT")));
 
             public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes) {
@@ -443,11 +443,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     LOGGER.log(Level.INFO, "ThreadLimit Loaded from Environment : {0}", threadLimit);
                 }
             }
-            
+
             @Override
             public void run() {
                 try {
-                    while (!nodes.isEmpty()){                   
+                    while (!nodes.isEmpty()){
                         if (hasFreeThreadVolume(threadLimit)) {
                             Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.remove()));
                         } else {
@@ -459,16 +459,16 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     LOGGER.log(Level.WARNING, e.getMessage());
                 }
             }
-            
+
             private boolean hasFreeThreadVolume(int threadLimit){
                 if (threadLimit <= 0) {
                     return true;
                 }
                 int currentThreadCount = ManagementFactory.getThreadMXBean().getThreadCount();
-            
+
                 return currentThreadCount < threadLimit;
             }
-            
+
         }
 
         private static class CleanupTask implements Runnable {
@@ -665,5 +665,5 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
         }
 
-    }   
+    }
 }
