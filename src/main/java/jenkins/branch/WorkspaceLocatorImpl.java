@@ -434,7 +434,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             @NonNull
             private final Queue<Node> nodes;
 
-            private final int threadLimit = Math.max(0, Integer.parseInt(System.getenv("BRANCH_API_THREAD_LIMIT")));
+            private final int threadLimit = getThreadLimit();
 
             public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes) {
                 this.tli = tli;
@@ -469,6 +469,19 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 return currentThreadCount < threadLimit;
             }
 
+            private int getThreadLimit() {
+                String branchApiThreadLimit = System.getenv("BRANCH_API_THREAD_LIMIT");
+                if (branchApiThreadLimit == null) {
+                    return 0;
+                }
+
+                try {
+                    return Integer.parseInt(branchApiThreadLimit);
+                } catch (NumberFormatException e) {
+                    LOGGER.log(Level.SEVERE, "Failed to parse BRANCH_API_THREAD_LIMIT: {0}", branchApiThreadLimit);
+                    return 0;
+                }
+            }
         }
 
         private static class CleanupTask implements Runnable {
