@@ -124,6 +124,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * Our logger.
      */
     private static final Logger LOGGER = Logger.getLogger(OrganizationFolder.class.getName());
+    static final String COMPLETED_PROCESSING_EVENT = "[%tc] Finished processing %s %s event from %s with timestamp %tc, processed in %dms. Matched %d.%n";
     /**
      * Our navigators.
      */
@@ -982,8 +983,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         public void onSCMHeadEvent(SCMHeadEvent<?> event) {
             try (StreamTaskListener global = globalEventsListener()) {
                 String globalEventDescription = StringUtils.defaultIfBlank(event.description(), event.getClass().getName());
+                long started = System.currentTimeMillis();
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                        System.currentTimeMillis(),
+                        started,
                         globalEventDescription,
                         event.getType().name(),
                         event.getOrigin(), event.getTimestamp());
@@ -1087,10 +1089,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 event.getOrigin(), event.getTimestamp()));
                     }
                 }
+                long ended = System.currentTimeMillis();
                 global.getLogger()
-                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), globalEventDescription, event.getType().name(),
-                                event.getOrigin(), event.getTimestamp(), matchCount);
+                        .format(COMPLETED_PROCESSING_EVENT,
+                                ended, globalEventDescription, event.getType().name(),
+                                event.getOrigin(), event.getTimestamp(), ended - started,  matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -1103,8 +1106,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public void onSCMNavigatorEvent(SCMNavigatorEvent<?> event) {
             try (StreamTaskListener global = globalEventsListener()) {
+                long started = System.currentTimeMillis();
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                        System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                    started, event.getClass().getName(), event.getType().name(),
                         event.getOrigin(), event.getTimestamp());
                 int matchCount = 0;
                 if (UPDATED == event.getType()) {
@@ -1188,10 +1192,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 event.getOrigin(), event.getTimestamp()));
                     }
                 }
+                long ended = System.currentTimeMillis();
                 global.getLogger()
-                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                                event.getOrigin(), event.getTimestamp(), matchCount);
+                        .format(OrganizationFolder.COMPLETED_PROCESSING_EVENT,
+                            ended, event.getClass().getName(), event.getType().name(),
+                                event.getOrigin(), event.getTimestamp(), ended - started, matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -1203,8 +1208,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public void onSCMSourceEvent(SCMSourceEvent<?> event) {
             try (StreamTaskListener global = globalEventsListener()) {
+                long started = System.currentTimeMillis();
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                        System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
+                    started, event.getClass().getName(), event.getType().name(),
                         event.getOrigin(), event.getTimestamp());
                 int matchCount = 0;
                 if (CREATED == event.getType()) {
@@ -1278,10 +1284,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 event.getOrigin(), event.getTimestamp()));
                     }
                 }
+                long ended = System.currentTimeMillis();
                 global.getLogger()
-                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), event.getClass().getName(), event.getType().name(),
-                                event.getOrigin(), event.getTimestamp(), matchCount);
+                        .format(OrganizationFolder.COMPLETED_PROCESSING_EVENT,
+                            ended, event.getClass().getName(), event.getType().name(),
+                                event.getOrigin(), event.getTimestamp(), ended - started, matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -1335,7 +1342,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     for (SCMSource source : sources) {
                         BranchSource branchSource = new BranchSource(source);
                         branchSource.setBuildStrategies(buildStrategies);
-                        branchSource.setStrategy(strategy); 
+                        branchSource.setStrategy(strategy);
                         branchSources.add(branchSource);
                     }
                     return branchSources;
