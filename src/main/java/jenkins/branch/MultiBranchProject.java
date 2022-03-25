@@ -1138,7 +1138,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     250, TimeUnit.MILLISECONDS,
                     1024,
                     true,
-                    32 * 1024,
+                    FileUtils.ONE_MB * 10,
                     5
             );
         }
