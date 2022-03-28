@@ -125,6 +125,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      */
     private static final Logger LOGGER = Logger.getLogger(OrganizationFolder.class.getName());
     static final String COMPLETED_PROCESSING_EVENT = "[%tc] Finished processing %s %s event from %s with timestamp %tc, processed in %dms. Matched %d.%n";
+    static final String MATCHED_EVENT = "[%tc] Found match against %s while processing %s %s %s with timestamp %tc";
     /**
      * Our navigators.
      */
@@ -1008,10 +1009,13 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             // we want to catch when a branch is created / updated and consequently becomes eligible
                             // against the criteria. First check if the event matches one of the navigators
                             SCMNavigator navigator = null;
+                            String eventDescription = StringUtils.defaultIfBlank(event.description(), event.getClass().getName());
                             for (SCMNavigator n : p.getSCMNavigators()) {
                                 if (event.isMatch(n)) {
                                     matchCount++;
-                                    global.getLogger().format("Found match against %s%n", p.getFullName());
+                                    global.getLogger().format(OrganizationFolder.MATCHED_EVENT + "%n",
+                                        System.currentTimeMillis(), p.getFullName(), eventDescription, event.getType().name(),
+                                        event.getOrigin(), event.getTimestamp());
                                     navigator = n;
                                     break;
                                 }
@@ -1213,13 +1217,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     started, event.getClass().getName(), event.getType().name(),
                         event.getOrigin(), event.getTimestamp());
                 int matchCount = 0;
+                String eventDescription = StringUtils.defaultIfBlank(event.description(), event.getClass().getName());
                 if (CREATED == event.getType()) {
                     try {
                         for (OrganizationFolder p : Jenkins.get().getAllItems(OrganizationFolder.class)) {
                             boolean haveMatch = false;
                             for (SCMNavigator n : p.getSCMNavigators()) {
                                 if (event.isMatch(n)) {
-                                    global.getLogger().format("Found match against %s%n", p.getFullName());
+                                    global.getLogger().format(OrganizationFolder.MATCHED_EVENT + "%n",
+                                        System.currentTimeMillis(), p.getFullName(), eventDescription, event.getType().name(),
+                                        event.getOrigin(), event.getTimestamp());
                                     haveMatch = true;
                                     break;
                                 }

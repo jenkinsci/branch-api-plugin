@@ -1254,7 +1254,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 // only interested in create events that actually could create a new branch
                                 haveMatch = true;
                                 matchCount++;
-                                global.getLogger().format("Found match against %s (new branch %s)%n", pFullName, name);
+                                global.getLogger().format(OrganizationFolder.MATCHED_EVENT + " (new branch %s)%n",
+                                    System.currentTimeMillis(), p.getFullName(), eventDescription, event.getType().name(),
+                                    event.getOrigin(), event.getTimestamp(), name);
                                 break SOURCES;
                             }
                             Branch branch = _factory.getBranch(job);
@@ -1267,7 +1269,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 // only interested in create events that actually could create a new branch
                                 haveMatch = true;
                                 matchCount++;
-                                global.getLogger().format("Found match against %s (resurrect branch %s)%n", pFullName, name);
+                                global.getLogger().format(OrganizationFolder.MATCHED_EVENT + " (resurrect branch %s)%n%n",
+                                    System.currentTimeMillis(), p.getFullName(), eventDescription, event.getType().name(),
+                                    event.getOrigin(), event.getTimestamp(), name);
                                 break SOURCES;
                             }
                             String sourceId = branch.getSourceId();
@@ -1317,7 +1321,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             // only interested in create events that actually could create a new branch
                             haveMatch = true;
                             matchCount++;
-                            global.getLogger().format("Found match against %s (takeover branch %s)%n", pFullName, name);
+                            global.getLogger().format(OrganizationFolder.MATCHED_EVENT + " (takeover branch %s)%n",
+                                System.currentTimeMillis(), p.getFullName(), eventDescription, event.getType().name(),
+                                event.getOrigin(), event.getTimestamp(), name);
                             break SOURCES;
                         }
                         LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: No new projects for {4}",
@@ -1575,7 +1581,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
                 if (!matches.isEmpty()) {
                     matchCount++;
-                    global.getLogger().format("Found match against %s%n", pFullName);
+                    global.getLogger().format(OrganizationFolder.MATCHED_EVENT + "%n",
+                        System.currentTimeMillis(), pFullName, eventDescription, event.getType().name(),
+                        event.getOrigin(), event.getTimestamp());
                     long start = System.currentTimeMillis();
                     try (StreamTaskListener listener = p.getComputation().createEventsListener();
                          ChildObserver childObserver = p.openEventsChildObserver()) {
@@ -1660,7 +1668,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             }
                             if (haveMatch) {
                                 matchCount++;
-                                global.getLogger().format("Found match against %s%n", pFullName);
+                                global.getLogger().format(OrganizationFolder.MATCHED_EVENT + "%n",
+                                    System.currentTimeMillis(), pFullName, eventDescription, event.getType().name(),
+                                    event.getOrigin(), event.getTimestamp());
                                 break;
                             }
                             break;
@@ -1758,7 +1768,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             for (SCMSource s : scmSources) {
                                 if (event.isMatch(s)) {
                                     matchCount++;
-                                    global.getLogger().format("Found match against %s%n", p.getFullName());
+                                    global.getLogger().format(OrganizationFolder.MATCHED_EVENT,
+                                        System.currentTimeMillis(), p.getFullName(), eventDescription, event.getType().name(),
+                                        event.getOrigin(), event.getTimestamp());
                                     haveMatch = true;
                                     break;
                                 }
