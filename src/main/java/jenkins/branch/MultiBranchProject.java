@@ -1222,6 +1222,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 throws IOException, InterruptedException {
             Set<String> sourceIds = new HashSet<>();
 
+            String correlationId = logCorrelationId();
+            String methodName = getClass().getName() + "#.processHeadCreate";
             long started = System.currentTimeMillis();
 
             for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
@@ -1272,7 +1274,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 haveMatch = true;
                                 matchCount++;
                                 global.getLogger().format(OrganizationFolder.MATCHED_EVENT + " (new branch %s)%n",
-                                    System.currentTimeMillis(), p.getFullName(), eventDescription, event.getType().name(),
+                                    System.currentTimeMillis(), methodName, correlationId, p.getFullName(), eventDescription, event.getType().name(),
                                     event.getOrigin(), event.getTimestamp(), name);
                                 break SOURCES;
                             }
@@ -1339,7 +1341,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             haveMatch = true;
                             matchCount++;
                             global.getLogger().format(OrganizationFolder.MATCHED_EVENT + " (takeover branch %s)%n",
-                                System.currentTimeMillis(), p.getFullName(), eventDescription, event.getType().name(),
+                                System.currentTimeMillis(), methodName, correlationId, p.getFullName(), eventDescription, event.getType().name(),
                                 event.getOrigin(), event.getTimestamp(), name);
                             break SOURCES;
                         }
@@ -1415,7 +1417,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             Map<SCMSource, Map<SCMHead,SCMRevision>> revisionMaps = new IdentityHashMap<>();
             Set<Job<?, ?>> jobs = new HashSet<>();
             long started = System.currentTimeMillis();
-            
+            String methodName = getClass().getName() + "#.processHeadUpdate";
+
             for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
 
@@ -1423,7 +1426,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 String logCorrelationId = logCorrelationId();
                 global.getLogger().format("[%tc] [%s] [%s] Checking folder %s, time taken: %d%n",
                     now,
-                    getClass().getName() + "#.processHeadCreate",
+                    methodName,
                     logCorrelationId,
                     p.getFullName(), now - started);
 
@@ -1610,7 +1613,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 if (!matches.isEmpty()) {
                     matchCount++;
                     global.getLogger().format(OrganizationFolder.MATCHED_EVENT + "%n",
-                        System.currentTimeMillis(), pFullName, eventDescription, event.getType().name(),
+                        System.currentTimeMillis(), methodName, logCorrelationId, pFullName, eventDescription, event.getType().name(),
                         event.getOrigin(), event.getTimestamp());
                     long start = System.currentTimeMillis();
                     try (StreamTaskListener listener = p.getComputation().createEventsListener();
