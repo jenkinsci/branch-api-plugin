@@ -1700,7 +1700,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             if (haveMatch) {
                                 matchCount++;
                                 global.getLogger().format(OrganizationFolder.MATCHED_EVENT + "%n",
-                                    System.currentTimeMillis(), pFullName, eventDescription, event.getType().name(),
+                                    System.currentTimeMillis(), methodName, logCorrelationId, pFullName, eventDescription, event.getType().name(),
                                     event.getOrigin(), event.getTimestamp());
                                 break;
                             }
