@@ -960,11 +960,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     return eventsFile;
                 }
             },
-                    250, TimeUnit.MILLISECONDS,
-                    1024,
-                    true,
-                    32 * 1024,
-                    5
+                250, TimeUnit.MILLISECONDS,
+                1024,
+                true,
+                FileUtils.ONE_MB * 15,
+                20
             );
         }
 
