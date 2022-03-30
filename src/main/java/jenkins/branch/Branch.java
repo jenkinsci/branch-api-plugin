@@ -38,7 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.TransientActionFactory;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadEvent;
@@ -350,9 +350,9 @@ public class Branch {
         /**
          * {@inheritDoc}
          */
-        @Nonnull
+        @NonNull
         @Override
-        public Collection<? extends Action> createFor(@Nonnull Job target) {
+        public Collection<? extends Action> createFor(@NonNull Job target) {
             if (target.getParent() instanceof MultiBranchProject) {
                 MultiBranchProject p = (MultiBranchProject) target.getParent();
                 BranchProjectFactory factory = p.getProjectFactory();

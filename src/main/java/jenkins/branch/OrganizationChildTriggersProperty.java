@@ -48,7 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jvnet.tiger_types.Types;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -190,7 +190,7 @@ public class OrganizationChildTriggersProperty extends OrganizationFolderPropert
         /**
          * {@inheritDoc}
          */
-        @Nonnull
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.OrganizationChildTriggersProperty_DisplayName();

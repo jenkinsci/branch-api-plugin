@@ -42,7 +42,7 @@ THE SOFTWARE.
         </div>
         <j:if test="${help!=null}">
           <div>
-            <a href="#" class="help-button" helpURL="${rootURL}${help}"><img src="${imagesURL}/16x16/help.png" alt="[help]" height="16" width="16"/></a>
+            <a href="#" class="help-button" helpURL="${rootURL}${help}"><l:icon class="icon-help icon-md" alt="[help]"/></a>
           </div>
         </j:if>
       </div>
