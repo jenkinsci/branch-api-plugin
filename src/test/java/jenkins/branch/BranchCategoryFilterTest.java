@@ -36,7 +36,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.SCMHeadCategory;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
@@ -156,7 +156,7 @@ public class BranchCategoryFilterTest {
 
     public static abstract class TopLevelRun extends Run<TopLevelJob, TopLevelRun> {
 
-        protected TopLevelRun(@Nonnull TopLevelJob job) throws IOException {
+        protected TopLevelRun(@NonNull TopLevelJob job) throws IOException {
             super(job);
         }
     }
