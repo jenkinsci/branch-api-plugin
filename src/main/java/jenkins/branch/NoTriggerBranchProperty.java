@@ -21,21 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.model.Action;
-import hudson.model.Cause;
-import hudson.model.CauseAction;
 import hudson.model.Job;
-import hudson.model.Queue;
 import hudson.model.Run;
-import java.util.List;
+import hudson.util.FormValidation;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.NoTriggerProperty;
+import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy;
 import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Suppresses builds due to either {@link BranchIndexingCause} or {@link BranchEventCause}.
@@ -43,59 +45,76 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * of changes in the underlying SCM.
  */
 @Restricted(NoExternalUse.class)
-public class NoTriggerBranchProperty extends BranchProperty {
+public class NoTriggerBranchProperty extends BranchProperty implements NoTriggerProperty {
+
+    private String triggeredBranchesRegex;
+    private SuppressionStrategy strategy;
 
     @DataBoundConstructor
-    public NoTriggerBranchProperty() {}
+    public NoTriggerBranchProperty() {
+        // empty
+    }
+
+    @NonNull
+    @Override
+    public String getTriggeredBranchesRegex() {
+        // backward compatibility, skip all by default
+        if (triggeredBranchesRegex == null) {
+            return "^$";
+        }
+        return triggeredBranchesRegex;
+    }
+
+    @DataBoundSetter
+    public void setTriggeredBranchesRegex(String triggeredBranchesRegex) {
+        this.triggeredBranchesRegex = triggeredBranchesRegex;
+    }
+
+    @NonNull
+    @Override
+    public SuppressionStrategy getStrategy() {
+        if (strategy == null) {
+            return SuppressionStrategy.NONE;
+        }
+        return strategy;
+    }
+
+    @DataBoundSetter
+    public void setStrategy(SuppressionStrategy strategy) {
+        this.strategy = strategy;
+    }
 
     @Override
     public <P extends Job<P, B>, B extends Run<P, B>> JobDecorator<P, B> jobDecorator(Class<P> clazz) {
         return null;
     }
 
-    @Symbol("suppressAutomaticTriggering")
     @Extension
+    @Symbol("suppressAutomaticTriggering")
     public static class DescriptorImpl extends BranchPropertyDescriptor {
+
         @Override
         public String getDisplayName() {
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();
         }
 
+        public FormValidation doCheckTriggeredBranchesRegex(@QueryParameter String value) {
+            try {
+                Pattern.compile(value);
+                return FormValidation.ok();
+            } catch (PatternSyntaxException x) {
+                return FormValidation.error(x.getMessage());
+            }
+        }
     }
 
     @Extension
-    public static class Dispatcher extends Queue.QueueDecisionHandler {
+    public static class Dispatcher extends NoTriggerMultiBranchQueueDecisionHandler {
 
-        @SuppressWarnings({"unchecked", "rawtypes"}) // untypable
+        @NonNull
         @Override
-        public boolean shouldSchedule(Queue.Task p, List<Action> actions) {
-            for (Action action :  actions) {
-                if (action instanceof CauseAction) {
-                    for (Cause c : ((CauseAction) action).getCauses()) {
-                        if (c instanceof BranchIndexingCause || c instanceof BranchEventCause) {
-                            if (p instanceof Job) {
-                                Job<?,?> j = (Job) p;
-                                if (j.getParent() instanceof MultiBranchProject) {
-
-                                    OverrideIndexTriggersJobProperty overrideProp = j.getProperty(OverrideIndexTriggersJobProperty.class);
-                                    if (overrideProp != null) {
-                                        return overrideProp.getEnableTriggers();
-                                    } else {
-                                        for (BranchProperty prop : ((MultiBranchProject) j.getParent()).getProjectFactory().getBranch(j).getProperties()) {
-                                            if (prop instanceof NoTriggerBranchProperty) {
-                                                return false;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            return true;
+        protected Iterable<? extends Object> getBranchProperties(MultiBranchProject project, Job job) {
+            return project.getProjectFactory().getBranch(job).getProperties();
         }
-
     }
-
 }

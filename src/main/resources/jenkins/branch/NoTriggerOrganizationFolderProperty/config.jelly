@@ -22,12 +22,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 -->
-
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:section title="${%secTitle}">
-        <f:entry title="${%Branch names to build automatically}" field="branches">
-            <f:textbox default=".*"/>
-        </f:entry>
-    </f:section>
+  <f:section title="${%secTitle}">
+    <f:entry title="${%Branch names to build automatically}" field="branches">
+      <f:textbox default=".*"/>
+    </f:entry>
+    <f:entry title="${%Suppression strategy}">
+      <f:enum field="strategy" default="NONE">
+        ${it.displayName}
+      </f:enum>
+    </f:entry>
+  </f:section>
 </j:jelly>
