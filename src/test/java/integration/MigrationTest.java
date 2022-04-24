@@ -35,6 +35,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.impl.mock.MockSCMController;
@@ -58,6 +60,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class MigrationTest {
+    private static final Logger LOGGER = Logger.getLogger(MigrationTest.class.getName());
 
     private static MockSCMController c;
 
@@ -305,9 +308,8 @@ public class MigrationTest {
         Map<String, Job> jobByName = new HashMap<>();
         Map<String, Job> jobByDirName = new HashMap<>();
         Map<String, Job> jobByDisplayName = new HashMap<>();
-        System.out.println("Jobs");
-        System.out.println("====");
-        System.out.println();
+        LOGGER.log(Level.INFO, "Jobs");
+        LOGGER.log(Level.INFO, "====");
         // Assume NFC
         String espana = "España";
         String espanaMangled = "Espa_f1a.9jabqu";
@@ -324,7 +326,7 @@ public class MigrationTest {
         String chinaMangled = "0_4e_2d_56_fd.m4k0dn";
         for (MultiBranchProject<?, ?> p : prj.getItems()) {
             String dirName = p.getRootDir().getName();
-            System.out.printf("%s ==> %s ==> %s == \"%s\"%n", dirName, p.getName(), p.getDisplayName(), asJavaString(p.getDisplayName()));
+            LOGGER.log(Level.INFO, String.format("%s ==> %s ==> %s == \"%s\"%n", dirName, p.getName(), p.getDisplayName(), asJavaString(p.getDisplayName())));
             byName.put(p.getName(), p);
             if (dirName.equals("Espan_03_03a.eqqe01")) {
                 // NFD
@@ -372,8 +374,8 @@ public class MigrationTest {
             byDisplayName.put(p.getDisplayName(), p);
             for (Job<?, ?> j : p.getItems()) {
                 String jobDirName = prj.getRootDir().getName() + "/" + p.getRootDir().getName() + "/" + j.getRootDir().getName();
-                System.out.printf("  %s ==> %s ==> %s == \"%s\" %n", jobDirName, j.getName(), j.getDisplayName(),
-                        asJavaString(j.getDisplayName()));
+                LOGGER.log(Level.INFO, String.format("  %s ==> %s ==> %s == \"%s\" ", jobDirName, j.getName(), j.getDisplayName(),
+                        asJavaString(j.getDisplayName())));
                 if (j.getName().equals("0_11_10_1.m479ph0h00p7._6e_11_ab")) {
                     // NFD
                     korea2 = "\u1110\u1173\u11a8\u1109\u1162\u11a8/\u1109\u1162\u1105\u1169\u110b\u116e\u11ab";
