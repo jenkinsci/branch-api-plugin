@@ -83,7 +83,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
@@ -1138,7 +1138,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     250, TimeUnit.MILLISECONDS,
                     1024,
                     true,
-                    32 * 1024,
+                    FileUtils.ONE_MB,
                     5
             );
         }
@@ -1163,8 +1163,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 String eventType = event.getType().name();
                 String eventOrigin = event.getOrigin();
                 long eventTimestamp = event.getTimestamp();
+                long started = System.currentTimeMillis();
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                        System.currentTimeMillis(), eventDescription, eventType, eventOrigin,
+                        started, eventDescription, eventType, eventOrigin,
                         eventTimestamp);
                 LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: onSCMHeadEvent",
                         new Object[]{
@@ -1201,10 +1202,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     printStackTrace(e, global.error("[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
                             System.currentTimeMillis(), eventDescription, eventType, eventOrigin, eventTimestamp));
                 }
+                long ended = System.currentTimeMillis();
                 global.getLogger()
-                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), eventDescription, eventType, eventOrigin,
-                                eventTimestamp, matchCount);
+                        .format(OrganizationFolder.COMPLETED_PROCESSING_EVENT,
+                                ended, eventDescription, eventType, eventOrigin,
+                                eventTimestamp, ended - started, matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -1727,8 +1729,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         public void onSCMSourceEvent(SCMSourceEvent<?> event) {
             try (StreamTaskListener global = globalEventsListener()) {
                 String eventDescription = StringUtils.defaultIfBlank(event.description(), event.getClass().getName());
+                long started = System.currentTimeMillis();
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                        System.currentTimeMillis(), eventDescription, event.getType().name(),
+                    started, eventDescription, event.getType().name(),
                         event.getOrigin(), event.getTimestamp());
                 int matchCount = 0;
                 // not interested in creation as that is an event for org folders
@@ -1835,10 +1838,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 event.getOrigin(), event.getTimestamp()));
                     }
                 }
+                long ended = System.currentTimeMillis();
                 global.getLogger()
-                        .format("[%tc] Finished processing %s %s event from %s with timestamp %tc. Matched %d.%n",
-                                System.currentTimeMillis(), eventDescription, event.getType().name(),
-                                event.getOrigin(), event.getTimestamp(), matchCount);
+                        .format(OrganizationFolder.COMPLETED_PROCESSING_EVENT,
+                                ended, eventDescription, event.getType().name(),
+                                event.getOrigin(), event.getTimestamp(), ended - started, matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -2273,9 +2277,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         /**
          * {@inheritDoc}
          */
-        @Nonnull
+        @NonNull
         @Override
-        public Collection<? extends Action> createFor(@Nonnull MultiBranchProject target) {
+        public Collection<? extends Action> createFor(@NonNull MultiBranchProject target) {
             List<Action> result = new ArrayList<>();
             MultiBranchProject<?, ?> project = target;
             for (BranchSource b : project.getSources()) {

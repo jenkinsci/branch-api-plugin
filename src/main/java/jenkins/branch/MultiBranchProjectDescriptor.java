@@ -40,7 +40,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSourceDescriptor;
 import org.jvnet.tiger_types.Types;
@@ -209,7 +209,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      */
     @Override
     public boolean isIconConfigurable() {
-        return false;
+        return true;
     }
 
     @SuppressWarnings("unchecked")
