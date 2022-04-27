@@ -21,13 +21,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package jenkins.branch;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.queue.QueueTaskFuture;
 import java.util.Collections;
+import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
@@ -63,8 +67,9 @@ public class NoTriggerOrganizationFolderPropertyTest {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         r.configRoundtrip(top);
         NoTriggerOrganizationFolderProperty prop = top.getProperties().get(NoTriggerOrganizationFolderProperty.class);
-        assertNotNull(prop);
-        assertEquals(".*", prop.getBranches());
+        assertThat(prop, notNullValue());
+        assertThat(prop.getBranches(), is(".*"));
+        assertThat(prop.getStrategy(), is(SuppressionStrategy.NONE));
         top.getProperties().replace(new NoTriggerOrganizationFolderProperty("(?!release.*).*"));
         top.getProjectFactories().add(new OrganizationFolderTest.MockFactory());
         GitSCMSource source = new GitSCMSource(sampleRepo.toString());

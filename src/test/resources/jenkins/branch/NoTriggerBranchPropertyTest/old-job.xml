@@ -1,0 +1,23 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<jenkins.branch.harness.MultiBranchImpl>
+    <sources class="jenkins.branch.MultiBranchProject$BranchSourceList">
+        <data>
+            <jenkins.branch.BranchSource>
+                <source class="jenkins.scm.impl.mock.MockSCMSource">
+                    <controllerId>CONTROLLER_ID_PLACEHOLDER</controllerId>
+                    <repository>REPOSITORY_NAME_PLACEHOLDER</repository>
+                    <traits>
+                        <jenkins.scm.impl.mock.MockSCMDiscoverBranches/>
+                    </traits>
+                </source>
+                <strategy class="jenkins.branch.DefaultBranchPropertyStrategy">
+                    <properties class="java.util.Arrays$ArrayList">
+                        <a class="jenkins.branch.BranchProperty-array">
+                            <jenkins.branch.NoTriggerBranchProperty/>
+                        </a>
+                    </properties>
+                </strategy>
+            </jenkins.branch.BranchSource>
+        </data>
+    </sources>
+</jenkins.branch.harness.MultiBranchImpl>
