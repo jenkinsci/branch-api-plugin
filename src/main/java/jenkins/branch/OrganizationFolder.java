@@ -234,7 +234,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         if (!(getFolderViews() instanceof OrganizationFolderViewHolder)) {
             resetFolderViews();
         }
-        if (!(getIcon() instanceof MetadataActionFolderIcon)) {
+        if (getIcon() == null) {
             setIcon(newDefaultFolderIcon());
         }
         if (getProperties().get(OrganizationChildTriggersProperty.class) == null) {
