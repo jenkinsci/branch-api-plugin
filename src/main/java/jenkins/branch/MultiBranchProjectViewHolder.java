@@ -34,6 +34,7 @@ import hudson.model.View;
 import hudson.model.ViewDescriptor;
 import hudson.model.ViewGroup;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import hudson.security.Permission;
 import hudson.util.DescribableList;
 import hudson.views.DefaultViewsTabBar;
@@ -233,7 +234,10 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
          */
         @Override
         public String getDisplayName() {
-            return category.getDisplayName().toString() + " (" + getItems().size() + ")";
+            //Only used to get a count and to prevent poor performance in cases with large number of items
+            try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
+                return category.getDisplayName().toString() + " (" + getItems().size() + ")";
+            }
         }
 
         /**
