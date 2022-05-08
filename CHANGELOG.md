@@ -615,7 +615,7 @@ immediately” after the upgrade.
     ([Pipeline Plugin](https://wiki.jenkins.io/display/JENKINS/Pipeline+Plugin)).
 -   Major refactoring to use `ComputedFolder` API in
     [CloudBees Folders Plugin](https://wiki.jenkins.io/display/JENKINS/CloudBees+Folders+Plugin).
--   Always run branch indexing on the master node.
+-   Always run branch indexing on the controller node.
 -   Compatibility with 1.576+ icon captions.
 
 ## 0.2-beta-4
