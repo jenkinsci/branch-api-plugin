@@ -199,7 +199,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
      */
     @Override
     public List<FolderIconDescriptor> getIconDescriptors() {
-        return Collections.<FolderIconDescriptor>singletonList(
+        return Collections.singletonList(
                 Jenkins.get().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class)
         );
     }

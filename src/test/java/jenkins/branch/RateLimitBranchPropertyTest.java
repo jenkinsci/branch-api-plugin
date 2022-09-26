@@ -245,7 +245,7 @@ public class RateLimitBranchPropertyTest {
             assertThat(master.getQueueItem(), nullValue());
             QueueTaskFuture<FreeStyleBuild> future = master.scheduleBuild2(0);
             QueueTaskFuture<FreeStyleBuild> future2 = master.scheduleBuild2(0, (Cause) null,
-                    (Action) new ParametersAction(
+                    new ParametersAction(
                             Collections.singletonList(new StringParameterValue("FOO", "MANCHU"))));
             assertThat(future, not(is(future2)));
 
@@ -380,7 +380,7 @@ public class RateLimitBranchPropertyTest {
 
             // now we trigger a user build... it should skip the queue
             QueueTaskFuture<FreeStyleBuild> future2 = master.scheduleBuild2(0, new Cause.UserIdCause(),
-                    (Action) new ParametersAction(
+                    new ParametersAction(
                             Collections.singletonList(new StringParameterValue("FOO", "MANCHU"))));
             // now we wait for the start... invoking queue maintain every 100ms so that the queue
             // will pick up more responsively than the default 5s

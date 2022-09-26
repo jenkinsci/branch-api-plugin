@@ -537,11 +537,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         String sourceId = source.getId();
         if (NullSCMSource.ID.equals(sourceId)) {
-            return new Branch.Dead(head, Collections.<BranchProperty>emptyList());
+            return new Branch.Dead(head, Collections.emptyList());
         } else {
             final BranchPropertyStrategy strategy = getBranchPropertyStrategy(source);
             return new Branch(sourceId, head, source.build(head),
-                    strategy != null ? strategy.getPropertiesFor(head) : Collections.<BranchProperty>emptyList());
+                    strategy != null ? strategy.getPropertiesFor(head) : Collections.emptyList());
         }
     }
 

@@ -193,7 +193,7 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             assertThat("No sources means no items",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
+                    prj.getItems(), is(Collections.<FreeStyleProject>emptyList()));
             assertThat("Not buildable without sources", prj.scheduleBuild2(0), nullValue());
         }
     }
@@ -204,13 +204,13 @@ public class EventsTest {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             assertThat("No sources means no items",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
+                    prj.getItems(), is(Collections.<FreeStyleProject>emptyList()));
 
             prj.setCriteria(null);
             assertThat("Changing the criteria doesn't affect the items when we have none",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
+                    prj.getItems(), is(Collections.<FreeStyleProject>emptyList()));
             assertThat("No sources means no items",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
+                    prj.getItems(), is(Collections.<FreeStyleProject>emptyList()));
             assertThat("Not buildable without sources", prj.scheduleBuild2(0), nullValue());
         }
     }
@@ -224,7 +224,7 @@ public class EventsTest {
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             r.waitUntilNoActivity();
             assertThat("Adding sources doesn't trigger indexing",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
+                    prj.getItems(), is(Collections.<FreeStyleProject>emptyList()));
         }
     }
 
@@ -238,7 +238,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have branches",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+                    prj.getItems(), not(is(Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We now have the master branch", master, notNullValue());
             r.waitUntilNoActivity();
@@ -259,7 +259,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have branches",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+                    prj.getItems(), not(is(Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We now have the master branch", master, notNullValue());
             r.waitUntilNoActivity();
@@ -295,7 +295,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have branches",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+                    prj.getItems(), not(is(Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We now have the master branch", master, notNullValue());
             FreeStyleProject change = prj.getItem("CR-" + id);
@@ -375,7 +375,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We have no master branch", master, nullValue());
             FreeStyleProject tag = prj.getItem("master-1.0");
@@ -403,7 +403,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We have no master branch", master, nullValue());
             FreeStyleProject tag = prj.getItem("master-1.0");
@@ -435,7 +435,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We have no master branch", master, nullValue());
             FreeStyleProject tag = prj.getItem("master-1.0");
@@ -471,7 +471,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We have no master branch", master, nullValue());
             FreeStyleProject tag = prj.getItem("master-1.0");
@@ -507,7 +507,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assumeThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assumeThat("We have no master branch", master, nullValue());
             FreeStyleProject tag = prj.getItem("master-1.0");
@@ -559,7 +559,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We now have the master branch", master, notNullValue());
             FreeStyleProject tag = prj.getItem("master-1.0");
@@ -626,7 +626,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We have master branch", master, notNullValue());
             FreeStyleProject tag = prj.getItem("master-1.0");
@@ -671,12 +671,12 @@ public class EventsTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(),
                     new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests()));
-            source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new BuildEverythingStrategyImpl()));
+            source.setBuildStrategies(Arrays.asList(new BuildEverythingStrategyImpl()));
             prj.getSourcesList().add(source);
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We have master branch", master, notNullValue());
             FreeStyleProject tag = prj.getItem("master-1.0");
@@ -745,12 +745,12 @@ public class EventsTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(),
                     new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests()));
-            source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new BuildChangeRequestsStrategyImpl()));
+            source.setBuildStrategies(Arrays.asList(new BuildChangeRequestsStrategyImpl()));
             prj.getSourcesList().add(source);
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We have master branch", master, notNullValue());
             FreeStyleProject tag = prj.getItem("master-1.0");
@@ -808,7 +808,7 @@ public class EventsTest {
 
         assertThat("We now have branches",
             prj.getItems(),
-            not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+            not(is(Collections.<FreeStyleProject>emptyList())));
         FreeStyleProject master = prj.getItem("master");
         assertThat("We now have the master branch", master, notNullValue());
         r.waitUntilNoActivity();
@@ -825,7 +825,7 @@ public class EventsTest {
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("We now have branches",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+                    prj.getItems(), not(is(Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We now have the master branch", master, notNullValue());
             r.waitUntilNoActivity();
@@ -845,7 +845,7 @@ public class EventsTest {
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", SLASHY_BRANCH_NAME, "junkHash"));
             assertThat("We now have branches",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+                    prj.getItems(), not(is(Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject branch = prj.getItem(SLASHY_JOB_NAME);
             assertThat("We now have the "+SLASHY_BRANCH_NAME+" branch", branch, notNullValue());
             assertThat("We now have the "+SLASHY_BRANCH_NAME+" branch", branch.getName(), is(SLASHY_JOB_NAME));
@@ -867,7 +867,7 @@ public class EventsTest {
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", I18N_BRANCH_NAME, "junkHash"));
             assertThat("We now have branches",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+                    prj.getItems(), not(is(Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject branch = prj.getItem(I18N_JOB_NAME);
             assertThat("We now have the "+ I18N_BRANCH_NAME+" branch", branch, notNullValue());
             assertThat("We now have the "+ I18N_BRANCH_NAME+" branch", branch.getName(), is(I18N_JOB_NAME));
@@ -1111,12 +1111,12 @@ public class EventsTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches(),
                     new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests()));
-            source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new BuildRevisionStrategyImpl(c.getRevision("foo", "master"))));
+            source.setBuildStrategies(Arrays.asList(new BuildRevisionStrategyImpl(c.getRevision("foo", "master"))));
             prj.getSourcesList().add(source);
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We have master branch", master, notNullValue());
             FreeStyleProject stable = prj.getItem("stable");
@@ -1191,12 +1191,12 @@ public class EventsTest {
                             ChangeRequestCheckoutStrategy.MERGE
                     )
             ));
-            source.setBuildStrategies(Arrays.<BranchBuildStrategy>asList(new IgnoreTargetChangesStrategyImpl()));
+            source.setBuildStrategies(Arrays.asList(new IgnoreTargetChangesStrategyImpl()));
             prj.getSourcesList().add(source);
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have projects",
-                    prj.getItems(), not(Matchers.<FreeStyleProject>empty()));
+                    prj.getItems(), not(Matchers.empty()));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We have master branch", master, notNullValue());
             FreeStyleProject cr1Head = prj.getItem("CR-" + cr1Num + "-HEAD");
@@ -1318,10 +1318,10 @@ public class EventsTest {
             prj.setCriteria(null);
             prj.getSourcesList().add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
             assertThat("Adding sources doesn't trigger indexing",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
+                    prj.getItems(), is(Collections.<FreeStyleProject>emptyList()));
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "fork", "junkHash"));
             assertThat("Events only trigger the branch they mention",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList()));
+                    prj.getItems(), is(Collections.<FreeStyleProject>emptyList()));
         }
     }
 
@@ -1336,7 +1336,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("We now have branches",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+                    prj.getItems(), not(is(Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We now have the master branch", master, notNullValue());
             FreeStyleProject feature = prj.getItem("feature");
@@ -1554,7 +1554,7 @@ public class EventsTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("Indexing applies dead branch cleanup",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.singletonList(master)));
+                    prj.getItems(), is(Collections.singletonList(master)));
         }
     }
 
@@ -1570,7 +1570,7 @@ public class EventsTest {
             r.waitUntilNoActivity();
 
             assertThat("No branches matching criteria means no items",
-                    prj.getItems(), Matchers.<FreeStyleProject>empty());
+                    prj.getItems(), Matchers.empty());
         }
     }
 
@@ -1586,12 +1586,12 @@ public class EventsTest {
 
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("Events only validate the rumoured change",
-                    prj.getItems(), Matchers.<FreeStyleProject>empty());
+                    prj.getItems(), Matchers.empty());
 
             c.addFile("foo", "master", "Adding README.md", "README.md", "This is the readme".getBytes());
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("The criteria must be met to create the branch job",
-                    prj.getItems(), Matchers.<FreeStyleProject>empty());
+                    prj.getItems(), Matchers.empty());
 
         }
     }
@@ -1608,7 +1608,7 @@ public class EventsTest {
             c.addFile("foo", "master", "adding marker file", "marker.txt", "This is the marker".getBytes());
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "foo", "master", "junkHash"));
             assertThat("We now have branches",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.<FreeStyleProject>emptyList())));
+                    prj.getItems(), not(is(Collections.<FreeStyleProject>emptyList())));
             FreeStyleProject master = prj.getItem("master");
             assertThat("We now have the master branch", master, notNullValue());
             r.waitUntilNoActivity();
@@ -1635,15 +1635,15 @@ public class EventsTest {
 
             c.cloneBranch("foo", "master", "feature-1");
             assertThat("No new branches without indexing or event",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.singletonList(master)));
+                    prj.getItems(), is(Collections.singletonList(master)));
 
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "does-not-exist", "junkHash"));
             assertThat("Events only validate the rumoured change",
-                    prj.getItems(), is((Collection<FreeStyleProject>) Collections.singletonList(master)));
+                    prj.getItems(), is(Collections.singletonList(master)));
 
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "feature-1", "junkHash"));
             assertThat("Events add the new branch",
-                    prj.getItems(), not(is((Collection<FreeStyleProject>) Collections.singletonList(master))));
+                    prj.getItems(), not(is(Collections.singletonList(master))));
 
             FreeStyleProject feature1 = prj.getItem("feature-1");
             assertThat("We now have the feature-1 branch", feature1, notNullValue());
@@ -1879,13 +1879,13 @@ public class EventsTest {
             prj.getProjectFactories().replaceBy(Collections
                     .singletonList(new BasicMultiBranchProjectFactory(new BasicSCMSourceCriteria("marker.txt"))));
             assertThat("No repos means no items",
-                    prj.getItems(), Matchers.<MultiBranchProject<?, ?>>empty());
+                    prj.getItems(), Matchers.empty());
 
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat("Scheduling a scan makes no difference when we have no repos",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>empty());
+                    Matchers.empty());
 
         }
     }
@@ -1905,7 +1905,7 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("A scan makes no difference when we have no repos meeting criteria",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>empty());
+                    Matchers.empty());
         }
     }
 
@@ -1924,12 +1924,12 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("A scan picks up a newly qualified repo",
                     prj.getItems(),
-                    not(is((Collection<MultiBranchProject<?, ?>>) Collections.<MultiBranchProject<?, ?>>emptyList())));
+                    not(is(Collections.<MultiBranchProject<?, ?>>emptyList())));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+                    Matchers.containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("master"), notNullValue());
         }
     }
@@ -1957,14 +1957,14 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("A scan picks up a newly qualified repo",
                     prj.getItems(),
-                    not(is((Collection<MultiBranchProject<?, ?>>) Collections.<MultiBranchProject<?, ?>>emptyList())));
+                    not(is(Collections.<MultiBranchProject<?, ?>>emptyList())));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+                    Matchers.containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("master"), notNullValue());
-            assertThat(saved, hasKey((SCMSourceOwner)foo));
+            assertThat(saved, hasKey(foo));
         }
     }
 
@@ -1987,12 +1987,12 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("A scan picks up a newly qualified repo",
                     prj.getItems(),
-                    not(is((Collection<MultiBranchProject<?, ?>>) Collections.<MultiBranchProject<?, ?>>emptyList())));
+                    not(is(Collections.<MultiBranchProject<?, ?>>emptyList())));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+                    Matchers.containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("master"), notNullValue());
         }
     }
@@ -2016,7 +2016,7 @@ public class EventsTest {
             assertThat(prj.getComputation().getResult(), is(Result.SUCCESS));
             assertThat("A scan picks up a newly qualified repo",
                     prj.getItems(),
-                    not(is((Collection<MultiBranchProject<?, ?>>) Collections.<MultiBranchProject<?, ?>>emptyList())));
+                    not(is(Collections.<MultiBranchProject<?, ?>>emptyList())));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
             BasicMultiBranchProject manchu = (BasicMultiBranchProject) prj.getItem("manchu");
@@ -2025,7 +2025,7 @@ public class EventsTest {
             assertThat("We now have the `manchu` project", manchu, notNullValue());
             assertThat("We now have only the projects expected",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo, bar, manchu));
+                    Matchers.containsInAnyOrder(foo, bar, manchu));
             c.addFault(new MockFailure() {
                 @Override
                 public void check(@CheckForNull String repository, @CheckForNull String branchOrCR,
@@ -2047,7 +2047,7 @@ public class EventsTest {
             assertThat("We now have the `manchu` project", manchu, notNullValue());
             assertThat("We now have only the projects expected",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo, bar, manchu));
+                    Matchers.containsInAnyOrder(foo, bar, manchu));
         }
     }
 
@@ -2069,7 +2069,7 @@ public class EventsTest {
             r.waitUntilNoActivity();
             assertThat("A scan picks up a newly qualified repo",
                     prj.getItems(),
-                    not(is((Collection<MultiBranchProject<?, ?>>) Collections.<MultiBranchProject<?, ?>>emptyList())));
+                    not(is(Collections.<MultiBranchProject<?, ?>>emptyList())));
             BasicMultiBranchProject foo = (BasicMultiBranchProject) prj.getItem("foo");
             BasicMultiBranchProject bar = (BasicMultiBranchProject) prj.getItem("bar");
             BasicMultiBranchProject manchu = (BasicMultiBranchProject) prj.getItem("manchu");
@@ -2078,7 +2078,7 @@ public class EventsTest {
             assertThat("We now have the `manchu` project", manchu, notNullValue());
             assertThat("We now have only the projects expected",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo, bar, manchu));
+                    Matchers.containsInAnyOrder(foo, bar, manchu));
             c.addFault(new MockFailure() {
                 @Override
                 public void check(@CheckForNull String repository, @CheckForNull String branchOrCR,
@@ -2100,7 +2100,7 @@ public class EventsTest {
             assertThat("We now have the `manchu` project", manchu, notNullValue());
             assertThat("We now have only the projects expected",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo, bar, manchu));
+                    Matchers.containsInAnyOrder(foo, bar, manchu));
         }
     }
 
@@ -2121,7 +2121,7 @@ public class EventsTest {
             assertThat("We now have the second project matching", bar, notNullValue());
             assertThat("We now have only the two projects matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(bar));
+                    Matchers.containsInAnyOrder(bar));
             assertThat("The matching branch exists", bar.getItem("master"), notNullValue());
         }
     }
@@ -2147,7 +2147,7 @@ public class EventsTest {
             assertThat("We now have the second project matching", bar, notNullValue());
             assertThat("We now have only the two projects matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(bar));
+                    Matchers.containsInAnyOrder(bar));
             assertThat("The matching branch exists", bar.getItem(SLASHY_JOB_NAME), notNullValue());
         }
     }
@@ -2173,7 +2173,7 @@ public class EventsTest {
             assertThat("We now have the second project matching", bar, notNullValue());
             assertThat("We now have only the two projects matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(bar));
+                    Matchers.containsInAnyOrder(bar));
             assertThat("The matching branch exists", bar.getItem(I18N_JOB_NAME), notNullValue());
         }
     }
@@ -2192,11 +2192,11 @@ public class EventsTest {
             fire(new MockSCMHeadEvent(SCMEvent.Type.UPDATED, c, "bar", "master", "junkHash"));
             assertThat("Events only apply to the branch they refer to and are validated",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>empty());
+                    Matchers.empty());
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "bar", "master", "junkHash"));
             assertThat("Events only apply to the branch they refer to and are validated",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>empty());
+                    Matchers.empty());
         }
     }
 
@@ -2216,7 +2216,7 @@ public class EventsTest {
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+                    Matchers.containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("master"), notNullValue());
         }
     }
@@ -2286,7 +2286,7 @@ public class EventsTest {
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+                    Matchers.containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("feature"), notNullValue());
             assertThat("The non-matching branch does not exists", foo.getItem("master"), nullValue());
         }
@@ -2309,7 +2309,7 @@ public class EventsTest {
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+                    Matchers.containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem(SLASHY_JOB_NAME), notNullValue());
             assertThat("The non-matching branch does not exists", foo.getItem("master"), nullValue());
         }
@@ -2332,7 +2332,7 @@ public class EventsTest {
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+                    Matchers.containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem(I18N_JOB_NAME), notNullValue());
             assertThat("The non-matching branch does not exists", foo.getItem("master"), nullValue());
         }
@@ -2355,7 +2355,7 @@ public class EventsTest {
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+                    Matchers.containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("feature"), notNullValue());
             assertThat("The non-matching branch does not exists", foo.getItem("master"), nullValue());
         }
@@ -2381,7 +2381,7 @@ public class EventsTest {
             assertThat("We now have the one project matching", foo, notNullValue());
             assertThat("We now have only the one project matching",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>containsInAnyOrder(foo));
+                    Matchers.containsInAnyOrder(foo));
             assertThat("The matching branch exists", foo.getItem("feature"), notNullValue());
             assertThat("A full index occurred when adding the repo", foo.getItem("sustaining"), notNullValue());
             assertThat("The non-matching branch does not exists", foo.getItem("master"), nullValue());
@@ -2402,7 +2402,7 @@ public class EventsTest {
             fire(new MockSCMSourceEvent(SCMEvent.Type.CREATED, c, "foo"));
             assertThat("No matching branches",
                     prj.getItems(),
-                    Matchers.<MultiBranchProject<?, ?>>empty());
+                    Matchers.empty());
         }
     }
 
@@ -2842,7 +2842,7 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
-            source.setBuildStrategies(Collections.<BranchBuildStrategy>singletonList(new SkipInitialBuildStrategyImpl()));
+            source.setBuildStrategies(Collections.singletonList(new SkipInitialBuildStrategyImpl()));
             prj.getSourcesList().add(source);
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             FreeStyleProject master = prj.getItem("master");
@@ -2887,7 +2887,7 @@ public class EventsTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
-            source.setBuildStrategies(Collections.<BranchBuildStrategy>singletonList(new SkipIAllBuildStrategyImpl()));
+            source.setBuildStrategies(Collections.singletonList(new SkipIAllBuildStrategyImpl()));
             prj.getSourcesList().add(source);
             fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "master", c.getRevision("foo", "master")));
             FreeStyleProject master = prj.getItem("master");

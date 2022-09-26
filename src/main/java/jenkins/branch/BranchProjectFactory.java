@@ -231,7 +231,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
         BulkChange bc = new BulkChange(project);
         try {
             List<BranchProperty> properties = new ArrayList<>(branch.getProperties());
-            Collections.sort(properties, DescriptorOrder.reverse(BranchProperty.class));
+            properties.sort(DescriptorOrder.reverse(BranchProperty.class));
             for (BranchProperty property : properties) {
                 JobDecorator<P, R> decorator = property.jobDecorator((Class) project.getClass());
                 if (decorator != null) {

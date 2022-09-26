@@ -211,7 +211,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 for (int i = 1; ; i++) {
                     path = StringUtils.right(i > 1 ? mnemonic + "_" + i : mnemonic, MAX_LENGTH);
                     path = replaceLeadingHyphen(path);
-                    if (index.values().contains(path)) {
+                    if (index.containsValue(path)) {
                         LOGGER.log(Level.FINER, "index collision on {0} for {1} on {2}", new Object[] {path, item, node});
                     } else {
                         dir = workspace.child(path);
@@ -308,14 +308,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     // Avoiding WeakHashMap<Node, T> since Slave overrides hashCode/equals
-    private final LoadingCache<Node, Object> nodeLocks = Caffeine.newBuilder().weakKeys().build(new CacheLoader<Node, Object>() {
-        @Override
-        public Object load(Node node) throws Exception {
-            // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
-            // Avoiding new String(…) because static analyzers complain
-            // Could use anything but hoping that a future JVM enhances thread dumps to display monitors of type String
-            return new StringBuilder("WorkspaceLocatorImpl lock for ").append(node.getNodeName()).toString();
-        }
+    private final LoadingCache<Node, Object> nodeLocks = Caffeine.newBuilder().weakKeys().build(node -> {
+        // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
+        // Avoiding new String(…) because static analyzers complain
+        // Could use anything but hoping that a future JVM enhances thread dumps to display monitors of type String
+        return new StringBuilder("WorkspaceLocatorImpl lock for ").append(node.getNodeName()).toString();
     });
     private static Object lockFor(Node node) {
         return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.get(node);
@@ -378,7 +375,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             // the "-".  The rest of PATH_MAX is split evenly between the two.
             LOGGER.log(Level.WARNING, "WorkspaceLocatorImpl.PATH_MAX is small enough that workspace path collisions are more likely to occur");
             final int minSuffix = 10 + /* length("-") */ 1;
-            maxMnemonic = Math.max((int)((PATH_MAX - minSuffix) / 2), 1);
+            maxMnemonic = Math.max((PATH_MAX - minSuffix) / 2, 1);
             maxSuffix = Math.max(PATH_MAX - maxMnemonic, minSuffix);
         }
         maxSuffix = maxSuffix - 1; // Remove the "-"

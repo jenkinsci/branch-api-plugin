@@ -70,10 +70,10 @@ public class OrganizationChildHealthMetricsPropertyTest {
             c.createRepository("stuff");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = prj.getProjectFactories();
-            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
+            assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             projectFactories.add(new OrganizationFolderTest.MockFactory());
             prj.getNavigators().add(new SingleSCMNavigator("stuff",
-                    Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",
+                    Collections.singletonList(new SingleSCMSource("id", "stuffy",
                             new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
             );
             prj.getProperties().remove(OrganizationChildHealthMetricsProperty.class);

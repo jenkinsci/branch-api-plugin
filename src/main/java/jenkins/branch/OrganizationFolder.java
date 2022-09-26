@@ -533,7 +533,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 listener.getLogger().format("[%tc] Consulting %s%n", System.currentTimeMillis(),
                         navigator.getDescriptor().getDisplayName());
                 try {
-                    navigator.visitSources(new SCMSourceObserverImpl(listener, observer, navigator, (SCMSourceEvent<?>) null));
+                    navigator.visitSources(new SCMSourceObserverImpl(listener, observer, navigator, null));
                 } catch (IOException | InterruptedException | RuntimeException e) {
                     listener.error("[%tc] Could not fetch sources from navigator %s",
                             System.currentTimeMillis(), navigator);
@@ -805,7 +805,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Override
         public List<FolderIconDescriptor> getIconDescriptors() {
-            return Collections.<FolderIconDescriptor>singletonList(
+            return Collections.singletonList(
                     Jenkins.get().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class)
             );
         }
@@ -1369,7 +1369,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 public void complete() throws IllegalStateException, IOException, InterruptedException {
                     try {
                         MultiBranchProjectFactory factory = null;
-                        Map<String, Object> attributes = Collections.<String, Object>emptyMap();
+                        Map<String, Object> attributes = Collections.emptyMap();
                         for (MultiBranchProjectFactory candidateFactory : projectFactories) {
                             boolean recognizes = recognizes(attributes, candidateFactory);
                             LOGGER.fine(() -> candidateFactory + " recognizes " + projectName + " with " + attributes + "? " + recognizes);
