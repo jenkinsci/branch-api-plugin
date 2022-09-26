@@ -12,7 +12,6 @@ import hudson.model.UpdateSite;
 import hudson.util.DescribableList;
 import hudson.util.VersionNumber;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;

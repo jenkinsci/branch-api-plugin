@@ -33,7 +33,6 @@ import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.thoughtworks.xstream.XStreamException;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.BulkChange;
 import hudson.Extension;

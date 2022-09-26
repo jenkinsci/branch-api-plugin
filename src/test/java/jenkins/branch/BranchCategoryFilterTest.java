@@ -25,7 +25,6 @@
 
 package jenkins.branch;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.Run;

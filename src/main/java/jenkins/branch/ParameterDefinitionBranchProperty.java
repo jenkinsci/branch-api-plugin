@@ -31,7 +31,7 @@ import hudson.model.JobProperty;
 import hudson.model.ParameterDefinition;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Run;
-import java.util.Iterator;
+
 import java.util.List;
 import jenkins.model.ParameterizedJobMixIn;
 import org.kohsuke.stapler.DataBoundConstructor;

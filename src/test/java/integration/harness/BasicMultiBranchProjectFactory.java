@@ -26,7 +26,6 @@
 package integration.harness;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.ItemGroup;
 import hudson.model.TaskListener;

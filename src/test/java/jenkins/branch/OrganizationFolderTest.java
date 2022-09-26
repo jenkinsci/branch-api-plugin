@@ -29,7 +29,6 @@ import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import hudson.ExtensionList;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
-import hudson.model.ParameterDefinition;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
 import hudson.model.TaskListener;

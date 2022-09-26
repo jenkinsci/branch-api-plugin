@@ -28,7 +28,6 @@ import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy;
 import com.cloudbees.hudson.plugins.folder.computed.OrphanedItemStrategy;
 import com.cloudbees.hudson.plugins.folder.computed.OrphanedItemStrategyDescriptor;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.model.ItemGroup;

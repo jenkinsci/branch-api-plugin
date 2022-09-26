@@ -24,7 +24,6 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.Action;

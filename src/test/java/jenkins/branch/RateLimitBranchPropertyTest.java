@@ -26,7 +26,6 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.model.Action;
 import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;

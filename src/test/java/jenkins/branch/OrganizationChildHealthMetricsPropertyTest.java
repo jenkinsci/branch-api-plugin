@@ -35,7 +35,6 @@ import integration.harness.BasicSCMSourceCriteria;
 import java.util.Collections;
 import java.util.List;
 
-import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.SingleSCMSource;
 import jenkins.scm.impl.mock.MockSCM;

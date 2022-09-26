@@ -37,7 +37,6 @@ import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.thoughtworks.xstream.XStreamException;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.BulkChange;
 import hudson.Extension;
 import hudson.ExtensionList;

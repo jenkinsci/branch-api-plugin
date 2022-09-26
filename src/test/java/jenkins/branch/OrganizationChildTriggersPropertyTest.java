@@ -35,7 +35,7 @@ import integration.harness.BasicSCMSourceCriteria;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import jenkins.scm.api.SCMSource;
+
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.SingleSCMSource;
 import jenkins.scm.impl.mock.MockSCM;
@@ -53,7 +53,6 @@ import org.jvnet.hudson.test.TestExtension;
 import static jenkins.branch.matchers.Extracting.extracting;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertEquals;
 
 public class OrganizationChildTriggersPropertyTest {
     @ClassRule

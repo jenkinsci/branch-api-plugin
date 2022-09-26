@@ -25,18 +25,13 @@
 
 package integration.harness;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ItemGroup;
 import hudson.model.TopLevelItem;
-import java.util.logging.Logger;
 import jenkins.branch.BranchProjectFactory;
-import jenkins.branch.MultiBranchProject;
 import jenkins.branch.MultiBranchProjectDescriptor;
-import jenkins.scm.api.SCMSource;
-import jenkins.scm.api.SCMSourceCriteria;
 
 public class HealthReportingMultiBranchProject extends BasicMultiBranchProject {
 
