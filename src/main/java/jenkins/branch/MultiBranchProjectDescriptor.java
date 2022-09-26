@@ -191,7 +191,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     @SuppressWarnings({"unused", "unchecked"}) // used by stapler
     @NonNull
     public Descriptor<BranchSource> getBranchSourceDescriptor() {
-        return Jenkins.getActiveInstance().getDescriptorOrDie(BranchSource.class);
+        return Jenkins.get().getDescriptorOrDie(BranchSource.class);
     }
 
     /**
@@ -200,7 +200,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
     @Override
     public List<FolderIconDescriptor> getIconDescriptors() {
         return Collections.<FolderIconDescriptor>singletonList(
-                Jenkins.getActiveInstance().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class)
+                Jenkins.get().getDescriptorByType(MetadataActionFolderIcon.DescriptorImpl.class)
         );
     }
 
