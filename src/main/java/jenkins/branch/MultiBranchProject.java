@@ -1032,7 +1032,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 super.run();
             } finally {
                 long end = System.currentTimeMillis();
-                LOGGER.log(Level.INFO, "{0} #{1,time,yyyyMMdd.HHmmss} branch indexing action completed: {2} in {3}",
+                LOGGER.log(Level.FINE, "{0} #{1,time,yyyyMMdd.HHmmss} branch indexing action completed: {2} in {3}",
                         new Object[]{
                                 getParent().getFullName(), start, getResult(), Util.getTimeSpanString(end - start)
                         }
