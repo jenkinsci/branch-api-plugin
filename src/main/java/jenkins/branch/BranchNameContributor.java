@@ -61,6 +61,7 @@ public class BranchNameContributor extends EnvironmentContributor {
                 SCMHead head = branch.getHead();
                 // Note: not using Branch.name, since in the future that could be something different
                 // than SCMHead.name, which is what we really want here.
+                envs.put("FOLDER_NAME", parent.getFullName());
                 envs.put("BRANCH_NAME", head.getName());
                 if (branch.getAction(PrimaryInstanceMetadataAction.class) != null) {
                     envs.put("BRANCH_IS_PRIMARY", "true");
