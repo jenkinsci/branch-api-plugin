@@ -383,6 +383,8 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     @Extension
     public static class Deleter extends ItemListener {
 
+        private static final int CLEANUP_THREAD_LIMIT = parseToInt(System.getProperty(Deleter.class.getName() + ".CLEANUP_THREAD_LIMIT", "0"), 0);
+
         @Override
         public void onDeleted(Item item) {
             if (!(item instanceof TopLevelItem)) {
@@ -392,7 +394,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             Jenkins jenkins = Jenkins.get();
             Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
             // Starts provisioner Thread which is tasked with starting cleanup Threads
-            new CleanupTaskProvisioner(tli, jenkins.getNodes()).run();
+            new CleanupTaskProvisioner(tli, jenkins.getNodes(), CLEANUP_THREAD_LIMIT).run();
         }
 
         @Override
@@ -409,6 +411,14 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
         private static int runningTasks;
+
+        private static int parseToInt(String input, int defaultValue) {
+            try {
+                return Integer.parseInt(input);
+            } catch(NumberFormatException ex) {
+                return defaultValue;
+            }
+        }
 
         // Visible for testing
         static synchronized void waitForTasksToFinish() throws InterruptedException {
@@ -434,13 +444,14 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             @NonNull
             private final Queue<Node> nodes;
 
-            private final int threadLimit = getThreadLimit();
+            private final int threadLimit;
 
-            public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes) {
+            public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes, int threadLimit) {
                 this.tli = tli;
                 this.nodes = new LinkedList<>(nodes);
+                this.threadLimit = threadLimit;
                 if (threadLimit > 0) {
-                    LOGGER.log(Level.INFO, "ThreadLimit Loaded from Environment : {0}", threadLimit);
+                    LOGGER.log(Level.INFO, "Cleanup thread limit set: {0}", threadLimit);
                 }
             }
 
@@ -467,20 +478,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                 int currentThreadCount = ManagementFactory.getThreadMXBean().getThreadCount();
 
                 return currentThreadCount < threadLimit;
-            }
-
-            private int getThreadLimit() {
-                String branchApiThreadLimit = System.getenv("BRANCH_API_THREAD_LIMIT");
-                if (branchApiThreadLimit == null) {
-                    return 0;
-                }
-
-                try {
-                    return Integer.parseInt(branchApiThreadLimit);
-                } catch (NumberFormatException e) {
-                    LOGGER.log(Level.SEVERE, "Failed to parse BRANCH_API_THREAD_LIMIT: {0}", branchApiThreadLimit);
-                    return 0;
-                }
             }
         }
 
