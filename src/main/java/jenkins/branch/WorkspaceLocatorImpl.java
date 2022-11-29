@@ -54,6 +54,7 @@ import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.Semaphore;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -386,6 +387,8 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         private static /* almost final */ int CLEANUP_THREAD_LIMIT = SystemProperties.getInteger(Deleter.class.getName() + ".CLEANUP_THREAD_LIMIT", Integer.valueOf(0)).intValue();
 
+        private static Semaphore cleanupPool = new Semaphore(CLEANUP_THREAD_LIMIT, true);
+
         @Override
         public void onDeleted(Item item) {
             if (!(item instanceof TopLevelItem)) {
@@ -393,9 +396,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
             TopLevelItem tli = (TopLevelItem) item;
             Jenkins jenkins = Jenkins.get();
-            Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
+            Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins, cleanupPool));
             // Starts provisioner Thread which is tasked with starting cleanup Threads
-            new CleanupTaskProvisioner(tli, jenkins.getNodes(), CLEANUP_THREAD_LIMIT).run();
+            new CleanupTaskProvisioner(tli, jenkins.getNodes(), cleanupPool).run();
         }
 
         @Override
@@ -437,40 +440,25 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             @NonNull
             private final Queue<Node> nodes;
 
-            private final int threadLimit;
+            @NonNull
+            private final Semaphore cleanupPool;
 
-            public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes, int threadLimit) {
+            public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes, Semaphore cleanupPool) {
                 this.tli = tli;
                 this.nodes = new LinkedList<>(nodes);
-                this.threadLimit = threadLimit;
-                if (threadLimit > 0) {
-                    LOGGER.log(Level.INFO, "Cleanup thread limit set: {0}", threadLimit);
-                }
+                this.cleanupPool = cleanupPool;
             }
 
             @Override
             public void run() {
                 try {
                     while (!nodes.isEmpty()){
-                        if (hasFreeThreadVolume(threadLimit)) {
-                            Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.remove()));
-                        } else {
-                            Thread.sleep(1000);
-                        }
-                        LOGGER.log(Level.INFO, "LIVE THREAD COUNT : {0}", ManagementFactory.getThreadMXBean().getThreadCount());
+                        cleanupPool.acquire();
+                        Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.remove(), cleanupPool));
                     }
                 } catch (Exception e) {
                     LOGGER.log(Level.WARNING, e.getMessage());
                 }
-            }
-
-            private boolean hasFreeThreadVolume(int threadLimit){
-                if (threadLimit <= 0) {
-                    return true;
-                }
-                int currentThreadCount = ManagementFactory.getThreadMXBean().getThreadCount();
-
-                return currentThreadCount < threadLimit;
             }
         }
 
@@ -482,9 +470,13 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             @NonNull
             private final Node node;
 
-            CleanupTask(TopLevelItem tli, Node node) {
+            @NonNull
+            private final Semaphore cleanupPool;
+
+            CleanupTask(TopLevelItem tli, Node node, Semaphore cleanupPool) {
                 this.tli = tli;
                 this.node = node;
+                this.cleanupPool = cleanupPool;
                 taskStarted();
             }
 
@@ -527,6 +519,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     }
                 } finally {
                     t.setName(oldName);
+                    cleanupPool.release();
                     taskFinished();
                 }
             }
