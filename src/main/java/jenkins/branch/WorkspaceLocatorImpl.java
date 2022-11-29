@@ -387,7 +387,11 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         private static /* almost final */ int CLEANUP_THREAD_LIMIT = SystemProperties.getInteger(Deleter.class.getName() + ".CLEANUP_THREAD_LIMIT", Integer.valueOf(0)).intValue();
 
+        /** Semaphore for limiting number of scheduled {@link CleanupTask} */
         private static Semaphore cleanupPool = new Semaphore(CLEANUP_THREAD_LIMIT, true);
+
+        /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
+        private static int runningTasks;
 
         @Override
         public void onDeleted(Item item) {
@@ -396,9 +400,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
             TopLevelItem tli = (TopLevelItem) item;
             Jenkins jenkins = Jenkins.get();
-            Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins, cleanupPool));
+            Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
             // Starts provisioner Thread which is tasked with starting cleanup Threads
-            new CleanupTaskProvisioner(tli, jenkins.getNodes(), cleanupPool).run();
+            new CleanupTaskProvisioner(tli, jenkins.getNodes()).run();
         }
 
         @Override
@@ -413,8 +417,19 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
         }
 
-        /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
-        private static int runningTasks;
+        static void acquireThread() throws InterruptedException {
+            if (CLEANUP_THREAD_LIMIT <= 0) {
+                return;
+            }
+            cleanupPool.acquire();
+        }
+
+        static void releaseThread() {
+            if (CLEANUP_THREAD_LIMIT <= 0) {
+                return;
+            }
+            cleanupPool.release();
+        }
 
         // Visible for testing
         static synchronized void waitForTasksToFinish() throws InterruptedException {
@@ -440,21 +455,17 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             @NonNull
             private final Queue<Node> nodes;
 
-            @NonNull
-            private final Semaphore cleanupPool;
-
-            public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes, Semaphore cleanupPool) {
+            public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes) {
                 this.tli = tli;
                 this.nodes = new LinkedList<>(nodes);
-                this.cleanupPool = cleanupPool;
             }
 
             @Override
             public void run() {
                 try {
                     while (!nodes.isEmpty()){
-                        cleanupPool.acquire();
-                        Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.remove(), cleanupPool));
+                        Deleter.acquireThread();
+                        Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.remove()));
                     }
                 } catch (Exception e) {
                     LOGGER.log(Level.WARNING, e.getMessage());
@@ -470,13 +481,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             @NonNull
             private final Node node;
 
-            @NonNull
-            private final Semaphore cleanupPool;
-
-            CleanupTask(TopLevelItem tli, Node node, Semaphore cleanupPool) {
+            CleanupTask(TopLevelItem tli, Node node) {
                 this.tli = tli;
                 this.node = node;
-                this.cleanupPool = cleanupPool;
                 taskStarted();
             }
 
@@ -519,7 +526,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     }
                 } finally {
                     t.setName(oldName);
-                    cleanupPool.release();
+                    Deleter.releaseThread();
                     taskFinished();
                 }
             }
