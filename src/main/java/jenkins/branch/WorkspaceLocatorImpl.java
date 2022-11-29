@@ -70,6 +70,7 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
 import jenkins.slaves.WorkspaceLocator;
+import jenkins.util.SystemProperties;
 import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
@@ -383,7 +384,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     @Extension
     public static class Deleter extends ItemListener {
 
-        private static final int CLEANUP_THREAD_LIMIT = parseToInt(System.getProperty(Deleter.class.getName() + ".CLEANUP_THREAD_LIMIT", "0"), 0);
+        private static /* almost final */ int CLEANUP_THREAD_LIMIT = SystemProperties.getInteger(Deleter.class.getName() + ".CLEANUP_THREAD_LIMIT", Integer.valueOf(0)).intValue();
 
         @Override
         public void onDeleted(Item item) {
@@ -411,14 +412,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
         private static int runningTasks;
-
-        private static int parseToInt(String input, int defaultValue) {
-            try {
-                return Integer.parseInt(input);
-            } catch(NumberFormatException ex) {
-                return defaultValue;
-            }
-        }
 
         // Visible for testing
         static synchronized void waitForTasksToFinish() throws InterruptedException {
