@@ -286,7 +286,7 @@ public class WorkspaceLocatorImplTest {
         Field workspaceDir = Jenkins.class.getDeclaredField("workspaceDir");
         workspaceDir.setAccessible(true);
         workspaceDir.set(r.jenkins, "${ITEM_ROOTDIR}/workspace");
-        assertEquals("old default", null, WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        assertNull("old default", WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
         workspaceDir.set(r.jenkins, "${JENKINS_HOME}/workspace/${ITEM_FULL_NAME}");
         assertEquals("new default", r.jenkins.getRootPath().child("workspace"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
         workspaceDir.set(r.jenkins, "${JENKINS_HOME}/somewhere/else/${ITEM_FULLNAME}");

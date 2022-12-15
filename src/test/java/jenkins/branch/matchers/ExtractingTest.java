@@ -15,29 +15,29 @@ public class ExtractingTest {
     public void shouldExtractNothingFromEmptyIterable() {
         final Iterable<Tuple> data = Collections.emptyList();
 
-        assertThat(data, extracting(t -> t.getFoo(), is(empty())));
+        assertThat(data, extracting(Tuple::getFoo, is(empty())));
     }
 
     @Test
     public void shouldExtractProperty() {
         final Iterable<Tuple> data = Arrays.asList(tuple("a",1), tuple("b", 2));
 
-        assertThat(data, extracting(t -> t.getFoo(), hasItem("a")));
+        assertThat(data, extracting(Tuple::getFoo, hasItem("a")));
     }
 
     @Test
     public void shouldExtractPropertyFromMultipleObjects() {
         final Iterable<Tuple> data = Arrays.asList(tuple("a",1), tuple("b", 2));
 
-        assertThat(data, extracting(t -> t.getFoo(), hasItems("a", "b")));
-        assertThat(data, extracting(t -> t.getBar(), hasItems(1, 2)));
+        assertThat(data, extracting(Tuple::getFoo, hasItems("a", "b")));
+        assertThat(data, extracting(Tuple::getBar, hasItems(1, 2)));
     }
 
     @Test
     public void shouldSupportPartialMatchers() {
         final Iterable<Tuple> data = Arrays.asList(tuple("a",1), tuple("b", 2), tuple("c", 3));
 
-        assertThat(data, extracting(t -> t.getFoo(), hasItems("a", "c")));
+        assertThat(data, extracting(Tuple::getFoo, hasItems("a", "c")));
     }
 
     private static Tuple tuple(String foo, int bar) {

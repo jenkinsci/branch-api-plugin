@@ -119,7 +119,7 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
     @NonNull
     public List<BranchBuildStrategy> getBuildStrategies() {
         return buildStrategies == null
-                ? Collections.<BranchBuildStrategy>emptyList()
+                ? Collections.emptyList()
                 : Collections.unmodifiableList(buildStrategies);
     }
 

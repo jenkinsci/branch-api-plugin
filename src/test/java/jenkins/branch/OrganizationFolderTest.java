@@ -29,7 +29,6 @@ import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import hudson.ExtensionList;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
-import hudson.model.ParameterDefinition;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
 import hudson.model.TaskListener;
@@ -106,10 +105,10 @@ public class OrganizationFolderTest {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
+            assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             projectFactories.add(new MockFactory());
             top.getNavigators().add(new SingleSCMNavigator("stuff",
-                    Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",
+                    Collections.singletonList(new SingleSCMSource("id", "stuffy",
                             new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
             );
             top = r.configRoundtrip(top);
@@ -118,7 +117,7 @@ public class OrganizationFolderTest {
             assertEquals(SingleSCMNavigator.class, navigators.get(0).getClass());
             assertEquals("stuff", ((SingleSCMNavigator) navigators.get(0)).getName());
             projectFactories = top.getProjectFactories();
-            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItems(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class), ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
+            assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItems(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class), ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
         }
     }
 
@@ -129,13 +128,13 @@ public class OrganizationFolderTest {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
+            assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             top.getNavigators().add(new SingleSCMNavigator("stuff",
-                    Collections.<SCMSource>singletonList(new SingleSCMSource("stuffy",
+                    Collections.singletonList(new SingleSCMSource("stuffy",
                             new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
                     );
             OrganizationFolderBranchProperty instance = new OrganizationFolderBranchProperty();
-            instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
+            instance.setParameterDefinitions(Collections.singletonList(
                     new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")
                     ));
             top.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[] { instance }));
@@ -198,8 +197,8 @@ public class OrganizationFolderTest {
             arrayContainingInAnyOrder(MockFactory.class, BasicMultiBranchProjectFactory.class));
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
-        assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
+        assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
         top.scheduleBuild2(0).getFuture().get();
         top.getComputation().writeWholeLogTo(System.out);
         assertEquals(1, top.getItems().size());

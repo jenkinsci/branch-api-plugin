@@ -15,6 +15,7 @@ import org.jvnet.hudson.test.FlagRule;
 import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 
 import static junit.framework.TestCase.assertTrue;
 
@@ -43,8 +44,8 @@ public class UpdatingFromXmlWithDisabledFlagTest {
             c.createRepository("foo");
             c.cloneBranch("foo", "master", "feature");
             c.addFile("foo", "feature", "add new feature", "FEATURE", "new".getBytes());
-            String configXml = IOUtils.toString(getClass().getResourceAsStream("UpdatingFromXmlTest/config.xml")).replace("fixme", c.getId());
-            BasicMultiBranchProject prj = (BasicMultiBranchProject) r.jenkins.createProjectFromXML("foo", new ReaderInputStream(new StringReader(configXml)));
+            String configXml = IOUtils.toString(getClass().getResourceAsStream("UpdatingFromXmlTest/config.xml"), StandardCharsets.UTF_8).replace("fixme", c.getId());
+            BasicMultiBranchProject prj = (BasicMultiBranchProject) r.jenkins.createProjectFromXML("foo", new ReaderInputStream(new StringReader(configXml), StandardCharsets.UTF_8));
             r.waitUntilNoActivity();
             assertTrue(prj.getItems().isEmpty());
         }
@@ -56,7 +57,7 @@ public class UpdatingFromXmlWithDisabledFlagTest {
             c.createRepository("foo");
             c.cloneBranch("foo", "master", "feature");
             c.addFile("foo", "feature", "add new feature", "FEATURE", "new".getBytes());
-            String configXml = IOUtils.toString(getClass().getResourceAsStream("UpdatingFromXmlTest/config.xml")).replace("fixme", c.getId());
+            String configXml = IOUtils.toString(getClass().getResourceAsStream("UpdatingFromXmlTest/config.xml"), StandardCharsets.UTF_8).replace("fixme", c.getId());
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.updateByXml((Source) new StreamSource(new StringReader(configXml)));
             r.waitUntilNoActivity();

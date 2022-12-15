@@ -3,16 +3,12 @@ package jenkins.branch;
 import hudson.model.FreeStyleProject;
 import hudson.model.TopLevelItem;
 import integration.harness.HealthReportingMultiBranchProject;
-import java.util.Collection;
+
 import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
-import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;

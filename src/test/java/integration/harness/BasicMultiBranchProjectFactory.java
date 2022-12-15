@@ -26,12 +26,13 @@
 package integration.harness;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.ItemGroup;
 import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
+
 import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.MultiBranchProjectFactory;
@@ -68,7 +69,7 @@ public class BasicMultiBranchProjectFactory extends MultiBranchProjectFactory.By
             throws IOException, InterruptedException {
         if (project instanceof BasicMultiBranchProject) {
             SCMSourceCriteria criteria = ((BasicMultiBranchProject) project).getCriteria();
-            if (this.criteria == null ? criteria != null : !this.criteria.equals(criteria)) {
+            if (!Objects.equals(this.criteria, criteria)) {
                 ((BasicMultiBranchProject) project).setCriteria(this.criteria);
             }
         }

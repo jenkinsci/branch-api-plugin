@@ -26,7 +26,6 @@ package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.ListView;
 import hudson.model.View;
@@ -226,7 +225,7 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
          */
         @Override
         public String getDisplayName() {
-            return category.getDisplayName().toString() + " (" + getItems().size() + ")";
+            return category.getDisplayName() + " (" + getItems().size() + ")";
         }
 
         /**
