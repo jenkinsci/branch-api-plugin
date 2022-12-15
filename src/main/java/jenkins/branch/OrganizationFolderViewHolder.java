@@ -41,7 +41,7 @@ import hudson.views.WeatherColumn;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.SCMSourceCategory;
 import net.jcip.annotations.GuardedBy;
 import org.acegisecurity.Authentication;
@@ -245,7 +245,7 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
             final ACL acl = super.getACL();
             return new ACL() {
                 @Override
-                public boolean hasPermission(@Nonnull Authentication a, @Nonnull Permission permission) {
+                public boolean hasPermission(@NonNull Authentication a, @NonNull Permission permission) {
                     if (View.CREATE.equals(permission)
                             || View.CONFIGURE.equals(permission)
                             || View.DELETE.equals(permission)) {

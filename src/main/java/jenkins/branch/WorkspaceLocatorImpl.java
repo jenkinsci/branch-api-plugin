@@ -24,10 +24,9 @@
 
 package jenkins.branch;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.CacheLoader;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -66,7 +65,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
 import jenkins.slaves.WorkspaceLocator;
@@ -251,7 +250,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         Map<String, String> map = new TreeMap<>();
         FilePath index = workspace.child(INDEX_FILE_NAME);
         if (index.exists()) {
-            try (InputStream is = readFilePath(index);  Reader r = new InputStreamReader(is, StandardCharsets.UTF_8); BufferedReader br = new BufferedReader(r)) {
+            try (InputStream is = index.read(); Reader r = new InputStreamReader(is, StandardCharsets.UTF_8); BufferedReader br = new BufferedReader(r)) {
                 while (true) {
                     String key = br.readLine();
                     if (key == null) {
@@ -269,15 +268,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             _indexCache.put(workspace.getChannel(), new IndexCacheEntry(workspace.getRemote(), map));
         }
         return map;
-    }
-
-    // Workaround spotbugs false-positive redundant null checking for try blocks in java 11
-    // https://github.com/spotbugs/spotbugs/issues/756
-    @NonNull
-    private static InputStream readFilePath(@NonNull FilePath index) throws IOException, InterruptedException {
-        InputStream stream = index.read();
-        assert stream != null;
-        return stream;
     }
 
     private static void save(Map<String, String> index, FilePath workspace) throws IOException, InterruptedException {
@@ -309,7 +299,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     }
 
     // Avoiding WeakHashMap<Node, T> since Slave overrides hashCode/equals
-    private final LoadingCache<Node, Object> nodeLocks = CacheBuilder.newBuilder().weakKeys().build(new CacheLoader<Node, Object>() {
+    private final LoadingCache<Node, Object> nodeLocks = Caffeine.newBuilder().weakKeys().build(new CacheLoader<Node, Object>() {
         @Override
         public Object load(Node node) throws Exception {
             // Avoiding new Object() to prepare for http://cr.openjdk.java.net/~briangoetz/valhalla/sov/02-object-model.html
@@ -319,11 +309,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         }
     });
     private static Object lockFor(Node node) {
-        try {
-            return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.get(node);
-        } catch (ExecutionException x) {
-            throw new AssertionError(x);
-        }
+        return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.get(node);
     }
 
     private static final Pattern GOOD_RAW_WORKSPACE_DIR = Pattern.compile("(.+)[/\\\\][$][{]ITEM_FULL_?NAME[}][/\\\\]?");
@@ -427,7 +413,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
         private static int runningTasks;
 
-        @VisibleForTesting
+        // Visible for testing
         static synchronized void waitForTasksToFinish() throws InterruptedException {
             while (runningTasks > 0) {
                 Deleter.class.wait();

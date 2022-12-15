@@ -39,7 +39,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -120,7 +120,7 @@ public class OrganizationChildOrphanedItemsProperty extends OrganizationFolderPr
         /**
          * {@inheritDoc}
          */
-        @Nonnull
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.OrganizationChildOrphanedItemsProperty_DisplayName();
@@ -180,7 +180,7 @@ public class OrganizationChildOrphanedItemsProperty extends OrganizationFolderPr
             /**
              * {@inheritDoc}
              */
-            @Nonnull
+            @NonNull
             @Override
             public String getDisplayName() {
                 return Messages.OrganizationChildOrphanedItemsProperty_Inherit();

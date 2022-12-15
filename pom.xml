@@ -29,19 +29,19 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.26</version>
+    <version>4.50</version>
     <relativePath />
   </parent>
 
   <artifactId>branch-api</artifactId>
-  <version>${revision}${changelist}</version>
+  <version>${revision}.${changelist}</version>
   <packaging>hpi</packaging>
 
   <name>Branch API Plugin</name>
   <description>
     This plugin provides an API for multiple branch based projects.
   </description>
-  <url>https://github.com/jenkinsci/branch-api-plugin</url>
+  <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
   <licenses>
     <license>
       <name>The MIT license</name>
@@ -58,19 +58,18 @@
   </developers>
 
   <scm>
-    <connection>scm:git:git://github.com/${gitHubRepo}.git</connection>
+    <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
     <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
-    <url>http://github.com/${gitHubRepo}</url>
+    <url>https://github.com/${gitHubRepo}</url>
     <tag>${scmTag}</tag>
   </scm>
 
   <properties>
-    <revision>2.7.1</revision>
-    <changelist>-SNAPSHOT</changelist>
+    <revision>2</revision>
+    <changelist>999999-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
-    <jenkins.version>2.277.1</jenkins.version>
+    <jenkins.version>2.332.1</jenkins.version>
     <hpi.compatibleSinceVersion>2.0.0</hpi.compatibleSinceVersion>
-    <java.level>8</java.level>
   </properties>
 
   <repositories>
@@ -91,8 +90,8 @@
     <dependencies>
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
-        <artifactId>bom-2.277.x</artifactId>
-        <version>950.v396cb834de1e</version>
+        <artifactId>bom-2.332.x</artifactId>
+        <version>1289.v5c4b_1c43511b_</version>
         <scope>import</scope>
         <type>pom</type>
       </dependency>
@@ -108,12 +107,21 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>cloudbees-folder</artifactId>
-      <version>6.16</version>
+    </dependency>
+    <dependency>
+      <groupId>io.jenkins.plugins</groupId>
+      <artifactId>caffeine-api</artifactId>
     </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>pl.pragmatists</groupId>
+      <artifactId>JUnitParams</artifactId>
+      <version>1.1.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -144,17 +152,4 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <reuseForks>false</reuseForks> <!-- TODO reuse seems to cause problems with GitSampleRepoRule -->
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-
 </project>
