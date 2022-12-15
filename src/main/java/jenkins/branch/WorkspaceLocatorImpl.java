@@ -248,7 +248,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         Map<String, String> map = new TreeMap<>();
         FilePath index = workspace.child(INDEX_FILE_NAME);
         if (index.exists()) {
-            try (InputStream is = readFilePath(index);  Reader r = new InputStreamReader(is, StandardCharsets.UTF_8); BufferedReader br = new BufferedReader(r)) {
+            try (InputStream is = index.read(); Reader r = new InputStreamReader(is, StandardCharsets.UTF_8); BufferedReader br = new BufferedReader(r)) {
                 while (true) {
                     String key = br.readLine();
                     if (key == null) {
@@ -266,15 +266,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             _indexCache.put(workspace.getChannel(), new IndexCacheEntry(workspace.getRemote(), map));
         }
         return map;
-    }
-
-    // Workaround spotbugs false-positive redundant null checking for try blocks in java 11
-    // https://github.com/spotbugs/spotbugs/issues/756
-    @NonNull
-    private static InputStream readFilePath(@NonNull FilePath index) throws IOException, InterruptedException {
-        InputStream stream = index.read();
-        assert stream != null;
-        return stream;
     }
 
     private static void save(Map<String, String> index, FilePath workspace) throws IOException, InterruptedException {
