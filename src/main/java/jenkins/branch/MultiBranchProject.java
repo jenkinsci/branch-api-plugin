@@ -1032,7 +1032,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 super.run();
             } finally {
                 long end = System.currentTimeMillis();
-                LOGGER.log(Level.INFO, "{0} #{1,time,yyyyMMdd.HHmmss} branch indexing action completed: {2} in {3}",
+                LOGGER.log(Level.FINE, "{0} #{1,time,yyyyMMdd.HHmmss} branch indexing action completed: {2} in {3}",
                         new Object[]{
                                 getParent().getFullName(), start, getResult(), Util.getTimeSpanString(end - start)
                         }
@@ -1580,7 +1580,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     try (StreamTaskListener listener = p.getComputation().createEventsListener();
                          ChildObserver childObserver = p.openEventsChildObserver()) {
                         try {
-                            assert childObserver != null;
                             listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                                     start, eventDescription, eventType, eventOrigin, eventTimestamp);
                             for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
