@@ -69,9 +69,9 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
     public NamedExceptionsBranchPropertyStrategy(@CheckForNull BranchProperty[] defaultProperties,
                                                  @CheckForNull Named[] namedExceptions) {
         this.defaultProperties =
-                defaultProperties == null ? Collections.<BranchProperty>emptyList() : Arrays.asList(defaultProperties);
+                defaultProperties == null ? Collections.emptyList() : Arrays.asList(defaultProperties);
         this.namedExceptions =
-                namedExceptions == null ? Collections.<Named>emptyList() : Arrays.asList(namedExceptions);
+                namedExceptions == null ? Collections.emptyList() : Arrays.asList(namedExceptions);
     }
 
     /**
@@ -152,7 +152,7 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
         @DataBoundConstructor
         public Named(@CheckForNull String name, @CheckForNull BranchProperty[] props) {
             this.name = Util.fixNull(name);
-            this.props = props == null ? Collections.<BranchProperty>emptyList() : Arrays.asList(props);
+            this.props = props == null ? Collections.emptyList() : Arrays.asList(props);
         }
 
         /**

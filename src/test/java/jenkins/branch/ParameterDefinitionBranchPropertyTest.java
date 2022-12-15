@@ -29,7 +29,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.ChoiceParameterDefinition;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
-import hudson.model.ParameterDefinition;
 import hudson.model.StringParameterDefinition;
 import hudson.model.TopLevelItem;
 import hudson.util.VersionNumber;
@@ -45,7 +44,6 @@ import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
 import org.junit.Before;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -74,7 +72,7 @@ public class ParameterDefinitionBranchPropertyTest {
     @Test
     public void getSetParameterDefinitions() throws Exception {
         ParameterDefinitionBranchPropertyImpl instance = new ParameterDefinitionBranchPropertyImpl();
-        instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
+        instance.setParameterDefinitions(Collections.singletonList(
                 new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")
         ));
         assertThat(instance.getParameterDefinitions(), contains(
@@ -128,7 +126,7 @@ public class ParameterDefinitionBranchPropertyTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             ParameterDefinitionBranchPropertyImpl instance = new ParameterDefinitionBranchPropertyImpl();
-            instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
+            instance.setParameterDefinitions(Collections.singletonList(
                     new ChoiceParameterDefinition("CHOOSE", new String[] { "a", "b" }, "choose one")
                     ));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
@@ -159,7 +157,7 @@ public class ParameterDefinitionBranchPropertyTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             ParameterDefinitionBranchPropertyImpl instance = new ParameterDefinitionBranchPropertyImpl();
-            instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
+            instance.setParameterDefinitions(Collections.singletonList(
                     new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")
             ));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{
@@ -191,7 +189,7 @@ public class ParameterDefinitionBranchPropertyTest {
             prj.setCriteria(null);
             BranchSource source = new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches()));
             ParameterDefinitionBranchPropertyImpl instance = new ParameterDefinitionBranchPropertyImpl();
-            instance.setParameterDefinitions(Collections.<ParameterDefinition>singletonList(
+            instance.setParameterDefinitions(Collections.singletonList(
                     new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")
             ));
             source.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[]{

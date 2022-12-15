@@ -71,7 +71,7 @@ public class UntrustedBranchProperty extends BranchProperty {
 
     @DataBoundConstructor
     public UntrustedBranchProperty(String[] publisherWhitelist) {
-        this.publisherWhitelist = publisherWhitelist == null ? Collections.<String>emptySet() : new TreeSet<>(
+        this.publisherWhitelist = publisherWhitelist == null ? Collections.emptySet() : new TreeSet<>(
                 Arrays.asList(publisherWhitelist));
     }
 

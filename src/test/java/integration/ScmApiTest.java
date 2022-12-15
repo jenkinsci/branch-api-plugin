@@ -82,11 +82,11 @@ public class ScmApiTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(SCMHead.HeadByItem.findHead(prj.getItem("master")),
-                    is((SCMHead) new MockSCMHead("master")));
-            assertThat(SCMHead.HeadByItem.findHead(prj.getItem("1.0")), is((SCMHead) new MockTagSCMHead("1.0",
+                    is(new MockSCMHead("master")));
+            assertThat(SCMHead.HeadByItem.findHead(prj.getItem("1.0")), is(new MockTagSCMHead("1.0",
                     timestamp)));
             assertThat(SCMHead.HeadByItem.findHead(prj.getItem("CR-" + crNum)),
-                    is((SCMHead) new MockChangeRequestSCMHead(crNum, "master")));
+                    is(new MockChangeRequestSCMHead(crNum, "master")));
         }
     }
 

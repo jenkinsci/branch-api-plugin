@@ -33,7 +33,6 @@ import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.thoughtworks.xstream.XStreamException;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.BulkChange;
 import hudson.Extension;
@@ -537,11 +536,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         String sourceId = source.getId();
         if (NullSCMSource.ID.equals(sourceId)) {
-            return new Branch.Dead(head, Collections.<BranchProperty>emptyList());
+            return new Branch.Dead(head, Collections.emptyList());
         } else {
             final BranchPropertyStrategy strategy = getBranchPropertyStrategy(source);
             return new Branch(sourceId, head, source.build(head),
-                    strategy != null ? strategy.getPropertiesFor(head) : Collections.<BranchProperty>emptyList());
+                    strategy != null ? strategy.getPropertiesFor(head) : Collections.emptyList());
         }
     }
 

@@ -27,7 +27,6 @@ package jenkins.branch;
 import antlr.ANTLRException;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Items;

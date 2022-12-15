@@ -24,7 +24,6 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
@@ -37,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.TransientActionFactory;
@@ -219,7 +219,7 @@ public class Branch {
      */
     @NonNull
     public List<Action> getActions() {
-        return actions == null ? Collections.<Action>emptyList() : Collections.unmodifiableList(actions);
+        return actions == null ? Collections.emptyList() : Collections.unmodifiableList(actions);
     }
 
     /**
@@ -273,7 +273,7 @@ public class Branch {
 
         Branch branch = (Branch) o;
 
-        if (sourceId != null ? !sourceId.equals(branch.sourceId) : branch.sourceId != null) {
+        if (!Objects.equals(sourceId, branch.sourceId)) {
             return false;
         }
         if (!head.equals(branch.head)) {

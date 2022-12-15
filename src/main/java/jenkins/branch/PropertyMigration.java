@@ -12,7 +12,6 @@ import hudson.model.UpdateSite;
 import hudson.util.DescribableList;
 import hudson.util.VersionNumber;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -210,13 +209,7 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
                     result.add(m);
                 }
             }
-            Collections.sort(result, new Comparator<PropertyMigration<?, ?>>() {
-                @Override
-                public int compare(PropertyMigration<?, ?> o1, PropertyMigration<?, ?> o2) {
-                    // just want a deterministic sort
-                    return o1.getClass().getName().compareTo(o2.getClass().getName());
-                }
-            });
+            result.sort(Comparator.comparing(o -> o.getClass().getName())); // just want a deterministic sort
             return result;
         }
 

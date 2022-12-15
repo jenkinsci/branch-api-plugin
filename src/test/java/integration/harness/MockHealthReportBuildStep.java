@@ -7,7 +7,7 @@ import hudson.model.Descriptor;
 import hudson.model.HealthReport;
 import hudson.model.HealthReportingAction;
 import hudson.tasks.Builder;
-import java.util.Random;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.util.NonLocalizable;

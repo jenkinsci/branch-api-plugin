@@ -90,12 +90,6 @@ public class DescriptorOrder<T extends Describable<T>> implements Comparator<T> 
         if (i2 == -1) {
             return -1;
         }
-        if (i1 == i2) {
-            return 0;
-        }
-        if (i1 < i2) {
-            return -1;
-        }
-        return 1;
+        return Integer.compare(i1, i2);
     }
 }

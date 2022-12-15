@@ -47,15 +47,13 @@ class Timeout implements AutoCloseable {
 
     public static Timeout limit(final long time, final TimeUnit unit) {
         final Thread thread = Thread.currentThread();
-        return new Timeout(Timer.get().schedule(new Runnable() {
-            @Override public void run() {
-                if (LOGGER.isLoggable(Level.FINE)) {
-                    Throwable t = new Throwable();
-                    t.setStackTrace(thread.getStackTrace());
-                    LOGGER.log(Level.FINE, "Interrupting " + thread + " after " + time + " " + unit, t);
-                }
-                thread.interrupt();
+        return new Timeout(Timer.get().schedule(() -> {
+            if (LOGGER.isLoggable(Level.FINE)) {
+                Throwable t = new Throwable();
+                t.setStackTrace(thread.getStackTrace());
+                LOGGER.log(Level.FINE, "Interrupting " + thread + " after " + time + " " + unit, t);
             }
+            thread.interrupt();
         }, time, unit));
     }
 
