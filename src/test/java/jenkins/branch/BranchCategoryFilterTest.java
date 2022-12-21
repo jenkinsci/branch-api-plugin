@@ -163,7 +163,8 @@ public class BranchCategoryFilterTest {
     public static abstract class MockSCMSource extends SCMSource {
 
         protected MockSCMSource() {
-            super("1");
+            super();
+            this.setId("1");
         }
 
         @Override

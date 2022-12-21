@@ -108,7 +108,7 @@ public class OrganizationFolderTest {
             assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             projectFactories.add(new MockFactory());
             top.getNavigators().add(new SingleSCMNavigator("stuff",
-                    Collections.singletonList(new SingleSCMSource("id", "stuffy",
+                    Collections.singletonList(new SingleSCMSource("stuffy",
                             new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
             );
             top = r.configRoundtrip(top);
@@ -198,7 +198,7 @@ public class OrganizationFolderTest {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
         assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.singletonList(new SingleSCMSource("stuffy", new NullSCM()))));
         top.scheduleBuild2(0).getFuture().get();
         top.getComputation().writeWholeLogTo(System.out);
         assertEquals(1, top.getItems().size());

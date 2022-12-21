@@ -254,7 +254,7 @@ public class NoTriggerBranchPropertyTest {
         }
 
         private String bumpHeadRevision() throws IOException {
-            controller.addFile(repositoryName, BRANCH_NAME, "add new file", Long.toString(System.currentTimeMillis()), "text".getBytes("UTF-8"));
+            controller.addFile(repositoryName, BRANCH_NAME, "add new file", Long.toString(System.currentTimeMillis()), "text".getBytes(StandardCharsets.UTF_8));
             return controller.getRevision(repositoryName, BRANCH_NAME);
         }
     }
