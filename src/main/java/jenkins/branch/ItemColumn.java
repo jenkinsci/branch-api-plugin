@@ -85,7 +85,7 @@ public class ItemColumn extends ListViewColumn {
         if (item instanceof MultiBranchProject) {
             MultiBranchProject<?,?> project = (MultiBranchProject<?,?>) item;
             BranchProjectFactory factory = project.getProjectFactory();
-            try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
+            try (ACLContext ctx = ACL.as2(ACL.SYSTEM2)) {
                 for (Job c: project.getItems()) {
                     if (factory.isProject(c) && !(factory.getBranch(c) instanceof Branch.Dead)) {
                         // if we have at least one not-dead branch then the project is alive

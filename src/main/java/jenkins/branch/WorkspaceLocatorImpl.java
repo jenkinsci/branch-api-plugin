@@ -580,7 +580,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             synchronized (lockFor(node)) {
                 Map<String, String> index = load(workspace);
                 boolean modified = false;
-                try (ACLContext as = ACL.as(ACL.SYSTEM)) {
+                try (ACLContext as = ACL.as2(ACL.SYSTEM2)) {
                     Iterator<Map.Entry<String, String>> it = index.entrySet().iterator();
                     while (it.hasNext()) {
                         Map.Entry<String, String> entry = it.next();

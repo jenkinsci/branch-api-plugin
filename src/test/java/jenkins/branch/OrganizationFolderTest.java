@@ -58,7 +58,6 @@ import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
-import org.acegisecurity.Authentication;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
@@ -74,6 +73,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeThat;
 import org.jvnet.hudson.test.LoggerRule;
+import org.springframework.security.core.Authentication;
 
 public class OrganizationFolderTest {
 
@@ -352,14 +352,14 @@ public class OrganizationFolderTest {
 
         // SYSTEM (the default authentication scope) can do everything, so we need to look like someone else.
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
-        Authentication some_user = User.getById("testing", true).impersonate();
+        Authentication some_user = User.getById("testing", true).impersonate2();
 
-        // verify that all of of the suppressed permissions are actually suppressed!
+        // verify that all of the suppressed permissions are actually suppressed!
         for( Permission perm : suppressed_permissions ) {
 
             assertFalse(
                 "OrganizationFolders in ComputedFolders should suppress the [" + perm.getId() + "] permission.",
-                org_folder.getACL().hasPermission( some_user, perm ) );
+                org_folder.getACL().hasPermission2( some_user, perm ) );
         }
 
     }
@@ -375,14 +375,14 @@ public class OrganizationFolderTest {
 
         // SYSTEM (the default authentication scope) can do everything, so we need to look like someone else.
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
-        Authentication some_user = User.getById("testing", true).impersonate();
+        Authentication some_user = User.getById("testing", true).impersonate2();
 
         // verify that none of the suppressed permissions are suppressed
         for( Permission perm : suppressed_permissions ) {
 
             assertTrue(
                 "Organization Folders in non-computed parents do not suppress the [" + perm.getId() + "] permission.",
-                top.getACL().hasPermission( some_user, perm ) );
+                top.getACL().hasPermission2( some_user, perm ) );
         }
 
     }
