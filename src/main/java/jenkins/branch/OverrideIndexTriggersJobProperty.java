@@ -23,6 +23,7 @@
  */
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Action;
 import hudson.model.Cause;
@@ -66,6 +67,7 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
             return item instanceof MultiBranchProject || item instanceof OrganizationFolder || item.getParent() instanceof MultiBranchProject;
         }
 
+        @NonNull
         @Override public String getDisplayName() {
             return "Override multibranch or organization branch indexing triggers";
         }

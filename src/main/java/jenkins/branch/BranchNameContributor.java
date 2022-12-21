@@ -24,6 +24,7 @@
 
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.EnvironmentContributor;
@@ -52,7 +53,7 @@ public class BranchNameContributor extends EnvironmentContributor {
     /** {@inheritDoc} */
     @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
-    public void buildEnvironmentFor(Job j, EnvVars envs, TaskListener listener) throws IOException, InterruptedException {
+    public void buildEnvironmentFor(@NonNull Job j, @NonNull EnvVars envs, @NonNull TaskListener listener) throws IOException, InterruptedException {
         ItemGroup parent = j.getParent();
         if (parent instanceof MultiBranchProject) {
             BranchProjectFactory projectFactory = ((MultiBranchProject) parent).getProjectFactory();

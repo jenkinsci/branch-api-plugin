@@ -93,6 +93,7 @@ public class NoTriggerBranchProperty extends BranchProperty implements NoTrigger
     @Symbol("suppressAutomaticTriggering")
     public static class DescriptorImpl extends BranchPropertyDescriptor {
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();

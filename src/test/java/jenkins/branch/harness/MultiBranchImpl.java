@@ -32,6 +32,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -93,6 +94,7 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
         super(parent, name);
     }
 
+    @NonNull
     @Override
     protected BranchProjectFactory<FreeStyleProject, FreeStyleBuild> newProjectFactory() {
         return new BranchProjectFactoryImpl();
@@ -114,6 +116,7 @@ public class MultiBranchImpl extends MultiBranchProject<FreeStyleProject, FreeSt
     @Extension
     public static class DescriptorImpl extends MultiBranchProjectDescriptor {
 
+        @NonNull
         @Override 
         public String getDisplayName() {
             return "Test Multibranch";

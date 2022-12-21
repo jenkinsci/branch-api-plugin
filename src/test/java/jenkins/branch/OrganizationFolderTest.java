@@ -26,6 +26,7 @@ package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
@@ -87,7 +88,7 @@ public class OrganizationFolderTest {
         @TestExtension
         public static class DescriptorImpl extends BranchPropertyDescriptor {
             @Override
-            protected boolean isApplicable(MultiBranchProjectDescriptor projectDescriptor) {
+            protected boolean isApplicable(@NonNull MultiBranchProjectDescriptor projectDescriptor) {
                 return projectDescriptor instanceof BasicMultiBranchProject.DescriptorImpl;
             }
         }
@@ -395,11 +396,15 @@ public class OrganizationFolderTest {
         public MockFactory() {}
         static boolean live = true;
         @Override
-        public boolean recognizes(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String, Object> attributes, TaskListener listener) throws IOException, InterruptedException {
+        public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name, @NonNull List<? extends SCMSource> scmSources,
+                                  @NonNull Map<String, Object> attributes, @NonNull TaskListener listener) throws IOException, InterruptedException {
             return live;
         }
+        @NonNull
         @Override
-        public MultiBranchProject<?, ?> createNewProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String,Object> attributes, TaskListener listener) throws IOException, InterruptedException {
+        public MultiBranchProject<?, ?> createNewProject(@NonNull ItemGroup<?> parent, @NonNull String name,
+                                                         @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String,Object> attributes,
+                                                         @NonNull TaskListener listener) throws IOException, InterruptedException {
             return new MultiBranchImpl(parent, name);
         }
     }
@@ -411,6 +416,7 @@ public class OrganizationFolderTest {
         public MultiBranchProjectFactory newInstance() {
             return new MockFactory();
         }
+        @NonNull
         @Override
         public String getDisplayName() {
             return "MockFactory";

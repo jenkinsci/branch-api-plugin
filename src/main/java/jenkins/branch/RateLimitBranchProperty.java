@@ -189,6 +189,7 @@ public class RateLimitBranchProperty extends BranchProperty {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.RateLimitBranchProperty_DisplayName();
@@ -404,6 +405,7 @@ public class RateLimitBranchProperty extends BranchProperty {
             /**
              * {@inheritDoc}
              */
+            @NonNull
             @Override
             public String getDisplayName() {
                 return Messages.RateLimitBranchProperty_DisplayName();

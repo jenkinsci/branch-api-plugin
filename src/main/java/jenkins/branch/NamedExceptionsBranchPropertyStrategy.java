@@ -120,6 +120,7 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.NamedExceptionsBranchPropertyStrategy_DisplayName();
@@ -231,6 +232,7 @@ public class NamedExceptionsBranchPropertyStrategy extends BranchPropertyStrateg
             /**
              * {@inheritDoc}
              */
+            @NonNull
             @Override
             public String getDisplayName() {
                 return "Named exception";

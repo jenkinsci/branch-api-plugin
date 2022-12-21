@@ -25,6 +25,7 @@
 
 package integration.harness;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.FreeStyleProject;
 import jenkins.branch.Branch;
@@ -54,6 +55,7 @@ public class HealthReportingBranchProjectFactory extends BasicBranchProjectFacto
             return MultiBranchProject.class.isAssignableFrom(clazz);
         }
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return "HealthReportingBranchProjectFactory";

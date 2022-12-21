@@ -606,6 +606,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * {@inheritDoc}
      */
+    @NonNull
     @Override
     public List<SCMSource> getSCMSources() {
         Set<SCMSource> result = new HashSet<>();
@@ -627,7 +628,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * {@inheritDoc}
      */
     @Override
-    public void onSCMSourceUpdated(SCMSource source) {
+    public void onSCMSourceUpdated(@NonNull SCMSource source) {
         // TODO possibly we should recheck whether this project remains valid
     }
 
@@ -635,7 +636,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * {@inheritDoc}
      */
     @Override
-    public SCMSourceCriteria getSCMSourceCriteria(SCMSource source) {
+    public SCMSourceCriteria getSCMSourceCriteria(@NonNull SCMSource source) {
         return null;
     }
 
@@ -706,13 +707,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * {@inheritDoc}
      */
+    @NonNull
     @Override
     public ACL getACL() {
         final ACL acl = super.getACL();
         if (getParent() instanceof ComputedFolder<?>) {
             return new ACL() {
                 @Override
-                public boolean hasPermission2(Authentication a, Permission permission) {
+                public boolean hasPermission2(@NonNull Authentication a, @NonNull Permission permission) {
                     if (ACL.SYSTEM2.equals(a)) {
                         return true;
                     } else if (SUPPRESSED_PERMISSIONS.contains(permission)) {
@@ -741,6 +743,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.OrganizationFolder_DisplayName();

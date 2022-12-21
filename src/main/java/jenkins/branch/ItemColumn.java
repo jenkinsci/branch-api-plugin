@@ -24,6 +24,7 @@
 
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Actionable;
 import hudson.model.Descriptor;
@@ -132,6 +133,7 @@ public class ItemColumn extends ListViewColumn {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.ItemColumn_DisplayName();
@@ -156,7 +158,7 @@ public class ItemColumn extends ListViewColumn {
          * {@inheritDoc}
          */
         @Override
-        public boolean filter(Object context, Descriptor descriptor) {
+        public boolean filter(Object context, @NonNull Descriptor descriptor) {
             return !(descriptor instanceof BranchStatusColumn.DescriptorImpl)
                     || context instanceof MultiBranchProjectViewHolder.ViewImpl
                     || context instanceof OrganizationFolderViewHolder.ViewImpl;

@@ -24,6 +24,7 @@
 
 package jenkins.branch.harness;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -47,13 +48,15 @@ public class BranchProjectFactoryImpl extends BranchProjectFactory<FreeStyleProj
         return job;
     }
 
+    @NonNull
     @Override
-    public Branch getBranch(FreeStyleProject project) {
+    public Branch getBranch(@NonNull FreeStyleProject project) {
         return project.getProperty(BranchProperty.class).getBranch();
     }
 
+    @NonNull
     @Override
-    public FreeStyleProject setBranch(FreeStyleProject project, Branch branch) {
+    public FreeStyleProject setBranch(@NonNull FreeStyleProject project, @NonNull Branch branch) {
         try {
             project.addProperty(new BranchProperty(branch));
         } catch (IOException e) {
@@ -75,6 +78,7 @@ public class BranchProjectFactoryImpl extends BranchProjectFactory<FreeStyleProj
             return MultiBranchProject.class.isAssignableFrom(clazz);
         }
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return "BranchProjectFactoryImpl";

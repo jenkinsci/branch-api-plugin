@@ -647,8 +647,8 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        @CheckForNull SCMRevision lastBuiltRevision, @CheckForNull SCMRevision lastSeenRevision,
+                                        @NonNull TaskListener listener) {
             return true;
         }
 
@@ -2864,8 +2864,8 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        @CheckForNull SCMRevision lastBuiltRevision, @CheckForNull SCMRevision lastSeenRevision,
+                                        @NonNull TaskListener listener) {
            if (lastSeenRevision != null) {
                return true;
            }
@@ -2910,8 +2910,8 @@ public class EventsTest {
         @Override
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
-                                        SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        @CheckForNull SCMRevision lastBuiltRevision, @CheckForNull SCMRevision lastSeenRevision,
+                                        @NonNull TaskListener listener) {
             return false;
         }
 

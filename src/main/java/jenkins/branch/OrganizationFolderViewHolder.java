@@ -239,6 +239,7 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public ACL getACL() {
             final ACL acl = super.getACL();
@@ -272,6 +273,7 @@ public class OrganizationFolderViewHolder extends AbstractFolderViewHolder {
             /**
              * {@inheritDoc}
              */
+            @NonNull
             @Override
             public String getDisplayName() {
                 return "Organization folder All view";

@@ -24,6 +24,7 @@
 
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.BallColor;
 import hudson.model.Descriptor;
@@ -93,6 +94,7 @@ public class BranchStatusColumn extends StatusColumn {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.BranchStatusColumn_displayName();
@@ -117,7 +119,7 @@ public class BranchStatusColumn extends StatusColumn {
          * {@inheritDoc}
          */
         @Override
-        public boolean filter(Object context, Descriptor descriptor) {
+        public boolean filter(Object context, @NonNull Descriptor descriptor) {
             return !(descriptor instanceof DescriptorImpl) || context instanceof MultiBranchProjectViewHolder.ViewImpl;
         }
     }

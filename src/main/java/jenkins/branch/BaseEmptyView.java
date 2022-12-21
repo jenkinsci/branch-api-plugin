@@ -1,5 +1,6 @@
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Item;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
@@ -74,6 +75,7 @@ public class BaseEmptyView extends View {
     /**
      * {@inheritDoc}
      */
+    @NonNull
     @Override
     public Collection<TopLevelItem> getItems() {
         return Collections.emptyList();

@@ -246,6 +246,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public ACL getACL() {
             final ACL acl = super.getACL();
@@ -279,6 +280,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
             /**
              * {@inheritDoc}
              */
+            @NonNull
             @Override
             public String getDisplayName() {
                 return "Multibranch Project All view";

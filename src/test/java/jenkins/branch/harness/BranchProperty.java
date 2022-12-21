@@ -24,6 +24,7 @@
 
 package jenkins.branch.harness;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.FreeStyleProject;
 import hudson.model.JobProperty;
@@ -50,6 +51,7 @@ public class BranchProperty extends JobProperty<FreeStyleProject> {
     @Extension
     public static class DescriptorImpl extends JobPropertyDescriptor {
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Branch property";

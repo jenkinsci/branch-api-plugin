@@ -89,6 +89,7 @@ public class DefaultBranchPropertyStrategy extends BranchPropertyStrategy {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.DefaultBranchPropertyStrategy_DisplayName();
