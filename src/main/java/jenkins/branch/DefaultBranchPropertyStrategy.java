@@ -56,7 +56,7 @@ public class DefaultBranchPropertyStrategy extends BranchPropertyStrategy {
      */
     @DataBoundConstructor
     public DefaultBranchPropertyStrategy(@CheckForNull BranchProperty[] props) {
-        this.properties = props == null ? Collections.<BranchProperty>emptyList() : Arrays.asList(props);
+        this.properties = props == null ? Collections.emptyList() : Arrays.asList(props);
     }
 
     /**

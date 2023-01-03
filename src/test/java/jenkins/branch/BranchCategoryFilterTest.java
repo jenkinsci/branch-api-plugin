@@ -25,7 +25,6 @@
 
 package jenkins.branch;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.Run;
@@ -71,17 +70,17 @@ public class BranchCategoryFilterTest {
         when(factory.asProject(child1)).thenReturn(child1);
         SCM scm = mock(SCM.class);
         when(factory.getBranch(child1)).thenReturn(
-                new Branch("1", new MockSCMHead("master"), scm, Collections.<BranchProperty>emptyList()));
+                new Branch("1", new MockSCMHead("master"), scm, Collections.emptyList()));
         TopLevelJob child2 = mock(TopLevelJob.class);
         when(factory.isProject(child2)).thenReturn(true);
         when(factory.asProject(child2)).thenReturn(child2);
         when(factory.getBranch(child2)).thenReturn(new Branch("1", new MockSCMHead("fork"), scm,
-                Collections.<BranchProperty>emptyList()));
+                Collections.emptyList()));
         TopLevelJob child3 = mock(TopLevelJob.class);
         when(factory.isProject(child3)).thenReturn(true);
         when(factory.asProject(child3)).thenReturn(child3);
         when(factory.getBranch(child3)).thenReturn(new Branch("1", new MockTagSCMHead("master-1.0", 0L), scm,
-                Collections.<BranchProperty>emptyList()));
+                Collections.emptyList()));
         TopLevelJob child4 = mock(TopLevelJob.class);
         when(factory.isProject(child4)).thenReturn(false);
         List<TopLevelItem> added = new ArrayList<>();
@@ -92,7 +91,7 @@ public class BranchCategoryFilterTest {
         all.add(child3);
         all.add(child4);
         new BranchCategoryFilter(UncategorizedSCMHeadCategory.DEFAULT).filter(added, all, filteringView);
-        assertThat(added, Matchers.<TopLevelItem>containsInAnyOrder(child1, child2));
+        assertThat(added, Matchers.containsInAnyOrder(child1, child2));
 
         added.clear();
         added.add(child1);
@@ -102,7 +101,7 @@ public class BranchCategoryFilterTest {
         all.add(child3);
         all.add(child4);
         new BranchCategoryFilter(TagSCMHeadCategory.DEFAULT).filter(added, all, filteringView);
-        assertThat(added, Matchers.<TopLevelItem>containsInAnyOrder(child1, child3));
+        assertThat(added, Matchers.containsInAnyOrder(child1, child3));
     }
 
     @Test
@@ -122,17 +121,17 @@ public class BranchCategoryFilterTest {
         when(factory.asProject(child1)).thenReturn(child1);
         SCM scm = mock(SCM.class);
         when(factory.getBranch(child1)).thenReturn(
-                new Branch("1", new MockSCMHead("master"), scm, Collections.<BranchProperty>emptyList()));
+                new Branch("1", new MockSCMHead("master"), scm, Collections.emptyList()));
         TopLevelJob child2 = mock(TopLevelJob.class);
         when(factory.isProject(child2)).thenReturn(true);
         when(factory.asProject(child2)).thenReturn(child2);
         when(factory.getBranch(child2)).thenReturn(new Branch("1", new MockSCMHead("fork"), scm,
-                Collections.<BranchProperty>emptyList()));
+                Collections.emptyList()));
         TopLevelJob child3 = mock(TopLevelJob.class);
         when(factory.isProject(child3)).thenReturn(true);
         when(factory.asProject(child3)).thenReturn(child3);
         when(factory.getBranch(child3)).thenReturn(new Branch("1", new MockTagSCMHead("master-1.0", 0L), scm,
-                Collections.<BranchProperty>emptyList()));
+                Collections.emptyList()));
         TopLevelJob child4 = mock(TopLevelJob.class);
         when(factory.isProject(child4)).thenReturn(false);
         List<TopLevelItem> added = new ArrayList<>();
@@ -143,7 +142,7 @@ public class BranchCategoryFilterTest {
         all.add(child3);
         all.add(child4);
         new BranchCategoryFilter(TagSCMHeadCategory.DEFAULT).filter(added, all, filteringView);
-        assertThat(added, Matchers.<TopLevelItem>containsInAnyOrder(child1, child3));
+        assertThat(added, Matchers.containsInAnyOrder(child1, child3));
 
     }
 

@@ -33,7 +33,6 @@ import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.thoughtworks.xstream.XStreamException;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.BulkChange;
 import hudson.Extension;
@@ -537,11 +536,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         String sourceId = source.getId();
         if (NullSCMSource.ID.equals(sourceId)) {
-            return new Branch.Dead(head, Collections.<BranchProperty>emptyList());
+            return new Branch.Dead(head, Collections.emptyList());
         } else {
             final BranchPropertyStrategy strategy = getBranchPropertyStrategy(source);
             return new Branch(sourceId, head, source.build(head),
-                    strategy != null ? strategy.getPropertiesFor(head) : Collections.<BranchProperty>emptyList());
+                    strategy != null ? strategy.getPropertiesFor(head) : Collections.emptyList());
         }
     }
 
@@ -1032,7 +1031,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 super.run();
             } finally {
                 long end = System.currentTimeMillis();
-                LOGGER.log(Level.INFO, "{0} #{1,time,yyyyMMdd.HHmmss} branch indexing action completed: {2} in {3}",
+                LOGGER.log(Level.FINE, "{0} #{1,time,yyyyMMdd.HHmmss} branch indexing action completed: {2} in {3}",
                         new Object[]{
                                 getParent().getFullName(), start, getResult(), Util.getTimeSpanString(end - start)
                         }
@@ -1580,7 +1579,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     try (StreamTaskListener listener = p.getComputation().createEventsListener();
                          ChildObserver childObserver = p.openEventsChildObserver()) {
                         try {
-                            assert childObserver != null;
                             listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                                     start, eventDescription, eventType, eventOrigin, eventTimestamp);
                             for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {

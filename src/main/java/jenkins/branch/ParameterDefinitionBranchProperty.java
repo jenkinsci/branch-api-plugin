@@ -31,7 +31,7 @@ import hudson.model.JobProperty;
 import hudson.model.ParameterDefinition;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Run;
-import java.util.Iterator;
+
 import java.util.List;
 import jenkins.model.ParameterizedJobMixIn;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -112,13 +112,7 @@ public abstract class ParameterDefinitionBranchProperty extends BranchProperty {
             public List<JobProperty<? super P>> jobProperties(
                     @NonNull List<JobProperty<? super P>> jobProperties) {
                 List<JobProperty<? super P>> result = asArrayList(jobProperties);
-                for (Iterator<JobProperty<? super P>> iterator = result.iterator();
-                     iterator.hasNext(); ) {
-                    JobProperty<? super P> p = iterator.next();
-                    if (p instanceof ParametersDefinitionProperty) {
-                        iterator.remove();
-                    }
-                }
+                result.removeIf(p -> p instanceof ParametersDefinitionProperty);
                 if (parameterDefinitions != null && !parameterDefinitions.isEmpty()) {
                     result.add(new ParametersDefinitionProperty(parameterDefinitions));
                 }

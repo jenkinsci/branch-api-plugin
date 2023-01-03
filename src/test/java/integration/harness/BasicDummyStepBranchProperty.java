@@ -25,7 +25,6 @@
 
 package integration.harness;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.Functions;
 import hudson.model.FreeStyleBuild;

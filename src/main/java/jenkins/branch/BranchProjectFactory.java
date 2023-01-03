@@ -45,7 +45,6 @@ import hudson.util.DescribableList;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHead.HeadByItem;
@@ -231,7 +230,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
         BulkChange bc = new BulkChange(project);
         try {
             List<BranchProperty> properties = new ArrayList<>(branch.getProperties());
-            Collections.sort(properties, DescriptorOrder.reverse(BranchProperty.class));
+            properties.sort(DescriptorOrder.reverse(BranchProperty.class));
             for (BranchProperty property : properties) {
                 JobDecorator<P, R> decorator = property.jobDecorator((Class) project.getClass());
                 if (decorator != null) {

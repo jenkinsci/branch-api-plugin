@@ -40,22 +40,20 @@ public class BuildRetentionBranchProperty extends BranchProperty {
                 // ==========
                 // The lesser evil hack is to set the field by reflection, so we try that first
 
-                Boolean success = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                    public Boolean run() {
+                Boolean success = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+                    try {
+                        Field logRotator = Job.class.getDeclaredField("logRotator");
+                        boolean accessible = logRotator.isAccessible();
                         try {
-                            Field logRotator = Job.class.getDeclaredField("logRotator");
-                            boolean accessible = logRotator.isAccessible();
-                            try {
-                                if (!accessible) logRotator.setAccessible(true);
-                                logRotator.set(project, buildDiscarder);
-                                // now finally check our handywork in case the field gets renamed.
-                                return project.getBuildDiscarder() == buildDiscarder;
-                            } finally {
-                                if (!accessible) logRotator.setAccessible(false);
-                            }
-                        } catch (IllegalAccessException | NoSuchFieldException e) {
-                            return false;
+                            if (!accessible) logRotator.setAccessible(true);
+                            logRotator.set(project, buildDiscarder);
+                            // now finally check our handywork in case the field gets renamed.
+                            return project.getBuildDiscarder() == buildDiscarder;
+                        } finally {
+                            if (!accessible) logRotator.setAccessible(false);
                         }
+                    } catch (IllegalAccessException | NoSuchFieldException e) {
+                        return false;
                     }
                 });
                 if (!Boolean.TRUE.equals(success)) {

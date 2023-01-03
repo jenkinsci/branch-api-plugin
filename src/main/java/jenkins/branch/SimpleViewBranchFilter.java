@@ -34,12 +34,7 @@ public abstract class SimpleViewBranchFilter extends ViewJobFilter {
             MultiBranchProject project = (MultiBranchProject) itemGroup;
             BranchProjectFactory factory = project.getProjectFactory();
             if (processExclusions) {
-                for (Iterator<TopLevelItem> iterator = added.iterator(); iterator.hasNext(); ) {
-                    TopLevelItem i = iterator.next();
-                    if (factory.isProject(i) && isExcluded(factory.getBranch(factory.asProject(i)))) {
-                        iterator.remove();
-                    }
-                }
+                added.removeIf(i -> factory.isProject(i) && isExcluded(factory.getBranch(factory.asProject(i))));
             }
             for (TopLevelItem i : all) {
                 if (factory.isProject(i) && isIncluded(factory.getBranch(factory.asProject(i)))) {

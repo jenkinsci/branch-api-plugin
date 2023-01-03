@@ -32,7 +32,7 @@ import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
 import java.util.Collections;
 import java.util.List;
-import jenkins.scm.api.SCMSource;
+
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.SingleSCMSource;
 import jenkins.scm.impl.mock.MockSCM;
@@ -49,7 +49,6 @@ import org.jvnet.hudson.test.TestExtension;
 import static jenkins.branch.matchers.Extracting.extracting;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.hamcrest.Matchers.hasItem;
 
 public class OrganizationChildOrphanedItemsPropertyTest {
     @ClassRule
@@ -68,10 +67,10 @@ public class OrganizationChildOrphanedItemsPropertyTest {
             c.createRepository("stuff");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "top");
             List<MultiBranchProjectFactory> projectFactories = prj.getProjectFactories();
-            assertThat(projectFactories, extracting(f -> f.getDescriptor(), hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
+            assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             projectFactories.add(new OrganizationFolderTest.MockFactory());
             prj.getNavigators().add(new SingleSCMNavigator("stuff",
-                    Collections.<SCMSource>singletonList(new SingleSCMSource("id", "stuffy",
+                    Collections.singletonList(new SingleSCMSource("id", "stuffy",
                             new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
             );
             prj.getProperties().remove(OrganizationChildOrphanedItemsProperty.class);

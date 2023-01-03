@@ -27,7 +27,6 @@ package jenkins.branch;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetric;
 import com.cloudbees.hudson.plugins.folder.health.FolderHealthMetricDescriptor;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.Items;
@@ -176,7 +175,7 @@ public class OrganizationChildHealthMetricsProperty extends OrganizationFolderPr
         @Restricted(DoNotUse.class) // stapler only
         @NonNull
         public List<FolderHealthMetricDescriptor> getHealthMetricDescriptors() {
-            List<FolderHealthMetricDescriptor> r = new ArrayList<FolderHealthMetricDescriptor>();
+            List<FolderHealthMetricDescriptor> r = new ArrayList<>();
             for (FolderHealthMetricDescriptor d : FolderHealthMetricDescriptor.all()) {
                 if (d.isApplicable(MultiBranchProject.class)) {
                     r.add(d);
@@ -193,7 +192,7 @@ public class OrganizationChildHealthMetricsProperty extends OrganizationFolderPr
         @Restricted(DoNotUse.class) // stapler only
         @NonNull
         public List<FolderHealthMetric> getDefaultTemplates() {
-            List<FolderHealthMetric> metrics = new ArrayList<FolderHealthMetric>();
+            List<FolderHealthMetric> metrics = new ArrayList<>();
             for (FolderHealthMetricDescriptor d : FolderHealthMetricDescriptor.all()) {
                 if (d.isApplicable(MultiBranchProject.class)) {
                     FolderHealthMetric metric = d.createDefault();
