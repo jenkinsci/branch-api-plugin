@@ -416,14 +416,14 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
         }
 
-        static void acquireThread() throws InterruptedException {
+        public void acquireThread() throws InterruptedException {
             if (CLEANUP_THREAD_LIMIT <= 0) {
                 return;
             }
             cleanupPool.acquire();
         }
 
-        static void releaseThread() {
+        public void releaseThread() {
             if (CLEANUP_THREAD_LIMIT <= 0) {
                 return;
             }
@@ -454,16 +454,20 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             @NonNull
             private final Queue<Node> nodes;
 
+            @NonNull
+            private final Deleter deleter;
+
             public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes) {
                 this.tli = tli;
                 this.nodes = new LinkedList<>(nodes);
+                this.deleter = ExtensionList.lookupSingleton(Deleter.class);
             }
 
             @Override
             public void run() {
                 try {
                     while (!nodes.isEmpty()){
-                        Deleter.acquireThread();
+                        deleter.acquireThread();
                         Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.remove()));
                     }
                 } catch (Exception e) {
@@ -480,9 +484,13 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             @NonNull
             private final Node node;
 
+            @NonNull
+            private final Deleter deleter;
+
             CleanupTask(TopLevelItem tli, Node node) {
                 this.tli = tli;
                 this.node = node;
+                this.deleter = ExtensionList.lookupSingleton(Deleter.class);
                 taskStarted();
             }
 
@@ -525,7 +533,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     }
                 } finally {
                     t.setName(oldName);
-                    Deleter.releaseThread();
+                    deleter.releaseThread();
                     taskFinished();
                 }
             }
