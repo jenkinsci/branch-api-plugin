@@ -27,23 +27,11 @@ For generic information about how to use the Branch API plugin, please see [the 
 
 If you are writing a plugin that implements this API, please see [the implementation guide](docs/implementation.adoc)
  
-# Environment
-
-The following build environment is required to build this plugin
-
-* `java-1.8` and `maven-3.3.9`
-
 # Build
 
 To build the plugin locally:
 
     mvn clean verify
-
-# Release
-
-To release the plugin:
-
-    mvn release:prepare release:perform -B
 
 # Test local instance
 
@@ -98,3 +86,8 @@ file (which will be rolled every 32kB, limit of 5 files)
     that Organization folder project and will be stored in the
     `$JENKINS_HOME/jobs/$PATH_TO_PROJECT/computation/events.log` (which
     will be rolled every 150kB, limit of `BACKUP_LOG_COUNT` files)
+
+# Release notes
+
+For version 2.5.5 and beyond, see the [GitHub releases](https://github.com/jenkinsci/branch-api-plugin/releases) list.
+Otherwise see the [archive](https://github.com/jenkinsci/branch-api-plugin/blob/6dc6bef373070a298e1f9218d2a89c5c3623ebfc/CHANGELOG.md).
