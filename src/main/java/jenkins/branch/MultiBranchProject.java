@@ -2197,7 +2197,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
 
         private void doAutomaticBuilds(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull String rawName, @NonNull P project, Action[] revisionActions, SCMRevision scmLastBuiltRevision, SCMRevision scmLastSeenRevision) {
-            if (isAutomaticBuild(head, revision, scmLastBuiltRevision, scmLastSeenRevision)) {
+            if (isAutomaticBuild(head, revision, scmLastBuiltRevision, scmLastSeenRevision, project)) {
                 scheduleBuild(
                         _factory,
                         project,
@@ -2228,7 +2228,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         private boolean isAutomaticBuild(@NonNull SCMHead head,
                                          @NonNull SCMRevision currRevision,
                                          @CheckForNull SCMRevision lastBuiltRevision,
-                                         @CheckForNull SCMRevision lastSeenRevision) {
+                                         @CheckForNull SCMRevision lastSeenRevision,
+                                         @NonNull P project) {
             BranchSource branchSource = null;
             for (BranchSource s: MultiBranchProject.this.sources) {
                 if (s.getSource().getId().equals(source.getId())) {
@@ -2246,7 +2247,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 return !(head instanceof TagSCMHead);
             } else {
                 for (BranchBuildStrategy s: buildStrategies) {
-                    if (s.automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener)) {
+                    if (s.automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, project)) {
                         return true;
                     }
                 }

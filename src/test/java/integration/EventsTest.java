@@ -33,6 +33,7 @@ import hudson.Functions;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.FreeStyleProject;
+import hudson.model.Job;
 import hudson.model.OneOffExecutor;
 import hudson.model.Queue;
 import hudson.model.Result;
@@ -648,7 +649,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        TaskListener listener, Job<?,?> p) {
             return true;
         }
 
@@ -699,7 +700,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, Job<?,?> p) {
             return head instanceof ChangeRequestSCMHead;
         }
 
@@ -715,7 +716,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, Job<?,?> p) {
             if (head instanceof ChangeRequestSCMHead) {
                 try {
                     return currRevision.equals(source.getTrustedRevision(currRevision, listener));
@@ -1082,7 +1083,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, Job<?,?> p) {
             return currRevision instanceof MockSCMRevision
                     && approved.contains(((MockSCMRevision) currRevision).getHash());
         }
@@ -1148,7 +1149,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener, Job<?,?> p) {
             if (currRevision instanceof ChangeRequestSCMRevision) {
                 ChangeRequestSCMRevision<?> currCR = (ChangeRequestSCMRevision<?>) currRevision;
                 if (lastBuiltRevision instanceof ChangeRequestSCMRevision) {
@@ -2865,7 +2866,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        TaskListener listener, Job<?,?> p) {
            if (lastSeenRevision != null) {
                return true;
            }
@@ -2911,7 +2912,7 @@ public class EventsTest {
         public boolean isAutomaticBuild(@NonNull SCMSource source, @NonNull SCMHead head,
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
-                                        TaskListener listener) {
+                                        TaskListener listener, Job<?,?> p) {
             return false;
         }
 

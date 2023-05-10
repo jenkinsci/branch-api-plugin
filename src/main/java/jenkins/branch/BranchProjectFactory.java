@@ -158,7 +158,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
      * @return the {@link SCMRevision} of the last build.
      */
     @CheckForNull
-    public SCMRevision getRevision(P project) {
+    public static SCMRevision getRevision(Job<?,?> project) {
         XmlFile file = new XmlFile(new File(project.getRootDir(), "scm-revision-hash.xml"));
         try {
             return (SCMRevision) file.read();
@@ -175,7 +175,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
      * @param revision the {@link SCMRevision} of the last build.
      * @throws IOException if there was an issue persisting the details.
      */
-    public void setRevisionHash(P project, SCMRevision revision) throws IOException {
+    public static void setRevisionHash(Job<?,?> project, SCMRevision revision) throws IOException {
         XmlFile file = new XmlFile(new File(project.getRootDir(), "scm-revision-hash.xml"));
         file.write(revision);
     }
@@ -187,7 +187,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
      * @return the {@link SCMRevision} of the last seen.
      */
     @CheckForNull
-    public SCMRevision getLastSeenRevision(P project) {
+    public static SCMRevision getLastSeenRevision(Job<?,?> project) {
         XmlFile file = new XmlFile(new File(project.getRootDir(), "scm-last-seen-revision-hash.xml"));
         try {
             return (SCMRevision) file.read();
@@ -204,7 +204,7 @@ public abstract class BranchProjectFactory<P extends Job<P, R> & TopLevelItem,
      * @param revision the {@link SCMRevision} of the last build.
      * @throws IOException if there was an issue persisting the details.
      */
-    public void setLastSeenRevisionHash(P project, SCMRevision revision) throws IOException {
+    public static void setLastSeenRevisionHash(Job<?,?> project, SCMRevision revision) throws IOException {
         XmlFile file = new XmlFile(new File(project.getRootDir(), "scm-last-seen-revision-hash.xml"));
         file.write(revision);
     }
