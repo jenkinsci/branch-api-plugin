@@ -28,6 +28,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionPoint;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
+import hudson.model.Job;
 import hudson.model.TaskListener;
 import hudson.util.LogTaskListener;
 import java.util.logging.Level;
@@ -161,12 +162,22 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
      * @since 2.4.2
      */
     @Restricted(ProtectedExternally.class)
+    public boolean isAutomaticBuild(@NonNull SCMSource source,
+                                             @NonNull SCMHead head,
+                                             @NonNull SCMRevision currRevision,
+                                             @CheckForNull SCMRevision lastBuiltRevision,
+                                             @CheckForNull SCMRevision lastSeenRevision,
+                                             @NonNull TaskListener listener) {
+        return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, null);
+    }
+
     public abstract boolean isAutomaticBuild(@NonNull SCMSource source,
                                              @NonNull SCMHead head,
                                              @NonNull SCMRevision currRevision,
                                              @CheckForNull SCMRevision lastBuiltRevision,
                                              @CheckForNull SCMRevision lastSeenRevision,
-                                             @NonNull TaskListener listener);
+                                             @NonNull TaskListener listener,
+                                             @CheckForNull Job<?,?> job);
 
     /**
      * API: Should the specified {@link SCMRevision} of the {@link SCMHead} for the specified {@link SCMSource} be
@@ -219,6 +230,15 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
         return automaticBuild(source, head, currRevision, prevRevision, prevRevision, listener);
     }
 
+    public final boolean automaticBuild(@NonNull SCMSource source,
+                                        @NonNull SCMHead head,
+                                        @NonNull SCMRevision currRevision,
+                                        @CheckForNull SCMRevision lastBuiltRevision,
+                                        @CheckForNull SCMRevision lastSeenRevision,
+                                        @NonNull TaskListener listener) {
+        return automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, null);
+    }
+
     /**
      * API: Should the specified {@link SCMRevision} of the {@link SCMHead} for the specified {@link SCMSource} be
      * triggered when the {@link SCMHead} has been detected as created / modified?
@@ -243,7 +263,13 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
                                         @NonNull SCMRevision currRevision,
                                         @CheckForNull SCMRevision lastBuiltRevision,
                                         @CheckForNull SCMRevision lastSeenRevision,
-                                        @NonNull TaskListener listener) {
+                                        @NonNull TaskListener listener,
+                                        @CheckForNull Job<?,?> job) {
+        if (Util.isOverridden(BranchBuildStrategy.class, getClass(), "isAutomaticBuild", SCMSource.class,
+                SCMHead.class, SCMRevision.class, SCMRevision.class, SCMRevision.class, TaskListener.class, Job.class)) {
+            // modern implementation written to the some random number
+            return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, job);
+        }
         if (Util.isOverridden(BranchBuildStrategy.class, getClass(), "isAutomaticBuild", SCMSource.class,
                 SCMHead.class, SCMRevision.class, SCMRevision.class, SCMRevision.class, TaskListener.class)) {
             // modern implementation written to the 2.4.2+ spec
@@ -271,7 +297,7 @@ public abstract class BranchBuildStrategy extends AbstractDescribableImpl<Branch
         }
         // this is going to throw an abstract method exception, but we should never get here as all implementations
         // have to at least have overridden one of the methods above.
-        return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener);
+        return isAutomaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener, job);
     }
 
     /**
