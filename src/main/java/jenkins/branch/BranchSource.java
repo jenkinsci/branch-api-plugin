@@ -146,6 +146,7 @@ public class BranchSource extends AbstractDescribableImpl<BranchSource> {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Branch source";

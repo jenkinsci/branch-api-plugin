@@ -94,8 +94,6 @@ import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import net.sf.json.JSONObject;
 
-import org.acegisecurity.AccessDeniedException;
-import org.acegisecurity.Authentication;
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -107,6 +105,8 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.access.AccessDeniedException;
 
 import static hudson.Functions.printStackTrace;
 import static jenkins.scm.api.SCMEvent.Type.CREATED;
@@ -606,6 +606,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * {@inheritDoc}
      */
+    @NonNull
     @Override
     public List<SCMSource> getSCMSources() {
         Set<SCMSource> result = new HashSet<>();
@@ -627,7 +628,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * {@inheritDoc}
      */
     @Override
-    public void onSCMSourceUpdated(SCMSource source) {
+    public void onSCMSourceUpdated(@NonNull SCMSource source) {
         // TODO possibly we should recheck whether this project remains valid
     }
 
@@ -635,7 +636,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
      * {@inheritDoc}
      */
     @Override
-    public SCMSourceCriteria getSCMSourceCriteria(SCMSource source) {
+    public SCMSourceCriteria getSCMSourceCriteria(@NonNull SCMSource source) {
         return null;
     }
 
@@ -706,19 +707,20 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     /**
      * {@inheritDoc}
      */
+    @NonNull
     @Override
     public ACL getACL() {
         final ACL acl = super.getACL();
         if (getParent() instanceof ComputedFolder<?>) {
             return new ACL() {
                 @Override
-                public boolean hasPermission(Authentication a, Permission permission) {
-                    if (ACL.SYSTEM.equals(a)) {
+                public boolean hasPermission2(@NonNull Authentication a, @NonNull Permission permission) {
+                    if (ACL.SYSTEM2.equals(a)) {
                         return true;
                     } else if (SUPPRESSED_PERMISSIONS.contains(permission)) {
                         return false;
                     } else {
-                        return acl.hasPermission(a, permission);
+                        return acl.hasPermission2(a, permission);
                     }
                 }
             };
@@ -741,6 +743,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.OrganizationFolder_DisplayName();

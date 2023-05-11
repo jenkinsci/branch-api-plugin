@@ -25,6 +25,7 @@
 
 package integration.harness;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -39,6 +40,7 @@ public class HealthReportingMultiBranchProject extends BasicMultiBranchProject {
         super(parent, name);
     }
 
+    @NonNull
     @Override
     protected BranchProjectFactory<FreeStyleProject, FreeStyleBuild> newProjectFactory() {
         return new HealthReportingBranchProjectFactory();
@@ -47,6 +49,7 @@ public class HealthReportingMultiBranchProject extends BasicMultiBranchProject {
     @Extension
     public static class DescriptorImpl extends MultiBranchProjectDescriptor {
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return "HealthReportingMultiBranchProject";

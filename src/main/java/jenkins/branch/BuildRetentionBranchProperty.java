@@ -90,6 +90,7 @@ public class BuildRetentionBranchProperty extends BranchProperty {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Discard old builds";

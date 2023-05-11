@@ -128,6 +128,7 @@ public class UntrustedBranchProperty extends BranchProperty {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return "Untrusted";
@@ -142,7 +143,7 @@ public class UntrustedBranchProperty extends BranchProperty {
         }
 
         @Override
-        protected boolean isApplicable(MultiBranchProjectDescriptor projectDescriptor) {
+        protected boolean isApplicable(@NonNull MultiBranchProjectDescriptor projectDescriptor) {
             for (BranchProjectFactoryDescriptor d : projectDescriptor.getProjectFactoryDescriptors()) {
                 Type factoryType = Types.getBaseClass(d.clazz, BranchProjectFactory.class);
                 Type jobType = Types.getTypeArgument(factoryType, 0, /* if using rawtypes, err on the conservative side */ Project.class);

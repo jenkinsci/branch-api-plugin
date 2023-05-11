@@ -103,7 +103,6 @@ import jenkins.scm.api.mixin.TagSCMHead;
 import jenkins.scm.impl.NullSCMSource;
 import jenkins.triggers.SCMTriggerItem;
 import net.sf.json.JSONObject;
-import org.acegisecurity.Authentication;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.IconSpec;
@@ -113,6 +112,7 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.export.Exported;
 import jenkins.util.SystemProperties;
+import org.springframework.security.core.Authentication;
 
 import static hudson.Functions.printStackTrace;
 
@@ -777,19 +777,20 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * {@inheritDoc}
      */
+    @NonNull
     @Override
     public ACL getACL() {
         final ACL acl = super.getACL();
         if (getParent() instanceof ComputedFolder<?>) {
             return new ACL() {
                 @Override
-                public boolean hasPermission(Authentication a, Permission permission) {
-                    if (ACL.SYSTEM.equals(a)) {
+                public boolean hasPermission2(@NonNull Authentication a, @NonNull Permission permission) {
+                    if (ACL.SYSTEM2.equals(a)) {
                         return true;
                     } else if (SUPPRESSED_PERMISSIONS.contains(permission)) {
                         return false;
                     } else {
-                        return acl.hasPermission(a, permission);
+                        return acl.hasPermission2(a, permission);
                     }
                 }
             };
@@ -979,6 +980,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public MultiBranchProject<P, R> getParent() {
             return (MultiBranchProject) super.getParent();
@@ -987,6 +989,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         protected XmlFile getDataFile() {
             return new XmlFile(Items.XSTREAM, new File(getParent().getComputationDir(), "indexing.xml"));
@@ -995,6 +998,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public File getLogFile() {
             return new File(getParent().getComputationDir(), "indexing.log");
@@ -1011,6 +1015,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getUrl() {
             return getParent().getUrl() + "indexing/";
@@ -1054,6 +1059,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * {@inheritDoc}
      */
+    @NonNull
     @Override
     protected FolderComputation<P> createComputation(FolderComputation<P> previous) {
         return new BranchIndexing<>(this, (BranchIndexing) previous);

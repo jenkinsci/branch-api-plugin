@@ -26,6 +26,7 @@ package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
@@ -58,7 +59,6 @@ import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
-import org.acegisecurity.Authentication;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
@@ -74,6 +74,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeThat;
 import org.jvnet.hudson.test.LoggerRule;
+import org.springframework.security.core.Authentication;
 
 public class OrganizationFolderTest {
 
@@ -87,7 +88,7 @@ public class OrganizationFolderTest {
         @TestExtension
         public static class DescriptorImpl extends BranchPropertyDescriptor {
             @Override
-            protected boolean isApplicable(MultiBranchProjectDescriptor projectDescriptor) {
+            protected boolean isApplicable(@NonNull MultiBranchProjectDescriptor projectDescriptor) {
                 return projectDescriptor instanceof BasicMultiBranchProject.DescriptorImpl;
             }
         }
@@ -108,7 +109,7 @@ public class OrganizationFolderTest {
             assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             projectFactories.add(new MockFactory());
             top.getNavigators().add(new SingleSCMNavigator("stuff",
-                    Collections.singletonList(new SingleSCMSource("id", "stuffy",
+                    Collections.singletonList(new SingleSCMSource("stuffy",
                             new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
             );
             top = r.configRoundtrip(top);
@@ -198,7 +199,7 @@ public class OrganizationFolderTest {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
         assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
-        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.singletonList(new SingleSCMSource("id", "stuffy", new NullSCM()))));
+        top.getNavigators().add(new SingleSCMNavigator("stuff", Collections.singletonList(new SingleSCMSource("stuffy", new NullSCM()))));
         top.scheduleBuild2(0).getFuture().get();
         top.getComputation().writeWholeLogTo(System.out);
         assertEquals(1, top.getItems().size());
@@ -352,14 +353,14 @@ public class OrganizationFolderTest {
 
         // SYSTEM (the default authentication scope) can do everything, so we need to look like someone else.
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
-        Authentication some_user = User.getById("testing", true).impersonate();
+        Authentication some_user = User.getById("testing", true).impersonate2();
 
-        // verify that all of of the suppressed permissions are actually suppressed!
+        // verify that all of the suppressed permissions are actually suppressed!
         for( Permission perm : suppressed_permissions ) {
 
             assertFalse(
                 "OrganizationFolders in ComputedFolders should suppress the [" + perm.getId() + "] permission.",
-                org_folder.getACL().hasPermission( some_user, perm ) );
+                org_folder.getACL().hasPermission2( some_user, perm ) );
         }
 
     }
@@ -375,14 +376,14 @@ public class OrganizationFolderTest {
 
         // SYSTEM (the default authentication scope) can do everything, so we need to look like someone else.
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
-        Authentication some_user = User.getById("testing", true).impersonate();
+        Authentication some_user = User.getById("testing", true).impersonate2();
 
         // verify that none of the suppressed permissions are suppressed
         for( Permission perm : suppressed_permissions ) {
 
             assertTrue(
                 "Organization Folders in non-computed parents do not suppress the [" + perm.getId() + "] permission.",
-                top.getACL().hasPermission( some_user, perm ) );
+                top.getACL().hasPermission2( some_user, perm ) );
         }
 
     }
@@ -395,11 +396,15 @@ public class OrganizationFolderTest {
         public MockFactory() {}
         static boolean live = true;
         @Override
-        public boolean recognizes(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String, Object> attributes, TaskListener listener) throws IOException, InterruptedException {
+        public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name, @NonNull List<? extends SCMSource> scmSources,
+                                  @NonNull Map<String, Object> attributes, @NonNull TaskListener listener) throws IOException, InterruptedException {
             return live;
         }
+        @NonNull
         @Override
-        public MultiBranchProject<?, ?> createNewProject(ItemGroup<?> parent, String name, List<? extends SCMSource> scmSources, Map<String,Object> attributes, TaskListener listener) throws IOException, InterruptedException {
+        public MultiBranchProject<?, ?> createNewProject(@NonNull ItemGroup<?> parent, @NonNull String name,
+                                                         @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String,Object> attributes,
+                                                         @NonNull TaskListener listener) throws IOException, InterruptedException {
             return new MultiBranchImpl(parent, name);
         }
     }
@@ -411,6 +416,7 @@ public class OrganizationFolderTest {
         public MultiBranchProjectFactory newInstance() {
             return new MockFactory();
         }
+        @NonNull
         @Override
         public String getDisplayName() {
             return "MockFactory";

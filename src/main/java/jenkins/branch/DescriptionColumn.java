@@ -106,6 +106,7 @@ public class DescriptionColumn extends ListViewColumn {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.DescriptionColumn_displayName();

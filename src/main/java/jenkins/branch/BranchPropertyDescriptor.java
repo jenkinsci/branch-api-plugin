@@ -99,7 +99,7 @@ public abstract class BranchPropertyDescriptor extends Descriptor<BranchProperty
          */
         @SuppressWarnings("rawtypes")
         @Override
-        public boolean filter(Object context, Descriptor descriptor) {
+        public boolean filter(Object context, @NonNull Descriptor descriptor) {
             if (context instanceof MultiBranchProject && descriptor instanceof BranchPropertyDescriptor) {
                 return ((BranchPropertyDescriptor) descriptor).isApplicable((MultiBranchProject) context);
             } else {

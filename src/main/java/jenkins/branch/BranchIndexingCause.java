@@ -25,6 +25,7 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Cause;
 import hudson.model.ItemGroup;
 import hudson.model.Run;
@@ -56,7 +57,7 @@ public final class BranchIndexingCause extends Cause {
      * {@inheritDoc}
      */
     @Override
-    public void onLoad(Run<?,?> build) {
+    public void onLoad(@NonNull Run<?,?> build) {
         onAddedTo(build);
     }
 

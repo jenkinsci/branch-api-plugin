@@ -70,7 +70,7 @@ public class OrganizationChildOrphanedItemsPropertyTest {
             assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
             projectFactories.add(new OrganizationFolderTest.MockFactory());
             prj.getNavigators().add(new SingleSCMNavigator("stuff",
-                    Collections.singletonList(new SingleSCMSource("id", "stuffy",
+                    Collections.singletonList(new SingleSCMSource("stuffy",
                             new MockSCM(c, "stuff", new MockSCMHead("master"), null))))
             );
             prj.getProperties().remove(OrganizationChildOrphanedItemsProperty.class);

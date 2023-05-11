@@ -86,6 +86,7 @@ public class NoTriggerOrganizationFolderProperty extends AbstractFolderProperty<
     @Symbol("suppressFolderAutomaticTriggering")
     public static class DescriptorImpl extends AbstractFolderPropertyDescriptor {
 
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.NoTriggerBranchProperty_suppress_automatic_scm_triggering();

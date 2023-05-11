@@ -226,6 +226,7 @@ public abstract class MultiBranchProjectFactory extends AbstractDescribableImpl<
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public final MultiBranchProject<?, ?> createNewProject(@NonNull ItemGroup<?> parent, @NonNull String name,
                                                                @NonNull List<? extends SCMSource> scmSources,

@@ -1,5 +1,6 @@
 package integration.harness;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -30,7 +31,7 @@ public class MockHealthReportBuildStep extends hudson.tasks.Builder {
         public DescriptorImpl() {
         }
 
-        public Builder newInstance(StaplerRequest req, JSONObject data) {
+        public Builder newInstance(StaplerRequest req, @NonNull JSONObject data) {
             throw new UnsupportedOperationException();
         }
     }

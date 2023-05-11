@@ -47,9 +47,9 @@ import java.util.List;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.SCMHeadCategory;
 import net.jcip.annotations.GuardedBy;
-import org.acegisecurity.Authentication;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.springframework.security.core.Authentication;
 
 /**
  * Holds the view configuration for an {@link MultiBranchProject}.
@@ -246,18 +246,19 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public ACL getACL() {
             final ACL acl = super.getACL();
             return new ACL() {
                 @Override
-                public boolean hasPermission(@NonNull Authentication a, @NonNull Permission permission) {
+                public boolean hasPermission2(@NonNull Authentication a, @NonNull Permission permission) {
                     if (View.CREATE.equals(permission)
                             || View.CONFIGURE.equals(permission)
                             || View.DELETE.equals(permission)) {
                         return false;
                     }
-                    return acl.hasPermission(a, permission);
+                    return acl.hasPermission2(a, permission);
                 }
             };
         }
@@ -279,6 +280,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
             /**
              * {@inheritDoc}
              */
+            @NonNull
             @Override
             public String getDisplayName() {
                 return "Multibranch Project All view";

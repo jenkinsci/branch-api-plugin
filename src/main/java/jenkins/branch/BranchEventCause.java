@@ -79,7 +79,7 @@ public final class BranchEventCause extends Cause {
      * {@inheritDoc}
      */
     @Override
-    public void onLoad(Run<?, ?> build) {
+    public void onLoad(@NonNull Run<?, ?> build) {
         onAddedTo(build);
     }
 
