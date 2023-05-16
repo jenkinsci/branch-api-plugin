@@ -70,6 +70,7 @@
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     <jenkins.version>2.361.4</jenkins.version>
     <hpi.compatibleSinceVersion>2.0.0</hpi.compatibleSinceVersion>
+    <no-test-jar>false</no-test-jar>
   </properties>
 
   <repositories>
