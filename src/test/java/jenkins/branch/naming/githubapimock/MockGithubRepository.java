@@ -1,10 +1,7 @@
 package jenkins.branch.naming.githubapimock;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import static java.lang.String.format;
-import static jenkins.branch.naming.githubapimock.MockGithubOrg.ORG_LOGIN;
-import static jenkins.branch.naming.NamingStrategyTest.MOCK_BASE_URL;
+import jenkins.branch.naming.ProjectNamingStrategyTest;
 
 public class MockGithubRepository {
 
@@ -22,7 +19,7 @@ public class MockGithubRepository {
 
     @JsonProperty("full_name")
     public String getFullName() {
-        return format("%s/%s", ORG_LOGIN, REPO_NAME);
+        return String.format("%s/%s", MockGithubOrg.ORG_LOGIN, REPO_NAME);
     }
 
     public String getDefaultBranch() {
@@ -31,6 +28,6 @@ public class MockGithubRepository {
 
     @JsonProperty("html_url")
     public String getHtmlUrl() {
-        return format("%s/%s/%s", MOCK_BASE_URL, REPO_NAME, ORG_LOGIN);
+        return String.format("%s/%s/%s", ProjectNamingStrategyTest.MOCK_BASE_URL, REPO_NAME, MockGithubOrg.ORG_LOGIN);
     }
 }

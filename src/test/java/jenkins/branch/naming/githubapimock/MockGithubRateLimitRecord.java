@@ -1,9 +1,7 @@
 package jenkins.branch.naming.githubapimock;
 
 import java.util.Date;
-
-import static java.lang.System.currentTimeMillis;
-import static java.util.concurrent.TimeUnit.MINUTES;
+import java.util.concurrent.TimeUnit;
 
 public class MockGithubRateLimitRecord {
     public MockGithubRateLimitRecord() {}
@@ -21,7 +19,8 @@ public class MockGithubRateLimitRecord {
     }
 
     public long getReset() {
-        return new Date(currentTimeMillis() + MINUTES.toMillis(5))
-                .getTime();
+        return new Date(
+            System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5)
+        ).getTime();
     }
 }

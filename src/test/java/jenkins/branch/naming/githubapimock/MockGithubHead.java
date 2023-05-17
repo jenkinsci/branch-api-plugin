@@ -1,11 +1,8 @@
 package jenkins.branch.naming.githubapimock;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
-import static java.lang.String.format;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static jenkins.branch.naming.githubapimock.MockGithubOrg.ORG_LOGIN;
 
 public class MockGithubHead {
     private final String branchName;
@@ -24,7 +21,7 @@ public class MockGithubHead {
     }
 
     public String getLabel() {
-        return format("%s:%s", ORG_LOGIN, branchName);
+        return String.format("%s:%s", MockGithubOrg.ORG_LOGIN, branchName);
     }
 
     public MockGithubRepository getRepo() {
@@ -38,7 +35,7 @@ public class MockGithubHead {
     private String hash(final String input) {
         try {
             final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            final byte[] encodedHash = digest.digest(input.getBytes(UTF_8));
+            final byte[] encodedHash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
             return bytesToHex(encodedHash);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
