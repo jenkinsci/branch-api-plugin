@@ -33,6 +33,7 @@ import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.thoughtworks.xstream.XStreamException;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.BulkChange;
 import hudson.Extension;
@@ -84,7 +85,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
@@ -105,6 +105,7 @@ import jenkins.scm.api.mixin.TagSCMHead;
 import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.impl.NullSCMSource;
 import jenkins.triggers.SCMTriggerItem;
+import jenkins.util.SystemProperties;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -114,7 +115,6 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.export.Exported;
-import jenkins.util.SystemProperties;
 import org.springframework.security.core.Authentication;
 
 import static hudson.Functions.printStackTrace;
@@ -1785,8 +1785,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                                                 source.getId()
                                                         ));
                                                 // preserve previous actions if we have some transient error fetching now (e.g.
-
-
                                                 // API rate limit)
                                                 newActions = oldActions;
                                             }
@@ -2110,28 +2108,14 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
             }
 
-            String displayName = "";
-            if (naming.isShowRawName()) {
-                displayName += rawName;
-            }
-
-            if (naming.isShowDisplayName()) {
-                ObjectMetadataAction action = project.getAction(ObjectMetadataAction.class);
-                if (action != null) {
-                    String objectDisplayName = action.getObjectDisplayName();
-                    if (!StringUtils.isBlank(objectDisplayName) && !rawName.equals(objectDisplayName)) {
-                        if (!StringUtils.isBlank(displayName)) {
-                            displayName += ": ";
-                        }
-                        displayName += objectDisplayName;
-                    }
-                }
-            }
-
-            if (StringUtils.isBlank(displayName) || displayName.equals(project.getName())) {
-                return null;
-            }
-            return displayName;
+            final ObjectMetadataAction action = naming.needsDisplayName()
+                ? project.getAction(ObjectMetadataAction.class)
+                : null;
+            final String objectDisplayName = Optional.ofNullable(action)
+                .map(ObjectMetadataAction::getObjectDisplayName)
+                .orElse("");
+            final String generatedName = naming.generateName(rawName, objectDisplayName);
+            return StringUtils.isBlank(generatedName) || generatedName.equals(project.getName()) ? null : generatedName;
         }
 
         private boolean changesDetected(@NonNull SCMRevision revision, @NonNull P project, SCMRevision scmLastBuiltRevision) {

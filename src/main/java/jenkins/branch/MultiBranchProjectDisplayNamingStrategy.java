@@ -23,39 +23,56 @@
  */
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
+
+import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.isBlank;
 
 /**
  * Possible Display naming strategies.
+ *
  * @since 2.7.1
  */
 public enum MultiBranchProjectDisplayNamingStrategy {
     /**
      * Use the name as specified by the scm connector. (traditional behaviour)
      */
-    RAW(true, false),
+    RAW(false) {
+        @Override
+        public String generateName(@NonNull final String rawName, final String displayName) {
+            return rawName;
+        }
+    },
     /**
      * Use the display name (if available) sourced from the {@link ObjectMetadataAction}.
      */
-    OBJECT_DISPLAY_NAME(false, true),
+    OBJECT_DISPLAY_NAME(true) {
+        @Override
+        public String generateName(@NonNull final String rawName, final String displayName) {
+            return displayName;
+        }
+    },
     /**
      * Use both the raw name and the display name from the {@link ObjectMetadataAction} (if available).
      */
-    RAW_AND_OBJECT_DISPLAY_NAME(true, true);
+    RAW_AND_OBJECT_DISPLAY_NAME(true) {
+        @Override
+        public String generateName(@NonNull final String rawName, final String displayName) {
+            return isBlank(displayName) ? rawName : format("%s: %s", rawName, displayName);
+        }
+    },
+    ;
 
-    private final boolean showRawName;
-    private final boolean showDisplayName;
+    private final boolean needsDisplayName;
 
-    MultiBranchProjectDisplayNamingStrategy(boolean showRawName, boolean showDisplayName) {
-        this.showRawName = showRawName;
-        this.showDisplayName = showDisplayName;
+    MultiBranchProjectDisplayNamingStrategy(final boolean needsDisplayName) {
+        this.needsDisplayName = needsDisplayName;
     }
 
-    public boolean isShowRawName() {
-        return showRawName;
+    public boolean needsDisplayName() {
+        return needsDisplayName;
     }
 
-    public boolean isShowDisplayName() {
-        return showDisplayName;
-    }
+    public abstract String generateName(@NonNull final String rawName, final String displayName);
 }
