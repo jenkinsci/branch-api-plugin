@@ -34,7 +34,7 @@ public class MockPullRequest {
     public String getHtmlUrl() {
         return String.format(
             "%s/%s/%s/pulls/%s",
-            ProjectNamingStrategyTest.MOCK_BASE_URL,
+            ProjectNamingStrategyTest.stubBaseUrl,
             MockGithubOrg.ORG_LOGIN,
             MockGithubRepository.REPO_NAME,
             PR_NUMBER

@@ -1,7 +1,9 @@
 package jenkins.branch.naming;
 
 import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.logging.Logger;
@@ -44,17 +46,18 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class ProjectNamingStrategyTest {
     private static final Logger LOGGER = Logger.getLogger(ProjectNamingStrategyTest.class.getName());
-    static final int MOCK_PORT = 27960;
-    public static final String MOCK_BASE_URL = String.format("http://localhost:%s", MOCK_PORT);
 
     @ClassRule
     public static final JenkinsRule r = new JenkinsRule();
 
+    public static String stubBaseUrl ;
     public static HttpServer githubApiStub;
 
     @BeforeClass
     public static void setupGithubApiStub() throws Exception {
-        githubApiStub = HttpServer.create(new InetSocketAddress(MOCK_PORT), 0);
+        final int stubPort = findAvailablePort();
+        stubBaseUrl = String.format("http://localhost:%s", stubPort);
+        githubApiStub = HttpServer.create(new InetSocketAddress(stubPort), 0);
 
         final MockGithubInfo githubInfo = new MockGithubInfo();
         stubGithubApiCall("/", githubInfo);
@@ -125,7 +128,7 @@ public class ProjectNamingStrategyTest {
             jenkinsInstance.createProject(WorkflowMultiBranchProject.class, projectName);
 
         final GitHubSCMSource source = new GitHubSCMSource(MockGithubOrg.ORG_LOGIN, MockGithubRepository.REPO_NAME);
-        source.setApiUri(MOCK_BASE_URL);
+        source.setApiUri(stubBaseUrl);
         source.setTraits(Arrays.asList(
             new OriginPullRequestDiscoveryTrait(2),
             new MultiBranchProjectDisplayNamingTrait(namingStrategy)
@@ -142,6 +145,14 @@ public class ProjectNamingStrategyTest {
         final String expectedName = namingStrategy.generateName(MockPullRequest.PR_NAME, MockPullRequest.PR_TITLE);
         assertNotNull(prProject, "No job was created for the pull request");
         assertEquals(expectedName, prProject.getDisplayName(), "The job name doesn't match the naming strategy");
+    }
+
+    private static int findAvailablePort() {
+        try (final ServerSocket serverSocket = new ServerSocket(0)) {
+            return serverSocket.getLocalPort();
+        } catch (final IOException e) {
+            throw new RuntimeException("Could not find an available port for GitHub API stub");
+        }
     }
 
     private static <RESPONSE> void stubGithubApiCall(final String url, final RESPONSE response) {

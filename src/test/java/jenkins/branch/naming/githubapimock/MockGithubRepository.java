@@ -28,6 +28,6 @@ public class MockGithubRepository {
 
     @JsonProperty("html_url")
     public String getHtmlUrl() {
-        return String.format("%s/%s/%s", ProjectNamingStrategyTest.MOCK_BASE_URL, REPO_NAME, MockGithubOrg.ORG_LOGIN);
+        return String.format("%s/%s/%s", ProjectNamingStrategyTest.stubBaseUrl, REPO_NAME, MockGithubOrg.ORG_LOGIN);
     }
 }
