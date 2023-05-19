@@ -33,8 +33,8 @@ public class ResourceHandler<RESPONSE> implements HttpHandler {
     public void handle(final HttpExchange exchange) throws IOException {
         LOGGER.fine(String.format("Response for %s: %s", url, response));
         exchange.sendResponseHeaders(statusCode, response.length());
-        final OutputStream outputStream = exchange.getResponseBody();
-        outputStream.write(response.getBytes());
-        outputStream.close();
+        try (OutputStream outputStream = exchange.getResponseBody()) {
+            outputStream.write(response.getBytes());
+        }
     }
 }

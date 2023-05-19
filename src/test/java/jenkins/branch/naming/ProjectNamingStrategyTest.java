@@ -50,7 +50,7 @@ public class ProjectNamingStrategyTest {
     @ClassRule
     public static final JenkinsRule r = new JenkinsRule();
 
-    public static String stubBaseUrl ;
+    public static String stubBaseUrl;
     public static HttpServer githubApiStub;
 
     @BeforeClass
