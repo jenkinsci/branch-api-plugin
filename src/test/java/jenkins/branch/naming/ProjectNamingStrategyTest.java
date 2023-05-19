@@ -1,9 +1,9 @@
 package jenkins.branch.naming;
 
 import com.sun.net.httpserver.HttpServer;
-import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.logging.Logger;
@@ -55,9 +55,7 @@ public class ProjectNamingStrategyTest {
 
     @BeforeClass
     public static void setupGithubApiStub() throws Exception {
-        final int stubPort = findAvailablePort();
-        stubBaseUrl = String.format("http://localhost:%s", stubPort);
-        githubApiStub = HttpServer.create(new InetSocketAddress(stubPort), 0);
+        githubApiStub = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
 
         final MockGithubInfo githubInfo = new MockGithubInfo();
         stubGithubApiCall("/", githubInfo);
@@ -96,6 +94,13 @@ public class ProjectNamingStrategyTest {
         ), Collections.singletonList(jenkinsfileContent));
 
         githubApiStub.start();
+        final InetSocketAddress boundSocket = githubApiStub.getAddress();
+        final int port = boundSocket.getPort();
+        final InetAddress addr = boundSocket.getAddress();
+        final String address = addr instanceof Inet6Address
+            ? "[" + addr.getHostAddress() + "]" // literal IPv6 addresses need special encoding
+            : addr.getHostAddress();
+        stubBaseUrl = String.format("http://%s:%d", address, port);
     }
 
     @AfterClass
@@ -145,14 +150,6 @@ public class ProjectNamingStrategyTest {
         final String expectedName = namingStrategy.generateName(MockPullRequest.PR_NAME, MockPullRequest.PR_TITLE);
         assertNotNull(prProject, "No job was created for the pull request");
         assertEquals(expectedName, prProject.getDisplayName(), "The job name doesn't match the naming strategy");
-    }
-
-    private static int findAvailablePort() {
-        try (final ServerSocket serverSocket = new ServerSocket(0)) {
-            return serverSocket.getLocalPort();
-        } catch (final IOException e) {
-            throw new RuntimeException("Could not find an available port for GitHub API stub");
-        }
     }
 
     private static <RESPONSE> void stubGithubApiCall(final String url, final RESPONSE response) {

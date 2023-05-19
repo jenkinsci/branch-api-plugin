@@ -1,6 +1,5 @@
 package jenkins.branch.naming.githubapimock;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.sun.net.httpserver.HttpExchange;
@@ -15,26 +14,22 @@ public class ResourceHandler<RESPONSE> implements HttpHandler {
 
     private final String url;
     private final int statusCode;
-    private final String response;
+    private final Object response;
 
     public ResourceHandler(final String url, final RESPONSE response) {
         this.url = url;
-        try {
-            this.statusCode = response == null ? 404 : 200;
-            this.response = response == null
-                    ? "\"Oopsie, nothing there\""
-                    : MAPPER.writeValueAsString(response);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Cannot mock GitHub API resource", e);
-        }
+        this.statusCode = response == null ? 404 : 200;
+        this.response = response == null ? "Oopsie, nothing there" : response;
     }
 
     @Override
     public void handle(final HttpExchange exchange) throws IOException {
         LOGGER.fine(String.format("Response for %s: %s", url, response));
-        exchange.sendResponseHeaders(statusCode, response.length());
-        try (OutputStream outputStream = exchange.getResponseBody()) {
-            outputStream.write(response.getBytes());
+        try (final OutputStream outputStream = exchange.getResponseBody()) {
+            final String responseAsString =
+                MAPPER.writeValueAsString(response); // Must be done on demand, mock objects need the stub URL!
+            exchange.sendResponseHeaders(statusCode, responseAsString.length());
+            outputStream.write(responseAsString.getBytes());
         }
     }
 }
