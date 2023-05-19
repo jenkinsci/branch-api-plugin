@@ -2108,7 +2108,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
             }
 
-            final ObjectMetadataAction action = naming.needsDisplayName()
+            final ObjectMetadataAction action = naming.needsObjectDisplayName()
                 ? project.getAction(ObjectMetadataAction.class)
                 : null;
             final String objectDisplayName = Optional.ofNullable(action)

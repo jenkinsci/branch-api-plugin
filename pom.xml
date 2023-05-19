@@ -137,27 +137,6 @@
       <artifactId>github-branch-source</artifactId>
       <version>2.2.4</version>
       <scope>test</scope>
-      <exclusions>
-        <exclusion><!-- Vulnerable & unused => excluded -->
-          <groupId>com.fasterxml.woodstox</groupId>
-          <artifactId>woodstox-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <!-- Vulnerable & unused => excluded -->
-          <groupId>org.json</groupId>
-          <artifactId>json</artifactId>
-        </exclusion>
-        <exclusion>
-          <!-- Vulnerable & unused => excluded -->
-          <groupId>net.minidev</groupId>
-          <artifactId>json-smart</artifactId>
-        </exclusion>
-        <exclusion>
-          <!-- Vulnerable & unused => excluded -->
-          <groupId>org.yaml</groupId>
-          <artifactId>snakeyaml</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>

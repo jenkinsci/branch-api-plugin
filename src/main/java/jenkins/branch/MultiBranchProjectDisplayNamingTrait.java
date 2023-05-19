@@ -23,18 +23,13 @@
  */
 package jenkins.branch;
 
-import org.jenkinsci.Symbol;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.kohsuke.stapler.DataBoundConstructor;
-
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
-import hudson.util.ListBoxModel;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.api.trait.SCMSourceTraitDescriptor;
-import jenkins.scm.impl.trait.Discovery;
+import org.jenkinsci.Symbol;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * A {@link SCMSourceTrait} that controls how to set display names for {@link SCMHead}s
@@ -55,7 +50,7 @@ public class MultiBranchProjectDisplayNamingTrait extends SCMSourceTrait {
      * @param displayNamingStrategy the {@link MultiBranchProjectDisplayNamingStrategy}.
      */
     @DataBoundConstructor
-    public MultiBranchProjectDisplayNamingTrait(MultiBranchProjectDisplayNamingStrategy displayNamingStrategy) {
+    public MultiBranchProjectDisplayNamingTrait(@NonNull MultiBranchProjectDisplayNamingStrategy displayNamingStrategy) {
         this.displayNamingStrategy = displayNamingStrategy;
     }
 
@@ -74,31 +69,14 @@ public class MultiBranchProjectDisplayNamingTrait extends SCMSourceTrait {
      */
     @Symbol("multiBranchProjectDisplayNaming")
     @Extension
-    @Discovery
     public static class DescriptorImpl extends SCMSourceTraitDescriptor {
-
         /**
          * {@inheritDoc}
          */
+        @NonNull
         @Override
         public String getDisplayName() {
             return Messages.MultiBranchProjectDisplayNamingTrait_TraitDisplayName();
-        }
-
-        /**
-         * Populates the display naming strategy options.
-         *
-         * @return the display naming strategy options.
-         */
-        @NonNull
-        @Restricted(NoExternalUse.class)
-        @SuppressWarnings("unused") // stapler
-        public ListBoxModel doFillDisplayNamingStrategyItems() {
-            ListBoxModel result = new ListBoxModel();
-            result.add(Messages.MultiBranchProjectDisplayNamingTrait_Raw(), MultiBranchProjectDisplayNamingStrategy.RAW.name());
-            result.add(Messages.MultiBranchProjectDisplayNamingTrait_DisplayName(), MultiBranchProjectDisplayNamingStrategy.OBJECT_DISPLAY_NAME.name());
-            result.add(Messages.MultiBranchProjectDisplayNamingTrait_RawAndDisplayName(), MultiBranchProjectDisplayNamingStrategy.RAW_AND_OBJECT_DISPLAY_NAME.name());
-            return result;
         }
     }
 }

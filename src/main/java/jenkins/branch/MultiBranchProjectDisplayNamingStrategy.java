@@ -25,6 +25,7 @@ package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
+import org.jvnet.localizer.Localizable;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isBlank;
@@ -38,7 +39,7 @@ public enum MultiBranchProjectDisplayNamingStrategy {
     /**
      * Use the name as specified by the scm connector. (traditional behaviour)
      */
-    RAW(false) {
+    RAW(false, Messages._MultiBranchProjectDisplayNamingTrait_Raw()) {
         @Override
         public String generateName(@NonNull final String rawName, final String displayName) {
             return rawName;
@@ -47,7 +48,7 @@ public enum MultiBranchProjectDisplayNamingStrategy {
     /**
      * Use the display name (if available) sourced from the {@link ObjectMetadataAction}.
      */
-    OBJECT_DISPLAY_NAME(true) {
+    OBJECT_DISPLAY_NAME(true, Messages._MultiBranchProjectDisplayNamingTrait_DisplayName()) {
         @Override
         public String generateName(@NonNull final String rawName, final String displayName) {
             return displayName;
@@ -56,7 +57,7 @@ public enum MultiBranchProjectDisplayNamingStrategy {
     /**
      * Use both the raw name and the display name from the {@link ObjectMetadataAction} (if available).
      */
-    RAW_AND_OBJECT_DISPLAY_NAME(true) {
+    RAW_AND_OBJECT_DISPLAY_NAME(true, Messages._MultiBranchProjectDisplayNamingTrait_RawAndDisplayName()) {
         @Override
         public String generateName(@NonNull final String rawName, final String displayName) {
             return isBlank(displayName) ? rawName : format("%s: %s", rawName, displayName);
@@ -64,14 +65,19 @@ public enum MultiBranchProjectDisplayNamingStrategy {
     },
     ;
 
-    private final boolean needsDisplayName;
+    private final boolean needsObjectDisplayName;
+    private final Localizable displayName;
 
-    MultiBranchProjectDisplayNamingStrategy(final boolean needsDisplayName) {
-        this.needsDisplayName = needsDisplayName;
+    MultiBranchProjectDisplayNamingStrategy(final boolean needsObjectDisplayName, final Localizable displayName) {
+        this.needsObjectDisplayName = needsObjectDisplayName;
+        this.displayName = displayName;
     }
 
-    public boolean needsDisplayName() {
-        return needsDisplayName;
+    public boolean needsObjectDisplayName() {
+        return needsObjectDisplayName;
+    }
+    public String getDisplayName() {
+        return displayName.toString();
     }
 
     public abstract String generateName(@NonNull final String rawName, final String displayName);
