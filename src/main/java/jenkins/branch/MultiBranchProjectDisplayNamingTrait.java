@@ -34,8 +34,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * A {@link SCMSourceTrait} that controls how to set display names for {@link SCMHead}s
  * with additional information like merge/change/pull requests.
- *
- * @since 2.7.1
  */
 public class MultiBranchProjectDisplayNamingTrait extends SCMSourceTrait {
     /**
