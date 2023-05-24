@@ -37,15 +37,6 @@ import static org.apache.commons.lang.StringUtils.isBlank;
  */
 public enum MultiBranchProjectDisplayNamingStrategy {
     /**
-     * Use the name as specified by the scm connector. (traditional behaviour)
-     */
-    RAW(false, Messages._MultiBranchProjectDisplayNamingTrait_Raw()) {
-        @Override
-        public String generateName(@NonNull final String rawName, final String displayName) {
-            return rawName;
-        }
-    },
-    /**
      * Use the display name (if available) sourced from the {@link ObjectMetadataAction}.
      */
     OBJECT_DISPLAY_NAME(true, Messages._MultiBranchProjectDisplayNamingTrait_DisplayName()) {

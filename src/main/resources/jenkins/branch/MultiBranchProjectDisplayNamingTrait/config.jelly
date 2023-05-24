@@ -25,7 +25,7 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
   <f:entry title="${%Display name strategy}" field="displayNamingStrategy">
-    <f:enum default="RAW">
+    <f:enum default="RAW_AND_OBJECT_DISPLAY_NAME">
       ${it.displayName}
     </f:enum>
   </f:entry>

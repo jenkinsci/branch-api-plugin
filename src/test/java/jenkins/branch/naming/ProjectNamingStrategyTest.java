@@ -110,12 +110,6 @@ public class ProjectNamingStrategyTest {
 
     @Test
     @Issue("JENKINS-55348")
-    public void testRawStrategy() throws Exception {
-        testNamingStrategy(MultiBranchProjectDisplayNamingStrategy.RAW);
-    }
-
-    @Test
-    @Issue("JENKINS-55348")
     public void testCompositeStrategy() throws Exception {
         testNamingStrategy(MultiBranchProjectDisplayNamingStrategy.RAW_AND_OBJECT_DISPLAY_NAME);
     }
