@@ -33,6 +33,7 @@ import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import com.thoughtworks.xstream.XStreamException;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.BulkChange;
 import hudson.Extension;
@@ -76,13 +77,14 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
@@ -100,8 +102,10 @@ import jenkins.scm.api.SCMSourceEvent;
 import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.mixin.TagSCMHead;
+import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.impl.NullSCMSource;
 import jenkins.triggers.SCMTriggerItem;
+import jenkins.util.SystemProperties;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
@@ -111,7 +115,6 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.export.Exported;
-import jenkins.util.SystemProperties;
 import org.springframework.security.core.Authentication;
 
 import static hudson.Functions.printStackTrace;
@@ -119,12 +122,14 @@ import static hudson.Functions.printStackTrace;
 /**
  * Abstract base class for multiple-branch based projects.
  *
- * @param <P> the project type
- * @param <R> the run type
+ * @param <P>
+ *     the project type
+ * @param <R>
+ *     the run type
  */
 public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
-        R extends Run<P, R>>
-        extends ComputedFolder<P> implements SCMSourceOwner, IconSpec {
+    R extends Run<P, R>>
+    extends ComputedFolder<P> implements SCMSourceOwner, IconSpec {
 
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Accessible via System Groovy Scripts")
     private static /* not final */ boolean FIRE_SCM_SOURCE_BUILDS_AFTER_SAVE =
@@ -162,8 +167,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Constructor, mandated by {@link TopLevelItem}.
      *
-     * @param parent the parent of this multibranch job.
-     * @param name   the name of the multibranch job.
+     * @param parent
+     *     the parent of this multibranch job.
+     * @param name
+     *     the name of the multibranch job.
      */
     protected MultiBranchProject(ItemGroup parent, String name) {
         super(parent, name);
@@ -199,7 +206,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             state.reset();
         }
         // optimize lookup of sources by building a temporary map that is equivalent to getSCMSource(id) in results
-        Map<String,SCMSource> sourceMap = new HashMap<>();
+        Map<String, SCMSource> sourceMap = new HashMap<>();
         for (BranchSource source : sources) {
             SCMSource s = source.getSource();
             String id = s.getId();
@@ -217,20 +224,20 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             SCMHead newHead = SCMHeadMigration.readResolveSCMHead(source, oldHead);
             if (newHead != oldHead) {
                 LOGGER.log(Level.INFO, "Job {0}: a plugin upgrade is requesting migration of branch from {1} to {2}",
-                        new Object[]{item.getFullName(), oldHead.getClass(), newHead.getClass()}
+                    new Object[]{item.getFullName(), oldHead.getClass(), newHead.getClass()}
                 );
                 try {
                     Branch newBranch = new Branch(oldBranch.getSourceId(), newHead, oldBranch.getScm(),
-                            oldBranch.getProperties());
+                        oldBranch.getProperties());
                     newBranch.setActions(oldBranch.getActions());
                     factory.setBranch(item, newBranch);
                     SCMRevision revision = factory.getRevision(item);
                     factory.setRevisionHash(item, SCMHeadMigration.readResolveSCMRevision(source, revision));
                 } catch (IOException | RuntimeException e) {
                     LogRecord lr = new LogRecord(Level.WARNING,
-                            "Job {0}: Could not complete migration of branch from type {1} to {2}. "
-                                    + "The side-effect of this is that the next index may trigger a rebuild "
-                                    + "of the job (after which the issue will be resolved)");
+                        "Job {0}: Could not complete migration of branch from type {1} to {2}. "
+                            + "The side-effect of this is that the next index may trigger a rebuild "
+                            + "of the job (after which the issue will be resolved)");
                     lr.setThrown(e);
                     lr.setParameters(new Object[]{item.getFullName(), oldHead.getClass(), newHead.getClass()});
                     LOGGER.log(lr);
@@ -312,6 +319,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Get the term used in the UI to represent the source for this kind of
      * {@link Item}. Must start with a capital letter.
+     *
      * @return term used in the UI to represent the source
      */
     public String getSourcePronoun() {
@@ -352,7 +360,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Sets the {@link BranchProjectFactory}.
      *
-     * @param projectFactory the new {@link BranchProjectFactory}.
+     * @param projectFactory
+     *     the new {@link BranchProjectFactory}.
      */
     public synchronized void setProjectFactory(BranchProjectFactory<P, R> projectFactory) {
         projectFactory.getClass(); // throw NPE if null
@@ -402,8 +411,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * Offers direct access to set the configurable list of branch sources <strong>while</strong> preserving
      * branch source id associations for sources that are otherwise unmodified
      *
-     * @param sources the new sources.
-     * @throws IOException if the sources could not be persisted to disk.
+     * @param sources
+     *     the new sources.
+     * @throws IOException
+     *     if the sources could not be persisted to disk.
      */
     public void setSourcesList(List<BranchSource> sources) throws IOException {
         if (this.sources.isEmpty() || sources.isEmpty()) {
@@ -420,7 +431,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         // Now we need to check if any of the new entries are effectively the same as an old entry that is being removed
         // we will store the ID changes in a map and process all the affected branches to update their sourceIds
-        Map<String,String> changedIds = new HashMap<>();
+        Map<String, String> changedIds = new HashMap<>();
         Set<String> additions = new HashSet<>(newIds);
         additions.removeAll(oldIds);
         Set<String> removals = new HashSet<>(oldIds);
@@ -447,8 +458,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             }
         }
         this.sources.replaceBy(sources);
-        BranchProjectFactory<P,R> factory = getProjectFactory();
-        for (P item: getItems(factory::isProject)) {
+        BranchProjectFactory<P, R> factory = getProjectFactory();
+        for (P item : getItems(factory::isProject)) {
             Branch oldBranch = factory.getBranch(item);
             if (changedIds.containsKey(oldBranch.getSourceId())) {
                 Branch newBranch = new Branch(changedIds.get(oldBranch.getSourceId()), oldBranch.getHead(), oldBranch.getScm(), oldBranch.getProperties());
@@ -460,7 +471,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     private Set<String> sourceIds(List<BranchSource> sources) {
         Set<String> result = new HashSet<>();
-        for (BranchSource s: sources) {
+        for (BranchSource s : sources) {
             result.add(s.getSource().getId());
         }
         return result;
@@ -509,7 +520,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Returns the {@link BranchPropertyStrategy} for a specific {@link SCMSource}.
      *
-     * @param source the specific {@link SCMSource}.
+     * @param source
+     *     the specific {@link SCMSource}.
      * @return the {@link BranchPropertyStrategy} to use.
      */
     @CheckForNull
@@ -525,8 +537,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Creates a {@link Branch} for a specific {@link SCMSource} and {@link SCMHead}.
      *
-     * @param source the {@link SCMSource}
-     * @param head   the {@link SCMHead}.
+     * @param source
+     *     the {@link SCMSource}
+     * @param head
+     *     the {@link SCMHead}.
      * @return the {@link Branch}
      */
     @NonNull
@@ -540,7 +554,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         } else {
             final BranchPropertyStrategy strategy = getBranchPropertyStrategy(source);
             return new Branch(sourceId, head, source.build(head),
-                    strategy != null ? strategy.getPropertiesFor(head) : Collections.emptyList());
+                strategy != null ? strategy.getPropertiesFor(head) : Collections.emptyList());
         }
     }
 
@@ -574,7 +588,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @Override
     protected void computeChildren(final ChildObserver<P> observer, final TaskListener listener)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         // capture the current digests to prevent unnecessary reindex if re-saving after index
         try {
             srcDigest = Util.getDigestOf(Items.XSTREAM2.toXML(sources));
@@ -597,7 +611,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     sourceActions.put(source.getId(), source.fetchActions(null, listener));
                 } catch (IOException | InterruptedException | RuntimeException e) {
                     listener.error("[%tc] Could not update folder level actions from source %s",
-                            System.currentTimeMillis(), source.getId());
+                        System.currentTimeMillis(), source.getId());
                     throw e;
                 }
             }
@@ -618,7 +632,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         bc.commit();
                     } catch (IOException | RuntimeException e) {
                         listener.error("[%tc] Could not persist folder level actions",
-                                System.currentTimeMillis());
+                            System.currentTimeMillis());
                         throw e;
                     }
                     if (saveProject) {
@@ -626,8 +640,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             save();
                         } catch (IOException | RuntimeException e) {
                             listener.error(
-                                    "[%tc] Could not persist folder level configuration changes",
-                                    System.currentTimeMillis());
+                                "[%tc] Could not persist folder level configuration changes",
+                                System.currentTimeMillis());
                             throw e;
                         }
                     }
@@ -638,24 +652,24 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             for (final SCMSource source : scmSources) {
                 try {
                     source.fetch(new SCMHeadObserverImpl(source, observer, listener, _factory,
-                            new IndexingCauseFactory(), null), listener);
+                        new IndexingCauseFactory(), null), listener);
                 } catch (IOException | InterruptedException | RuntimeException e) {
                     listener.error("[%tc] Could not fetch branches from source %s",
-                            System.currentTimeMillis(), source.getId());
+                        System.currentTimeMillis(), source.getId());
                     throw e;
                 }
             }
         } finally {
             long end = System.currentTimeMillis();
             listener.getLogger().format("[%tc] Finished branch indexing. Indexing took %s%n", end,
-                    Util.getTimeSpanString(end - start));
+                Util.getTimeSpanString(end - start));
         }
     }
 
     private void scheduleBuild(BranchProjectFactory<P, R> factory, final P item, SCMRevision revision, TaskListener listener, String name, Cause[] causes, Action... actions) {
         if (!isBuildable()) {
             listener.getLogger().printf("Did not schedule build for branch: %s (%s is disabled)%n",
-                    name, getDisplayName());
+                name, getDisplayName());
             return;
         }
         // JENKINS-48090 see Queue.Item.getCauses() which only operates on the first CauseAction
@@ -678,7 +692,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             int i = 1;
             List<Cause> _causes = new ArrayList<>();
             Collections.addAll(_causes, causes);
-            for (Action a: actions) {
+            for (Action a : actions) {
                 if (a instanceof CauseAction) {
                     _causes.addAll(((CauseAction) a).getCauses());
                 } else {
@@ -704,7 +718,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @Override
     protected Collection<P> orphanedItems(Collection<P> orphaned, TaskListener listener)
-            throws IOException, InterruptedException {
+        throws IOException, InterruptedException {
         BranchProjectFactory<P, R> _factory = getProjectFactory();
         for (P project : orphaned) {
             if (!_factory.isProject(project)) {
@@ -714,7 +728,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             Branch b = _factory.getBranch(project);
             if (!(b instanceof Branch.Dead)) {
                 _factory.decorate(
-                        _factory.setBranch(project, new Branch.Dead(b)));
+                    _factory.setBranch(project, new Branch.Dead(b)));
             }
         }
         return super.orphanedItems(orphaned, listener);
@@ -723,7 +737,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Returns the named child job or {@code null} if no such job exists.
      *
-     * @param name the name of the child job.
+     * @param name
+     *     the name of the child job.
      * @return the named child job or {@code null} if no such job exists.
      */
     @Override
@@ -750,7 +765,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Returns the child job with the specified branch name or {@code null} if no such child job exists.
      *
-     * @param branchName the name of the branch.
+     * @param branchName
+     *     the name of the branch.
      * @return the child job or {@code null} if no such job exists or if the requesting user does ave permission to
      * view it.
      * @since 2.0.0
@@ -763,7 +779,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Returns the named branch job or {@code null} if no such branch exists.
      *
-     * @param name the name of the branch
+     * @param name
+     *     the name of the branch
      * @return the named branch job or {@code null} if no such branch exists.
      * @deprecated use {@link #getItem(String)} or {@link #getJob(String)} directly
      */
@@ -888,7 +905,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      */
     @Override
     protected void submit(StaplerRequest req, StaplerResponse rsp)
-            throws IOException, ServletException, Descriptor.FormException {
+        throws IOException, ServletException, Descriptor.FormException {
         super.submit(req, rsp);
         List<SCMSource> _sources = new ArrayList<>();
         synchronized (this) {
@@ -906,7 +923,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     /**
      * Fires the {@link SCMSource#afterSave()} method for the supplied sources.
-     * @param sources the sources.
+     *
+     * @param sources
+     *     the sources.
      */
     protected void fireSCMSourceAfterSave(List<SCMSource> sources) {
         for (SCMSource scmSource : sources) {
@@ -935,7 +954,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         try {
             return !StringUtils.equals(srcDigest, this.srcDigest)
-                    || !StringUtils.equals(facDigest, this.facDigest);
+                || !StringUtils.equals(facDigest, this.facDigest);
         } finally {
             this.srcDigest = srcDigest;
             this.facDigest = facDigest;
@@ -966,11 +985,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Represents the branch indexing job.
      *
-     * @param <P> the type of project that the branch projects consist of.
-     * @param <R> the type of runs that the branch projects use.
+     * @param <P>
+     *     the type of project that the branch projects consist of.
+     * @param <R>
+     *     the type of runs that the branch projects use.
      */
     public static class BranchIndexing<P extends Job<P, R> & TopLevelItem,
-            R extends Run<P, R>> extends FolderComputation<P> {
+        R extends Run<P, R>> extends FolderComputation<P> {
 
         public BranchIndexing(@NonNull MultiBranchProject<P, R> project,
                               @CheckForNull BranchIndexing<P, R> previousIndexing) {
@@ -1037,9 +1058,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             } finally {
                 long end = System.currentTimeMillis();
                 LOGGER.log(Level.FINE, "{0} #{1,time,yyyyMMdd.HHmmss} branch indexing action completed: {2} in {3}",
-                        new Object[]{
-                                getParent().getFullName(), start, getResult(), Util.getTimeSpanString(end - start)
-                        }
+                    new Object[]{
+                        getParent().getFullName(), start, getResult(), Util.getTimeSpanString(end - start)
+                    }
                 );
             }
         }
@@ -1068,7 +1089,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * Inverse function of {@link Util#rawEncode(String)}
      *
-     * @param s the encoded string.
+     * @param s
+     *     the encoded string.
      * @return the decoded string.
      */
     @NonNull
@@ -1140,11 +1162,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     return eventsFile;
                 }
             },
-                    250, TimeUnit.MILLISECONDS,
-                    1024,
-                    true,
-                    FileUtils.ONE_MB,
-                    5
+                250, TimeUnit.MILLISECONDS,
+                1024,
+                true,
+                FileUtils.ONE_MB,
+                5
             );
         }
 
@@ -1170,12 +1192,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 long eventTimestamp = event.getTimestamp();
                 long started = System.currentTimeMillis();
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                        started, eventDescription, eventType, eventOrigin,
-                        eventTimestamp);
+                    started, eventDescription, eventType, eventOrigin,
+                    eventTimestamp);
                 LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: onSCMHeadEvent",
-                        new Object[]{
-                                eventDescription, eventType, eventTimestamp
-                        }
+                    new Object[]{
+                        eventDescription, eventType, eventTimestamp
+                    }
                 );
                 int matchCount = 0;
                 // not interested in removal of dead items as that needs to be handled by the computation in order
@@ -1184,34 +1206,34 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 try {
                     if (SCMEvent.Type.CREATED == event.getType()) {
                         matchCount = processHeadCreate(
-                                event,
-                                global,
-                                eventDescription,
-                                eventType,
-                                eventOrigin,
-                                eventTimestamp,
-                                matchCount
+                            event,
+                            global,
+                            eventDescription,
+                            eventType,
+                            eventOrigin,
+                            eventTimestamp,
+                            matchCount
                         );
                     } else if (SCMEvent.Type.UPDATED == event.getType() || SCMEvent.Type.REMOVED == event.getType()) {
                         matchCount = processHeadUpdate(
-                                event,
-                                global,
-                                eventDescription,
-                                eventType,
-                                eventOrigin,
-                                eventTimestamp,
-                                matchCount
+                            event,
+                            global,
+                            eventDescription,
+                            eventType,
+                            eventOrigin,
+                            eventTimestamp,
+                            matchCount
                         );
                     }
                 } catch (InterruptedException e) {
                     printStackTrace(e, global.error("[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
-                            System.currentTimeMillis(), eventDescription, eventType, eventOrigin, eventTimestamp));
+                        System.currentTimeMillis(), eventDescription, eventType, eventOrigin, eventTimestamp));
                 }
                 long ended = System.currentTimeMillis();
                 global.getLogger()
-                        .format(OrganizationFolder.COMPLETED_PROCESSING_EVENT,
-                                ended, eventDescription, eventType, eventOrigin,
-                                eventTimestamp, ended - started, matchCount);
+                    .format(OrganizationFolder.COMPLETED_PROCESSING_EVENT,
+                        ended, eventDescription, eventType, eventOrigin,
+                        eventTimestamp, ended - started, matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -1219,23 +1241,23 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         private int processHeadCreate(SCMHeadEvent<?> event, TaskListener global, String eventDescription,
                                       String eventType, String eventOrigin, long eventTimestamp, int matchCount)
-                throws IOException, InterruptedException {
+            throws IOException, InterruptedException {
             Set<String> sourceIds = new HashSet<>();
             for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
                 if (!p.isBuildable()) {
                     LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
-                            new Object[]{
-                                    eventDescription, eventType, eventTimestamp, pFullName
-                            }
+                        new Object[]{
+                            eventDescription, eventType, eventTimestamp, pFullName
+                        }
                     );
                     continue;
                 }
                 sourceIds.clear();
                 LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Checking {3} for a match",
-                        new Object[]{
-                                eventDescription, eventType, eventTimestamp, pFullName
-                        }
+                    new Object[]{
+                        eventDescription, eventType, eventTimestamp, pFullName
+                    }
                 );
                 boolean haveMatch = false;
                 final BranchProjectFactory _factory = p.getProjectFactory();
@@ -1243,18 +1265,18 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 for (SCMSource source : p.getSCMSources()) {
                     if (event.isMatch(source)) {
                         LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: Matches source {4}",
-                                new Object[]{
-                                        eventDescription, eventType, eventTimestamp, pFullName, source.getId()
-                                }
+                            new Object[]{
+                                eventDescription, eventType, eventTimestamp, pFullName, source.getId()
+                            }
                         );
                         for (SCMHead h : event.heads(source).keySet()) {
                             String name = h.getName();
                             Job job = p.getItemByBranchName(name);
                             if (job == null) {
                                 LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Match: {5}",
-                                        new Object[]{
-                                                eventDescription, eventType, eventTimestamp, pFullName, source.getId(), name
-                                        }
+                                    new Object[]{
+                                        eventDescription, eventType, eventTimestamp, pFullName, source.getId(), name
+                                    }
                                 );
                                 // only interested in create events that actually could create a new branch
                                 haveMatch = true;
@@ -1265,9 +1287,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             Branch branch = _factory.getBranch(job);
                             if (branch instanceof Branch.Dead) {
                                 LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Match: {5}",
-                                        new Object[]{
-                                                eventDescription, eventType, eventTimestamp, pFullName, source.getId(), name
-                                        }
+                                    new Object[]{
+                                        eventDescription, eventType, eventTimestamp, pFullName, source.getId(), name
+                                    }
                                 );
                                 // only interested in create events that actually could create a new branch
                                 haveMatch = true;
@@ -1278,46 +1300,46 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             String sourceId = branch.getSourceId();
                             if (StringUtils.equals(sourceId, source.getId())) {
                                 LOGGER.log(Level.FINER,
-                                        "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Already have: {5}",
-                                        new Object[]{
-                                                eventDescription,
-                                                eventType,
-                                                eventTimestamp,
-                                                pFullName,
-                                                source.getId(),
-                                                name
-                                        }
+                                    "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Already have: {5}",
+                                    new Object[]{
+                                        eventDescription,
+                                        eventType,
+                                        eventTimestamp,
+                                        pFullName,
+                                        source.getId(),
+                                        name
+                                    }
                                 );
                                 continue;
                             }
                             if (sourceIds.contains(sourceId)) {
                                 LOGGER.log(Level.FINER,
-                                        "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Ignored as "
-                                                + "already have {5} from higher priority source {6}",
-                                        new Object[]{
-                                                eventDescription,
-                                                eventType,
-                                                eventTimestamp,
-                                                pFullName,
-                                                source.getId(),
-                                                name,
-                                                sourceId
-                                        }
+                                    "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Ignored as "
+                                        + "already have {5} from higher priority source {6}",
+                                    new Object[]{
+                                        eventDescription,
+                                        eventType,
+                                        eventTimestamp,
+                                        pFullName,
+                                        source.getId(),
+                                        name,
+                                        sourceId
+                                    }
                                 );
                                 continue;
                             }
                             LOGGER.log(Level.FINE,
-                                    "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Match: {5} "
-                                            + "overriding lower priority source {6}",
-                                    new Object[]{
-                                            eventDescription,
-                                            eventType,
-                                            eventTimestamp,
-                                            pFullName,
-                                            source.getId(),
-                                            name,
-                                            sourceId
-                                    }
+                                "{0} {1} {2,date} {2,time}: Project {3}: Source {4}: Match: {5} "
+                                    + "overriding lower priority source {6}",
+                                new Object[]{
+                                    eventDescription,
+                                    eventType,
+                                    eventTimestamp,
+                                    pFullName,
+                                    source.getId(),
+                                    name,
+                                    sourceId
+                                }
                             );
                             // only interested in create events that actually could create a new branch
                             haveMatch = true;
@@ -1326,17 +1348,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             break SOURCES;
                         }
                         LOGGER.log(Level.FINE, "{0} {1} {2,date} {2,time}: Project {3}: No new projects for {4}",
-                                new Object[]{
-                                        eventDescription, eventType, eventTimestamp, pFullName, source.getId()
-                                }
+                            new Object[]{
+                                eventDescription, eventType, eventTimestamp, pFullName, source.getId()
+                            }
                         );
                     } else {
                         LOGGER.log(Level.FINEST, "{0} {1} {2,date} {2,time}: Project {3}: Does not matches source {4}",
-                                new Object[]{
-                                        eventDescription, eventType,
-                                        eventTimestamp, pFullName,
-                                        source.getId()
-                                }
+                            new Object[]{
+                                eventDescription, eventType,
+                                eventTimestamp, pFullName,
+                                source.getId()
+                            }
                         );
                     }
                     sourceIds.add(source.getId());
@@ -1347,20 +1369,20 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                          ChildObserver childObserver = p.openEventsChildObserver()) {
                         try {
                             listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                    start, eventDescription, eventType, eventOrigin, eventTimestamp);
+                                start, eventDescription, eventType, eventOrigin, eventTimestamp);
                             for (SCMSource source : p.getSCMSources()) {
                                 if (event.isMatch(source)) {
                                     source.fetch(
-                                            p.getSCMSourceCriteria(source),
-                                            p.new SCMHeadObserverImpl(
-                                                    source,
-                                                    childObserver,
-                                                    listener,
-                                                    _factory,
-                                                    new EventCauseFactory(event),
-                                                    event),
-                                            event,
-                                            listener
+                                        p.getSCMSourceCriteria(source),
+                                        p.new SCMHeadObserverImpl(
+                                            source,
+                                            childObserver,
+                                            listener,
+                                            _factory,
+                                            new EventCauseFactory(event),
+                                            event),
+                                        event,
+                                        listener
                                     );
                                 }
                             }
@@ -1372,16 +1394,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         } finally {
                             long end = System.currentTimeMillis();
                             listener.getLogger()
-                                    .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                            end, eventDescription, eventType, eventOrigin, eventTimestamp,
-                                            Util.getTimeSpanString(end - start));
+                                .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                                    end, eventDescription, eventType, eventOrigin, eventTimestamp,
+                                    Util.getTimeSpanString(end - start));
                         }
                     } catch (IOException e) {
                         printStackTrace(e, global.error("[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp));
+                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp));
                     } catch (InterruptedException e) {
                         global.error("[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp);
+                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp);
                         throw e;
                     }
                 }
@@ -1391,25 +1413,25 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         private int processHeadUpdate(SCMHeadEvent<?> event, TaskListener global, String eventDescription,
                                       String eventType, String eventOrigin, long eventTimestamp, int matchCount)
-                throws InterruptedException {
+            throws InterruptedException {
             Map<SCMSource, SCMHead> matches = new IdentityHashMap<>();
             Set<String> candidateNames = new HashSet<>();
-            Map<SCMSource, Map<SCMHead,SCMRevision>> revisionMaps = new IdentityHashMap<>();
+            Map<SCMSource, Map<SCMHead, SCMRevision>> revisionMaps = new IdentityHashMap<>();
             Set<Job<?, ?>> jobs = new HashSet<>();
             for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
                 if (!p.isBuildable()) {
                     LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
-                            new Object[]{
-                                    eventDescription, eventType, eventTimestamp, pFullName
-                            }
+                        new Object[]{
+                            eventDescription, eventType, eventTimestamp, pFullName
+                        }
                     );
                     continue;
                 }
                 LOGGER.log(Level.FINER, "{0} {1} {2,date} {2,time}: Checking {3} for a match",
-                        new Object[]{
-                                eventDescription, eventType, eventTimestamp, pFullName
-                        }
+                    new Object[]{
+                        eventDescription, eventType, eventTimestamp, pFullName
+                    }
                 );
                 final BranchProjectFactory _factory = p.getProjectFactory();
                 matches.clear();
@@ -1431,21 +1453,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     Branch branch = _factory.getBranch(i);
                     if (branch instanceof Branch.Dead) {
                         LOGGER.log(Level.FINEST, "{0} {1} {2,date} {2,time}: Checking {3} -> Resurrect dead "
-                                        + "branch {4} (job {5})?",
-                                new Object[]{
-                                        eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
-                                        i.getName()
-                                }
+                                + "branch {4} (job {5})?",
+                            new Object[]{
+                                eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
+                                i.getName()
+                            }
                         );
                         // try to bring back from the dead by checking all sources in sequence
                         // the first to match the event and that contains the head wins!
-                        SOURCES: for (SCMSource src : p.getSCMSources()) {
+                        SOURCES:
+                        for (SCMSource src : p.getSCMSources()) {
                             Map<SCMHead, SCMRevision> revisionMap = revisionMaps.get(src);
                             if (revisionMap == null) {
                                 continue;
                             }
                             SCMHead head = branch.getHead();
-                            for (SCMHead h: revisionMap.keySet()) {
+                            for (SCMHead h : revisionMap.keySet()) {
                                 // for bringing back from the dead we need to check the name as it could be
                                 // back from the dead on a different source from original
                                 if (h.getName().equals(head.getName())) {
@@ -1458,12 +1481,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     } else {
                         // TODO takeover
                         LOGGER.log(Level.FINEST,
-                                "{0} {1} {2,date} {2,time}: Checking {3} -> Matches existing branch {4} "
-                                        + "(job {5})?",
-                                new Object[]{
-                                        eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
-                                        i.getName()
-                                }
+                            "{0} {1} {2,date} {2,time}: Checking {3} -> Matches existing branch {4} "
+                                + "(job {5})?",
+                            new Object[]{
+                                eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
+                                i.getName()
+                            }
                         );
                         SCMSource src = p.getSCMSource(branch.getSourceId());
                         if (src == null) {
@@ -1475,12 +1498,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             // need to find the source that did match the name and compare priorities
                             // to see if this is a takeover
                             LOGGER.log(Level.FINEST,
-                                    "{0} {1} {2,date} {2,time}: Checking {3} -> Event does not match current "
-                                            + "source of {4} (job {5}), checking for take-over",
-                                    new Object[]{
-                                            eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
-                                            i.getName()
-                                    }
+                                "{0} {1} {2,date} {2,time}: Checking {3} -> Event does not match current "
+                                    + "source of {4} (job {5}), checking for take-over",
+                                new Object[]{
+                                    eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
+                                    i.getName()
+                                }
                             );
 
                             // check who has priority
@@ -1493,7 +1516,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                 Map<SCMHead, SCMRevision> rMap = revisionMaps.get(s);
                                 if (ourPriority > priority && oldPriority > priority && rMap != null) {
                                     // only need to check for takeover when the event is higher priority
-                                    for (SCMHead h: rMap.keySet()) {
+                                    for (SCMHead h : rMap.keySet()) {
                                         if (branch.getName().equals(h.getName())) {
                                             ourPriority = priority;
                                             ourSource = s;
@@ -1508,22 +1531,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             }
                             if (oldPriority < ourPriority) {
                                 LOGGER.log(Level.FINEST,
-                                        "{0} {1} {2,date} {2,time}: Checking {3} -> Ignoring event for {4} "
-                                                + "(job {5}) from source #{6} as source #{7} owns the branch name",
-                                        new Object[]{
-                                                eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
-                                                i.getName(), ourPriority, oldPriority
-                                        }
+                                    "{0} {1} {2,date} {2,time}: Checking {3} -> Ignoring event for {4} "
+                                        + "(job {5}) from source #{6} as source #{7} owns the branch name",
+                                    new Object[]{
+                                        eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
+                                        i.getName(), ourPriority, oldPriority
+                                    }
                                 );
                                 continue;
                             } else {
                                 LOGGER.log(Level.FINER,
-                                        "{0} {1} {2,date} {2,time}: Checking {3} -> Takeover event for {4} "
-                                                + "(job {5}) by source #{5} from source #{6}",
-                                        new Object[]{
-                                                eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
-                                                i.getName(), ourPriority, oldPriority
-                                        }
+                                    "{0} {1} {2,date} {2,time}: Checking {3} -> Takeover event for {4} "
+                                        + "(job {5}) by source #{5} from source #{6}",
+                                    new Object[]{
+                                        eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
+                                        i.getName(), ourPriority, oldPriority
+                                    }
                                 );
                                 assert ourSource != null;
                                 src = ourSource;
@@ -1534,7 +1557,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         SCMHead head = branch.getHead();
                         // The distinguishing key for branch projects is the name, so check on the name
                         boolean match = false;
-                        for (SCMHead h: revisionMap.keySet()) {
+                        for (SCMHead h : revisionMap.keySet()) {
                             if (h.getName().equals(head.getName())) {
                                 match = true;
                                 break;
@@ -1542,12 +1565,12 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                         if (match) {
                             LOGGER.log(Level.FINE,
-                                    "{0} {1} {2,date} {2,time}: Checking {3} -> Event matches source of {4} "
-                                            + "(job {5})",
-                                    new Object[]{
-                                            eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
-                                            i.getName()
-                                    }
+                                "{0} {1} {2,date} {2,time}: Checking {3} -> Event matches source of {4} "
+                                    + "(job {5})",
+                                new Object[]{
+                                    eventDescription, eventType, eventTimestamp, pFullName, branch.getName(),
+                                    i.getName()
+                                }
                             );
                             if (SCMEvent.Type.UPDATED == event.getType()) {
                                 SCMRevision revision = revisionMap.get(head);
@@ -1557,17 +1580,17 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                         // we are not interested in events that tell us a revision
                                         // we have already seen
                                         LOGGER.log(Level.FINE,
-                                                "{0} {1} {2,date} {2,time}: Checking {3} -> Ignoring event as "
-                                                        + "revision {4} is same as last build of {5} (job {6})",
-                                                new Object[]{
-                                                        eventDescription,
-                                                        eventType,
-                                                        eventTimestamp,
-                                                        pFullName,
-                                                        revision,
-                                                        branch.getName(),
-                                                        i.getName()
-                                                }
+                                            "{0} {1} {2,date} {2,time}: Checking {3} -> Ignoring event as "
+                                                + "revision {4} is same as last build of {5} (job {6})",
+                                            new Object[]{
+                                                eventDescription,
+                                                eventType,
+                                                eventTimestamp,
+                                                pFullName,
+                                                revision,
+                                                branch.getName(),
+                                                i.getName()
+                                            }
                                         );
                                         continue;
                                     }
@@ -1586,19 +1609,19 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                          ChildObserver childObserver = p.openEventsChildObserver()) {
                         try {
                             listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                    start, eventDescription, eventType, eventOrigin, eventTimestamp);
+                                start, eventDescription, eventType, eventOrigin, eventTimestamp);
                             for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
                                 m.getKey().fetch(
-                                        p.getSCMSourceCriteria(m.getKey()),
-                                        p.new SCMHeadObserverImpl(
-                                                m.getKey(),
-                                                childObserver,
-                                                listener,
-                                                _factory,
-                                                new EventCauseFactory(event),
-                                                event),
-                                        event,
-                                        listener
+                                    p.getSCMSourceCriteria(m.getKey()),
+                                    p.new SCMHeadObserverImpl(
+                                        m.getKey(),
+                                        childObserver,
+                                        listener,
+                                        _factory,
+                                        new EventCauseFactory(event),
+                                        event),
+                                    event,
+                                    listener
                                 );
                             }
                             // now dis-associate branches that no-longer exist
@@ -1621,8 +1644,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     continue;
                                 }
                                 _factory.decorate(_factory.setBranch(
-                                        j,
-                                        new Branch.Dead(branch)
+                                    j,
+                                    new Branch.Dead(branch)
                                 ));
                                 j.save();
                             }
@@ -1634,20 +1657,20 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         } finally {
                             long end = System.currentTimeMillis();
                             listener.getLogger()
-                                    .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                            end, eventDescription, eventType, eventOrigin, eventTimestamp,
-                                            Util.getTimeSpanString(end - start));
+                                .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                                    end, eventDescription, eventType, eventOrigin, eventTimestamp,
+                                    Util.getTimeSpanString(end - start));
                         }
                     } catch (IOException e) {
                         printStackTrace(e, global.error(
-                                "[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                                eventOrigin, eventTimestamp));
+                            "[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
+                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                            eventOrigin, eventTimestamp));
                     } catch (InterruptedException e) {
                         global.error(
-                                "[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                                eventOrigin, eventTimestamp);
+                            "[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
+                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                            eventOrigin, eventTimestamp);
                         throw e;
                     }
                 } else {
@@ -1675,22 +1698,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         try (StreamTaskListener listener = p.getComputation().createEventsListener();
                              ChildObserver childObserver = p.openEventsChildObserver()) {
                             listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                    start, eventDescription, eventType, eventOrigin, eventTimestamp);
+                                start, eventDescription, eventType, eventOrigin, eventTimestamp);
                             try {
                                 for (SCMSource source : p.getSCMSources()) {
                                     if (event.isMatch(source)) {
                                         source.fetch(
-                                                p.getSCMSourceCriteria(source),
-                                                p.new SCMHeadObserverImpl(
-                                                        source,
-                                                        childObserver,
-                                                        listener,
-                                                        _factory,
-                                                        new EventCauseFactory(event),
-                                                        event
-                                                ),
-                                                event,
-                                                listener
+                                            p.getSCMSourceCriteria(source),
+                                            p.new SCMHeadObserverImpl(
+                                                source,
+                                                childObserver,
+                                                listener,
+                                                _factory,
+                                                new EventCauseFactory(event),
+                                                event
+                                            ),
+                                            event,
+                                            listener
                                         );
                                     }
                                 }
@@ -1702,22 +1725,22 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             } finally {
                                 long end = System.currentTimeMillis();
                                 listener.getLogger().format(
-                                        "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                        end, eventDescription, eventType, eventOrigin, eventTimestamp,
-                                        Util.getTimeSpanString(end - start));
+                                    "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                                    end, eventDescription, eventType, eventOrigin, eventTimestamp,
+                                    Util.getTimeSpanString(end - start));
                             }
                         } catch (IOException e) {
                             printStackTrace(e, global.error(
-                                    "[%tc] %s encountered an error while processing %s %s event from %s with "
-                                            + "timestamp %tc",
-                                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                                    eventOrigin, eventTimestamp));
+                                "[%tc] %s encountered an error while processing %s %s event from %s with "
+                                    + "timestamp %tc",
+                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                                eventOrigin, eventTimestamp));
                         } catch (InterruptedException e) {
                             global.error(
-                                    "[%tc] %s was interrupted while processing %s %s event from %s with "
-                                            + "timestamp %tc",
-                                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                                    eventOrigin, eventTimestamp);
+                                "[%tc] %s was interrupted while processing %s %s event from %s with "
+                                    + "timestamp %tc",
+                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                                eventOrigin, eventTimestamp);
                             throw e;
                         }
                     }
@@ -1736,7 +1759,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 long started = System.currentTimeMillis();
                 global.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
                     started, eventDescription, event.getType().name(),
-                        event.getOrigin(), event.getTimestamp());
+                    event.getOrigin(), event.getTimestamp());
                 int matchCount = 0;
                 // not interested in creation as that is an event for org folders
                 // not interested in removal as that is an event for org folders
@@ -1744,15 +1767,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     // we are only interested in updates as they would trigger the actions being updated
                     try {
                         for (MultiBranchProject<?, ?> p : Jenkins.get()
-                                .getAllItems(MultiBranchProject.class)) {
+                            .getAllItems(MultiBranchProject.class)) {
                             if (!p.isBuildable()) {
                                 if (LOGGER.isLoggable(Level.FINER)) {
                                     LOGGER.log(Level.FINER,
-                                            "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
-                                            new Object[]{
-                                                    eventDescription, event.getType().name(), event.getTimestamp(),
-                                                    p.getFullName()
-                                            }
+                                        "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
+                                        new Object[]{
+                                            eventDescription, event.getType().name(), event.getTimestamp(),
+                                            p.getFullName()
+                                        }
                                     );
                                 }
                                 continue;
@@ -1778,12 +1801,10 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                                 newActions = source.fetchActions(event, listener);
                                             } catch (IOException e) {
                                                 printStackTrace(e,
-                                                        listener.error("Could not refresh actions for source %s",
-                                                                source.getId()
-                                                        ));
+                                                    listener.error("Could not refresh actions for source %s",
+                                                        source.getId()
+                                                    ));
                                                 // preserve previous actions if we have some transient error fetching now (e.g.
-
-
                                                 // API rate limit)
                                                 newActions = oldActions;
                                             }
@@ -1819,34 +1840,34 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                     }
                                 } catch (IOException e) {
                                     printStackTrace(e, global.error(
-                                            "[%tc] %s encountered an error while processing %s %s event from %s with "
-                                                    + "timestamp %tc",
-                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            eventDescription, event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
+                                        "[%tc] %s encountered an error while processing %s %s event from %s with "
+                                            + "timestamp %tc",
+                                        System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                        eventDescription, event.getType().name(),
+                                        event.getOrigin(), event.getTimestamp()));
                                 } catch (InterruptedException e) {
                                     global.error(
-                                            "[%tc] %s was interrupted while processing %s %s event from %s with "
-                                                    + "timestamp %tc",
-                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            eventDescription, event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp());
+                                        "[%tc] %s was interrupted while processing %s %s event from %s with "
+                                            + "timestamp %tc",
+                                        System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                        eventDescription, event.getType().name(),
+                                        event.getOrigin(), event.getTimestamp());
                                     throw e;
                                 }
                             }
                         }
                     } catch (InterruptedException e) {
                         printStackTrace(e, global.error(
-                                "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
-                                System.currentTimeMillis(), eventDescription, event.getType().name(),
-                                event.getOrigin(), event.getTimestamp()));
+                            "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
+                            System.currentTimeMillis(), eventDescription, event.getType().name(),
+                            event.getOrigin(), event.getTimestamp()));
                     }
                 }
                 long ended = System.currentTimeMillis();
                 global.getLogger()
-                        .format(OrganizationFolder.COMPLETED_PROCESSING_EVENT,
-                                ended, eventDescription, event.getType().name(),
-                                event.getOrigin(), event.getTimestamp(), ended - started, matchCount);
+                    .format(OrganizationFolder.COMPLETED_PROCESSING_EVENT,
+                        ended, eventDescription, event.getType().name(),
+                        event.getOrigin(), event.getTimestamp(), ended - started, matchCount);
             } catch (IOException e) {
                 LOGGER.log(Level.WARNING, "Could not close global event log file", e);
             }
@@ -1863,8 +1884,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
          * for each build as we cannot know the assumptions that plugin authors have made in
          * {@link Cause#onAddedTo(Run)}.
          *
-         * @return an array of new cause instances.
          * @param source
+         * @return an array of new cause instances.
          */
         @NonNull
         abstract Cause[] create(SCMSource source);
@@ -1876,6 +1897,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     private static class IndexingCauseFactory extends CauseFactory {
         /**
          * {@inheritDoc}
+         *
          * @param source
          */
         @NonNull
@@ -1901,6 +1923,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         /**
          * {@inheritDoc}
+         *
          * @param source
          */
         @NonNull
@@ -1954,12 +1977,18 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         /**
          * Constructor.
          *
-         * @param source       The source that we are observing.
-         * @param observer     The child observer.
-         * @param listener     The task listener.
-         * @param _factory     The project factory.
-         * @param causeFactory A source of {@link Cause} instances to use when triggering builds.
-         * @param event        The optional event to use when scoping queries.
+         * @param source
+         *     The source that we are observing.
+         * @param observer
+         *     The child observer.
+         * @param listener
+         *     The task listener.
+         * @param _factory
+         *     The project factory.
+         * @param causeFactory
+         *     A source of {@link Cause} instances to use when triggering builds.
+         * @param event
+         *     The optional event to use when scoping queries.
          */
         public SCMHeadObserverImpl(@NonNull SCMSource source, @NonNull ChildObserver<P> observer,
                                    @NonNull TaskListener listener, @NonNull BranchProjectFactory<P, R> _factory,
@@ -2000,19 +2029,28 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         private void observeExisting(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull Branch branch, String rawName, P project, Branch origBranch, Action[] revisionActions) {
             boolean rebuild = (origBranch instanceof Branch.Dead && !(branch instanceof Branch.Dead))
-                    || !(source.getId().equals(origBranch.getSourceId()));
+                || !(source.getId().equals(origBranch.getSourceId()));
             boolean needSave = !branch.equals(origBranch)
-                    || !branch.getActions().equals(origBranch.getActions())
-                    || !Util.getDigestOf(Items.XSTREAM2.toXML(branch.getScm()))
-                    .equals(Util.getDigestOf(Items.XSTREAM2.toXML(origBranch.getScm())));
+                || !branch.getActions().equals(origBranch.getActions())
+                || !Util.getDigestOf(Items.XSTREAM2.toXML(branch.getScm()))
+                .equals(Util.getDigestOf(Items.XSTREAM2.toXML(origBranch.getScm())));
             _factory.decorate(_factory.setBranch(project, branch));
+
+            String displayName = getProjectDisplayName(project, rawName);
+            try {
+                needSave = needSave || !Objects.equals(displayName, project.getDisplayNameOrNull());
+                project.setDisplayName(displayName);
+            } catch (IOException e) {
+                listener.getLogger().format("DisplayName update failed for (%s) to '%s': %s", rawName, displayName, e.getMessage());
+            }
+
             if (rebuild) {
                 needSave = true;
                 listener.getLogger().format(
-                        "%s reopened: %s (%s)%n",
-                        StringUtils.defaultIfEmpty(head.getPronoun(), "Branch"),
-                        rawName,
-                        revision
+                    "%s reopened: %s (%s)%n",
+                    StringUtils.defaultIfEmpty(head.getPronoun(), "Branch"),
+                    rawName,
+                    revision
                 );
                 // the previous "revision" for this head is not a revision for the current source
                 // either because the head was removed and then recreated, or because the head
@@ -2024,7 +2062,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
                 if (changesDetected(revision, project, scmLastBuiltRevision)) {
                     listener.getLogger()
-                            .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
+                        .format("Changes detected: %s (%s → %s)%n", rawName, scmLastBuiltRevision, revision);
 
                     needSave = true;
                     // get the previous seen revision
@@ -2053,18 +2091,18 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 return;
             }
             try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                    MultiBranchProject.this, encodedName, branch.getName()
+                MultiBranchProject.this, encodedName, branch.getName()
             )) {
                 if (getItem(encodedName) != null) {
                     throw new IllegalStateException(
-                            "JENKINS-42511: attempted to redundantly create " + encodedName + " in "
-                                    + MultiBranchProject.this);
+                        "JENKINS-42511: attempted to redundantly create " + encodedName + " in "
+                            + MultiBranchProject.this);
                 }
                 project = _factory.newInstance(branch);
             }
             if (!project.getName().equals(encodedName)) {
                 throw new IllegalStateException(
-                        "Name of created project " + project + " did not match expected " + encodedName);
+                    "Name of created project " + project + " did not match expected " + encodedName);
             }
             // HACK ALERT
             // ==========
@@ -2072,9 +2110,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             // performs the save
             BulkChange bc = new BulkChange(project);
             try {
-                if (project.getDisplayNameOrNull() == null && !rawName.equals(encodedName)) {
-                    project.setDisplayName(rawName);
-                }
+                project.setDisplayName(getProjectDisplayName(project, rawName));
             } catch (IOException e) {
                 // ignore even if it does happen we didn't want a save
             } finally {
@@ -2085,6 +2121,34 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             // ok it is now up to the observer to ensure it does the actual save.
             observer.created(project);
             doAutomaticBuilds(head, revision, rawName, project, revisionActions, null, null);
+        }
+
+        private String getProjectDisplayName(@NonNull P project, @NonNull String rawName) {
+            MultiBranchProjectDisplayNamingStrategy naming = null;
+            List<SCMSourceTrait> traits = source.getTraits();
+            if (null != traits) {
+                Optional<SCMSourceTrait> trait = traits.stream()
+                    .filter(t -> t instanceof MultiBranchProjectDisplayNamingTrait)
+                    .findFirst();
+
+                naming = trait
+                    .map(scmSourceTrait -> (MultiBranchProjectDisplayNamingTrait) scmSourceTrait)
+                    .map(MultiBranchProjectDisplayNamingTrait::getDisplayNamingStrategy)
+                    .orElse(null);
+            }
+
+            if (naming == null) {
+                return rawName;
+            }
+
+            final ObjectMetadataAction action = naming.needsObjectDisplayName()
+                ? project.getAction(ObjectMetadataAction.class)
+                : null;
+            final String objectDisplayName = Optional.ofNullable(action)
+                .map(ObjectMetadataAction::getObjectDisplayName)
+                .orElse("");
+            final String generatedName = naming.generateName(rawName, objectDisplayName);
+            return StringUtils.isBlank(generatedName) || generatedName.equals(project.getName()) ? null : generatedName;
         }
 
         private boolean changesDetected(@NonNull SCMRevision revision, @NonNull P project, SCMRevision scmLastBuiltRevision) {
@@ -2122,7 +2186,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 revisionActions = actions.toArray(new Action[actions.size()]);
             } catch (IOException | InterruptedException e) {
                 printStackTrace(e, listener.error("Could not fetch metadata for revision %s of branch %s",
-                        revision, rawName));
+                    revision, rawName));
             }
             return revisionActions;
         }
@@ -2144,7 +2208,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             if (project != null) {
                 if (!_factory.isProject(project)) {
                     listener.getLogger().println("Detected unsupported subitem "
-                            + ModelHyperlinkNote.encodeTo(project) + ", skipping");
+                        + ModelHyperlinkNote.encodeTo(project) + ", skipping");
                 } else {
                     origBranch = _factory.getBranch(project);
                     if (!(origBranch instanceof Branch.Dead)) {
@@ -2165,21 +2229,21 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                             }
                             if (oldPriority < ourPriority) {
                                 listener.getLogger().println(
-                                        "Ignoring " + ModelHyperlinkNote.encodeTo(project) + " from source #"
-                                                + ourPriority + " as source #" +
-                                                oldPriority + " owns the branch name");
+                                    "Ignoring " + ModelHyperlinkNote.encodeTo(project) + " from source #"
+                                        + ourPriority + " as source #" +
+                                        oldPriority + " owns the branch name");
                                 origBranch = null;
                             } else {
                                 if (oldPriority == Integer.MAX_VALUE) {
                                     listener.getLogger().println(
-                                            "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
-                                                    + ourPriority
-                                                    + " from source that no longer exists");
+                                        "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
+                                            + ourPriority
+                                            + " from source that no longer exists");
                                 } else {
                                     listener.getLogger().println(
-                                            "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
-                                                    + ourPriority
-                                                    + " from source #" + oldPriority);
+                                        "Takeover for " + ModelHyperlinkNote.encodeTo(project) + " by source #"
+                                            + ourPriority
+                                            + " from source #" + oldPriority);
                                 }
                             }
                         }
@@ -2205,13 +2269,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         private void doAutomaticBuilds(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull String rawName, @NonNull P project, Action[] revisionActions, SCMRevision scmLastBuiltRevision, SCMRevision scmLastSeenRevision) {
             if (isAutomaticBuild(head, revision, scmLastBuiltRevision, scmLastSeenRevision)) {
                 scheduleBuild(
-                        _factory,
-                        project,
-                        revision,
-                        listener,
-                        rawName,
-                        causeFactory.create(source),
-                        revisionActions
+                    _factory,
+                    project,
+                    revision,
+                    listener,
+                    rawName,
+                    causeFactory.create(source),
+                    revisionActions
                 );
             } else {
                 listener.getLogger().format("No automatic build triggered for %s%n", rawName);
@@ -2225,10 +2289,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
         /**
          * Tests if the specified {@link SCMHead} should be automatically built when discovered / modified.
-         * @param head the head.
-         * @param currRevision the current built revision.
-         * @param lastBuiltRevision the previous built revision
-         * @param lastSeenRevision the last seen revision
+         *
+         * @param head
+         *     the head.
+         * @param currRevision
+         *     the current built revision.
+         * @param lastBuiltRevision
+         *     the previous built revision
+         * @param lastSeenRevision
+         *     the last seen revision
          * @return {@code true} if the head should be automatically built when discovered / modified.
          */
         private boolean isAutomaticBuild(@NonNull SCMHead head,
@@ -2236,7 +2305,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                          @CheckForNull SCMRevision lastBuiltRevision,
                                          @CheckForNull SCMRevision lastSeenRevision) {
             BranchSource branchSource = null;
-            for (BranchSource s: MultiBranchProject.this.sources) {
+            for (BranchSource s : MultiBranchProject.this.sources) {
                 if (s.getSource().getId().equals(source.getId())) {
                     branchSource = s;
                     break;
@@ -2251,7 +2320,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 // we will use default behaviour, build anything but tags
                 return !(head instanceof TagSCMHead);
             } else {
-                for (BranchBuildStrategy s: buildStrategies) {
+                for (BranchBuildStrategy s : buildStrategies) {
                     if (s.automaticBuild(source, head, currRevision, lastBuiltRevision, lastSeenRevision, listener)) {
                         return true;
                     }
@@ -2316,7 +2385,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         /**
          * Constructor.
          *
-         * @param owner our owner.
+         * @param owner
+         *     our owner.
          */
         private State(@NonNull MultiBranchProject<?, ?> owner) {
             this.owner = owner;
@@ -2332,7 +2402,8 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         /**
          * Loads the state from disk.
          *
-         * @throws IOException if there was an issue loading the state from disk.
+         * @throws IOException
+         *     if there was an issue loading the state from disk.
          */
         public synchronized void load() throws IOException {
             if (getStateFile().exists()) {
