@@ -1,13 +1,23 @@
 <div>
-    The different strategies:
-    <ul>
-        <li>
-            <strong>Object display name:</strong>
-            <span>Uses the branch source plugin's display name for the PR instead of the raw name</span>
-        </li>
-        <li>
-            <strong>Raw and object display name:</strong>
-            <span>Joins the raw name and the branch source plugin's display name</span>
-        </li>
-    </ul>
+  The different strategies:
+  <ul>
+    <li>
+      <span>
+        <strong>Job display name with fallback to name:</strong>
+        <br>
+        <span>Uses the branch source plugin's display name for the PR instead of the raw name</span>
+        <br>
+        <span>Value for configuration-as-code: <code>OBJECT_DISPLAY_NAME</code></span>
+      </span>
+    </li>
+    <li>
+      <span>
+        <strong>Name and, if available, display name:</strong>
+        <br>
+        <span>Joins the raw name and the branch source plugin's display name</span>
+        <br>
+        <span>Value for configuration-as-code: <code>RAW_AND_OBJECT_DISPLAY_NAME</code></span>
+      </span>
+    </li>
+  </ul>
 </div>
