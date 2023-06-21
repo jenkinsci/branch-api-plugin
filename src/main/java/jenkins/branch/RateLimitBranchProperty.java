@@ -533,23 +533,22 @@ public class RateLimitBranchProperty extends BranchProperty {
                     }
                     // ensure items leave the queue in the order they were scheduled
                     List<Queue.Item> items = Jenkins.get().getQueue().getItems(item.task);
-                    if (items.size() == 1 && item == items.get(0)) {
-                        return null;
-                    }
-                    for (Queue.Item i : items) {
-                        if (i.getId() < item.getId()) {
-                            LOGGER.log(Level.FINE, "{0} with queue id {1} blocked by queue id {2} was first",
-                                    new Object[]{
-                                            job.getFullName(),
-                                            item.getId(),
-                                            i.getId()
-                                    }
-                            );
+                    if (!items.isEmpty()) {
+                        Queue.Item i = items.get(0);
+                        if (item == i) { // This item is the first in queue for this task.
+                            LOGGER.log(Level.FINE, () -> "Allowing " + item.getId() + " " + item.getClass().getSimpleName() + " " + job.getFullName());
+                            return null;
+                        } else {
+                            // There is another item before the one currently processed, so block.
+                            LOGGER.log(Level.FINE, () -> item.getId() + " " + job.getFullName() + " blocked by queue id " + i.getId() + " was first");
                             long betweenBuilds = property.getMillisecondsBetweenBuilds();
                             return CauseOfBlockage.fromMessage(Messages._RateLimitBranchProperty_BuildBlocked(
                                     new Date(System.currentTimeMillis() + betweenBuilds))
                             );
                         }
+                    } else {
+                        // Defensive measure, the queue item is supposed to be in queue already.
+                        LOGGER.log(Level.WARNING, "Could not find queue item with id=" + item.getId() + " in queue.");
                     }
                 }
             }

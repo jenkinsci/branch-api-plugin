@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
@@ -51,6 +52,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.TestExtension;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -84,6 +86,9 @@ public class RateLimitBranchPropertyTest {
      */
     @ClassRule
     public static JenkinsRule r = new JenkinsRule();
+
+    @ClassRule
+    public static LoggerRule loggerRule = new LoggerRule().record(RateLimitBranchProperty.class, Level.FINE);
     /**
      * Our logger.
      */
