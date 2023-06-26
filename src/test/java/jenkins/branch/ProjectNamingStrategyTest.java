@@ -5,8 +5,8 @@ import integration.harness.BasicBranchProjectFactory;
 import integration.harness.BasicDummyStepBranchProperty;
 import integration.harness.BasicMultiBranchProject;
 import jenkins.model.Jenkins;
-import jenkins.scm.api.SCMSource;
 import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMSource;
 import org.junit.ClassRule;
@@ -42,12 +42,13 @@ public class ProjectNamingStrategyTest {
 
     public void testNamingStrategy(final MultiBranchProjectDisplayNamingStrategy namingStrategy) throws Exception {
         final Jenkins jenkinsInstance = r.jenkins;
+        final String mainBranch = "master";
         final String projectName = String.format("Project_%s", namingStrategy.name());
 
         try (final MockSCMController mockScm = MockSCMController.create()) {
             mockScm.createRepository(REPO_NAME);
 
-            final Integer crNumber = mockScm.openChangeRequest(REPO_NAME, "master");
+            final Integer crNumber = mockScm.openChangeRequest(REPO_NAME, mainBranch);
             final String crName = String.format("CR-%s", crNumber);
             final String crTitle = String.format("Change request #%s", crNumber);
 
@@ -58,6 +59,7 @@ public class ProjectNamingStrategyTest {
             final MockSCMSource scmSource = new MockSCMSource(
                 mockScm,
                 REPO_NAME,
+                new MockSCMDiscoverBranches(),
                 new MockSCMDiscoverChangeRequests(),
                 new MultiBranchProjectDisplayNamingTrait(namingStrategy)
             );
@@ -67,14 +69,23 @@ public class ProjectNamingStrategyTest {
             project.getSourcesList().add(source);
             r.configRoundtrip(project);
 
+            final FreeStyleProject branchProject = jenkinsInstance.getItemByFullName(
+                String.format("%s/%s", projectName, mainBranch),
+                FreeStyleProject.class
+            );
+
+            final String expectedBranchProjectName = namingStrategy.generateName(mainBranch, "");
+            assertNotNull(branchProject, "No job was created for the main branch");
+            assertEquals(expectedBranchProjectName, branchProject.getDisplayName(), "The job name doesn't match the naming strategy");
+
             final FreeStyleProject crProject = jenkinsInstance.getItemByFullName(
                 String.format("%s/%s", projectName, crName),
                 FreeStyleProject.class
             );
 
-            final String expectedName = namingStrategy.generateName(crName, crTitle);
+            final String expectedCrProjectName = namingStrategy.generateName(crName, crTitle);
             assertNotNull(crProject, "No job was created for the pull request");
-            assertEquals(expectedName, crProject.getDisplayName(), "The job name doesn't match the naming strategy");
+            assertEquals(expectedCrProjectName, crProject.getDisplayName(), "The job name doesn't match the naming strategy");
         }
     }
 }
