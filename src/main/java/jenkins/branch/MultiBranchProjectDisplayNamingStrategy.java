@@ -24,6 +24,7 @@
 package jenkins.branch;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.Objects;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import org.jvnet.localizer.Localizable;
 
@@ -42,7 +43,7 @@ public enum MultiBranchProjectDisplayNamingStrategy {
     OBJECT_DISPLAY_NAME(true, Messages._MultiBranchProjectDisplayNamingTrait_DisplayName()) {
         @Override
         public String generateName(@NonNull final String rawName, final String displayName) {
-            return displayName;
+            return isBlank(displayName) ? rawName : displayName;
         }
     },
     /**
@@ -51,7 +52,15 @@ public enum MultiBranchProjectDisplayNamingStrategy {
     RAW_AND_OBJECT_DISPLAY_NAME(true, Messages._MultiBranchProjectDisplayNamingTrait_RawAndDisplayName()) {
         @Override
         public String generateName(@NonNull final String rawName, final String displayName) {
-            return isBlank(displayName) ? rawName : format("%s: %s", rawName, displayName);
+            if (isBlank(displayName)) {
+                return rawName;
+            }
+
+            if (Objects.equals(rawName, displayName)) {
+                return rawName;
+            }
+
+            return format("%s - %s", rawName, displayName);
         }
     },
     ;
@@ -67,6 +76,7 @@ public enum MultiBranchProjectDisplayNamingStrategy {
     public boolean needsObjectDisplayName() {
         return needsObjectDisplayName;
     }
+
     public String getDisplayName() {
         return displayName.toString();
     }
