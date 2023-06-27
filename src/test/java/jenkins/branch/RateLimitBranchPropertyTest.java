@@ -248,6 +248,7 @@ public class RateLimitBranchPropertyTest {
             assertThat(master.isInQueue(), is(false));
             assertThat(master.getQueueItem(), nullValue());
             QueueTaskFuture<FreeStyleBuild> future = master.scheduleBuild2(0);
+            Thread.sleep(1);
             QueueTaskFuture<FreeStyleBuild> future2 = master.scheduleBuild2(0, (Cause) null,
                     new ParametersAction(
                             Collections.singletonList(new StringParameterValue("FOO", "MANCHU"))));

@@ -537,10 +537,7 @@ public class RateLimitBranchProperty extends BranchProperty {
                         return null;
                     }
                     for (Queue.Item i : items) {
-                        if (i.getId() == item.getId()) {
-                            // We've reached the current item, no need to go further
-                            break;
-                        } else if (i.getInQueueSince() <= item.getInQueueSince()) {
+                        if (i.getInQueueSince() < item.getInQueueSince()) {
                             LOGGER.log(Level.FINE, "{0} with queue id {1} blocked by queue id {2} was first",
                                     new Object[]{
                                             job.getFullName(),
