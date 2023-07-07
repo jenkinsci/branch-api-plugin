@@ -44,6 +44,7 @@
   <j:set var="descriptors" value="${descriptor.buildStrategiesDescriptors(it,sourceDescriptor)}"/>
   <j:if test="${!descriptors.isEmpty()}">
     <f:entry title="${%Build strategies}" field="buildStrategies">
+    <f:entry title="${%Strategy}" field="strategyId"></f:entry>
     <f:hetero-list name="buildStrategies" items="${instance.buildStrategies}"
                    descriptors="${descriptors}"
                    hasHeader="true" honorOrder="true"/>
