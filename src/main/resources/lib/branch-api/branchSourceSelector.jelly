@@ -56,7 +56,6 @@ THE SOFTWARE.
     </st:attribute>
   </st:documentation>
 
-  <st:adjunct includes="lib.form.hetero-list.hetero-list"/>
   <f:prepareDatabinding />
   <j:set target="${attrs}" property="descriptors"
          value="${attrs.descriptors ?: descriptor.getPropertyType(instance,attrs.field).getApplicableDescriptors()}" />
@@ -97,7 +96,7 @@ THE SOFTWARE.
     </div>
 
     <div>
-      <input type="button" value="${attrs.addCaption?:'%Add'}" class="hetero-list-add" menualign="${attrs.menuAlign}" suffix="${attrs.field}"/>
+      <button type="button" class="hetero-list-add" menualign="${attrs.menuAlign}" suffix="${attrs.field}">${attrs.addCaption?:'%Add'}<l:icon src="symbol-chevron-down"/>
     </div>
   </div>
 </j:jelly>
