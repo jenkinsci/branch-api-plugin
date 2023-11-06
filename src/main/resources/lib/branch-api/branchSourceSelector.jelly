@@ -96,7 +96,7 @@ THE SOFTWARE.
     </div>
 
     <div>
-      <button type="button" class="hetero-list-add" menualign="${attrs.menuAlign}" suffix="${attrs.field}">${attrs.addCaption?:'%Add'}<l:icon src="symbol-chevron-down"/>
+      <input type="button" value="${attrs.addCaption?:'%Add'}" class="hetero-list-add" menualign="${attrs.menuAlign}" suffix="${attrs.field}"/>
     </div>
   </div>
 </j:jelly>
