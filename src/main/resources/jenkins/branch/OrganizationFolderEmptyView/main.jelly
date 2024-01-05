@@ -43,7 +43,7 @@
           <a href="./configure" class="content-block__link">
             <span>Configure the project</span>
             <span class="trailing-icon">
-              <l:svgIcon class="icon-sm" href="${imagesURL}/material-icons/svg-sprite-navigation-symbol.svg#ic_arrow_forward_24px" />
+              <l:icon class="icon-sm" src="symbol-arrow-forward-outline plugin-ionicons-api" />
             </span>
           </a>
         </li>
@@ -51,7 +51,7 @@
           <a href="./computation" class="content-block__link">
             <span>Re-run the Folder Computation</span>
             <span class="trailing-icon">
-              <l:svgIcon class="icon-sm" href="${imagesURL}/material-icons/svg-sprite-navigation-symbol.svg#ic_arrow_forward_24px" />
+              <l:icon class="icon-sm" src="symbol-arrow-forward-outline plugin-ionicons-api" />
             </span>
           </a>
         </li>
