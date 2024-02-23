@@ -187,7 +187,7 @@ public class NoTriggerBranchPropertyTest {
         property.setStrategy(strategy);
         branchSource.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[] {property}));
         project.getSourcesList().add(branchSource);
-        r.configRoundtrip(project);
+        project.scheduleBuild2(0).getFuture().get();
         return new ProjectWrapper(r, project, controller, repositoryName);
     }
 
