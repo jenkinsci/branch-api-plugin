@@ -24,7 +24,6 @@
 
 package jenkins.branch;
 
-import antlr.ANTLRException;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.Extension;
@@ -95,11 +94,7 @@ public class OrganizationChildTriggersProperty extends OrganizationFolderPropert
      * @return a new default instance of this property.
      */
     public static OrganizationChildTriggersProperty newDefaultInstance() {
-        try {
-            return new OrganizationChildTriggersProperty(new PeriodicFolderTrigger("1d"));
-        } catch (ANTLRException e) {
-            throw new IllegalStateException(e);
-        }
+        return new OrganizationChildTriggersProperty(new PeriodicFolderTrigger("1d"));
     }
 
     /**
