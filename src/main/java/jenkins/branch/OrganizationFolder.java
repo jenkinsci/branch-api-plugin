@@ -24,7 +24,6 @@
 
 package jenkins.branch;
 
-import antlr.ANTLRException;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderDescriptor;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
@@ -204,11 +203,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             }
         }
 
-        try {
-            addTrigger(new PeriodicFolderTrigger("1d"));
-        } catch (ANTLRException x) {
-            throw new IllegalStateException(x);
-        }
+        addTrigger(new PeriodicFolderTrigger("1d"));
         try {
             addProperty(OrganizationChildTriggersProperty.newDefaultInstance());
             addProperty(OrganizationChildOrphanedItemsProperty.newDefaultInstance());
