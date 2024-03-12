@@ -1,6 +1,11 @@
 package jenkins.branch;
 
+import java.util.List;
+import org.hamcrest.Matchers;
 import org.junit.Test;
+import org.mockito.Mockito;
+import jenkins.branch.NamedExceptionsBranchPropertyStrategy.Named;
+import jenkins.scm.api.SCMHead;
 
 import static jenkins.branch.NamedExceptionsBranchPropertyStrategy.Named.isMatch;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -10,6 +15,27 @@ import static org.hamcrest.Matchers.is;
  * @author Stephen Connolly
  */
 public class NamedExceptionsBranchPropertyStrategyTest {
+
+    @Test
+    public void test_that_strategy_aggregates_properties_from_matching_branches() throws Exception {
+        BranchProperty defaultProp = Mockito.mock(BranchProperty.class);
+
+        BranchProperty prop1 = Mockito.mock(BranchProperty.class);
+        BranchProperty prop2 = Mockito.mock(BranchProperty.class);
+        BranchProperty prop3 = Mockito.mock(BranchProperty.class);
+
+        BranchPropertyStrategy strategy = new NamedExceptionsBranchPropertyStrategy( //
+            new BranchProperty[] { defaultProp }, //
+            new Named[] { //
+                          new Named("master", new BranchProperty[] { prop1 }), //
+                          new Named("master,support/*", new BranchProperty[] { prop2 }), //
+                          new Named("support/*", new BranchProperty[] { prop3 }), //
+            });
+
+        List<BranchProperty> matches = strategy.getPropertiesFor(new SCMHead("master"));
+        assertThat(matches, Matchers.containsInAnyOrder(prop1, prop2));
+    }
+
     @Test
     public void examplesFromHelpText() throws Exception {
         // "production"  matches one and only one branch
