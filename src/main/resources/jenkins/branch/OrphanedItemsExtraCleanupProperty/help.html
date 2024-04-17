@@ -1,0 +1,33 @@
+<!--
+ ~ The MIT License
+ ~
+ ~ Copyright (c) 2024, CloudBees, Inc.
+ ~
+ ~ Permission is hereby granted, free of charge, to any person obtaining a copy
+ ~ of this software and associated documentation files (the "Software"), to deal
+ ~ in the Software without restriction, including without limitation the rights
+ ~ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ ~ copies of the Software, and to permit persons to whom the Software is
+ ~ furnished to do so, subject to the following conditions:
+ ~
+ ~ The above copyright notice and this permission notice shall be included in
+ ~ all copies or substantial portions of the Software.
+ ~
+ ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ ~ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ ~ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ ~ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ ~ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ ~ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ ~ THE SOFTWARE.
+ -->
+<div>
+    <p>
+        Cleanup of orphaned items are normally only done during a full scan of the multibranch project.
+        SCM events can mark a branch project as "dead" if for example a branch is deleted in the scm,
+        but will only be removed when the full scan is performed for various reasons.
+    </p>
+    <p>
+        This provides a separate cleanup process of "dead" branch projects that doesn't perform a full scan and doesn't consult the scm and so doesn't suffer from api rate limits et.al.
+    </p>
+</div>
