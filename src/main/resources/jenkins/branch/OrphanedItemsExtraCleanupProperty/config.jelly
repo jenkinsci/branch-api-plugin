@@ -27,7 +27,7 @@ THE SOFTWARE.
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
     <f:optionalBlock title="${descriptor.displayName}" name="specified" checked="${instance != null}" inline="true" help="${descriptor.helpFile}">
         <f:entry title="${%Interval}" field="interval">
-            <f:select default="1d"/>
+            <f:select default="1h"/>
         </f:entry>
     </f:optionalBlock>
 </j:jelly>
