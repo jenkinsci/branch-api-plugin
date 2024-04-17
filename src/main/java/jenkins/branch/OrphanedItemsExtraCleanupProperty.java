@@ -1,37 +1,82 @@
+/*
+ * The MIT License
+ *
+ * Copyright 2024 CloudBees, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 package jenkins.branch;
 
 import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
+import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
+import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.Functions;
+import hudson.Util;
+import hudson.XmlFile;
+import hudson.model.Items;
 import hudson.model.PeriodicWork;
+import hudson.model.Queue;
+import hudson.model.Result;
+import hudson.model.StreamBuildListener;
+import hudson.model.TaskListener;
 import hudson.scheduler.CronTabList;
 import hudson.util.DescribableList;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import jenkins.security.stapler.StaplerDispatchable;
 import net.sf.json.JSONObject;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.ObjectStreamException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty {
+public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty<MultiBranchProject<?,?>> implements Queue.Task {
     static final Logger LOGGER = Logger.getLogger(OrphanedItemsExtraCleanupProperty.class.getName());
 
     private long interval;
     private transient String cronTabSpec;
     private transient CronTabList tabs;
+    private transient CleanupComputation computation;
 
     @DataBoundConstructor
     public OrphanedItemsExtraCleanupProperty(String interval) {
@@ -69,6 +114,25 @@ public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty {
         return tabs;
     }
 
+    @Override
+    public Collection<?> getItemContainerOverrides() {
+        return Collections.singleton(this);
+    }
+
+    @StaplerDispatchable
+    public synchronized CleanupComputation getCleaning() {
+        if (computation == null) {
+            computation = new CleanupComputation(this, (ComputedFolder<MultiBranchProject<?, ?>>) this.owner, null);
+        }
+        return computation;
+    }
+
+    @Override
+    public synchronized Queue.Executable createExecutable() throws IOException {
+        computation = new CleanupComputation(this, (ComputedFolder<MultiBranchProject<?, ?>>) this.owner, computation);
+        return computation;
+    }
+
     /**
      * Called when object has been deserialized from a stream.
      *
@@ -80,6 +144,38 @@ public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty {
         this.cronTabSpec = toCrontab(interval);
         this.tabs = CronTabList.create(cronTabSpec);
         return this;
+    }
+
+    @NonNull
+    public File getComputationDir() {
+        if (owner != null) {
+            return new File(owner.getRootDir(), "cleaning");
+        }
+        try {
+            return Util.createTempDir();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public String getName() {
+        return "cleaning";
+    }
+
+    @Override
+    public String getFullDisplayName() {
+        return getDisplayName();
+    }
+
+    @Override
+    public String getUrl() {
+        return "cleaning";
+    }
+
+    @Override
+    public String getDisplayName() {
+        return getDescriptor().getDisplayName() + " of " + owner.getDisplayName();
     }
 
     @Extension @Symbol("orphanedItemsCleanup")
@@ -219,10 +315,123 @@ public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty {
                 OrphanedItemsExtraCleanupProperty property = properties.get(OrphanedItemsExtraCleanupProperty.class);
                 CronTabList tabs = property.getTabs();
                 if (tabs.check(cal)) {
-                    //TODO property.getCalculation()
+                    Jenkins.get().getQueue().schedule(property, 0);
                 }
             });
+        }
+    }
 
+    static class CleanupComputation extends FolderComputation<MultiBranchProject<?,?>> {
+        private final OrphanedItemsExtraCleanupProperty property;
+        @CheckForNull
+        private volatile Result result = Result.NOT_BUILT;
+
+        protected CleanupComputation(OrphanedItemsExtraCleanupProperty property, @NonNull ComputedFolder<MultiBranchProject<?,?>> folder, FolderComputation<MultiBranchProject<?,?>> previous) {
+            super(folder, previous);
+            this.property = property;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @NonNull
+        @Override
+        protected XmlFile getDataFile() {
+            return new XmlFile(Items.XSTREAM, new File(property.getComputationDir(), "cleaning.xml"));
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @NonNull
+        @Override
+        public File getLogFile() {
+            return new File(property.getComputationDir(), "cleaning.log");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public String getDisplayName() {
+            return Messages.OrphanedItemsExtraCleanupProperty_displayName(((MultiBranchProject)getParent()).getSourcePronoun());
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @NonNull
+        @Override
+        public String getUrl() {
+            return getParent().getUrl() + "/cleaning";
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public String getSearchUrl() {
+            return "cleaning/";
+        }
+
+        @Override
+        public Result getResult() {
+            return result;
+        }
+
+        @Override
+        public void run() {
+            long start = System.currentTimeMillis();
+            StreamBuildListener listener;
+            try {
+                File logFile = getLogFile();
+                FileUtils.forceMkdir(logFile.getParentFile());
+                OutputStream os = new FileOutputStream(logFile);
+                listener = new StreamBuildListener(os, StandardCharsets.UTF_8);
+            } catch (IOException x) {
+                LOGGER.log(Level.WARNING, null, x);
+                result = Result.FAILURE;
+                return;
+            }
+            listener.started(getCauses());
+            Result _result = Result.NOT_BUILT;
+            try {
+                property.cleanDeadBranches(listener);
+                _result = Result.SUCCESS;
+            } catch (InterruptedException x) {
+                LOGGER.log(Level.FINE, "cleaning of " + getParent().getFullName() + " was aborted", x);
+                listener.getLogger().println("Aborted");
+                _result = Result.ABORTED;
+            } catch (Exception x) {
+                LOGGER.log(Level.FINE, "cleaning of " + getParent().getFullName() + " failed", x);
+                if (x instanceof AbortException) {
+                    listener.fatalError(x.getMessage());
+                } else {
+                    Functions.printStackTrace(x, listener.fatalError("Failed to recompute children of " + getParent().getFullDisplayName()));
+                }
+                _result = Result.FAILURE;
+            } finally {
+                long end = System.currentTimeMillis();
+                LOGGER.log(Level.FINE, "{0} #{1,time,yyyyMMdd.HHmmss} orphaned items cleaning action completed: {2} in {3}",
+                        new Object[]{
+                                getParent().getFullName(), start, getResult(), Util.getTimeSpanString(end - start)
+                        }
+                );
+                listener.finished(_result);
+                listener.closeQuietly();
+                result = _result;
+                try {
+                    save();
+                } catch (IOException x) {
+                    LOGGER.log(Level.WARNING, null, x);
+                }
+            }
+        }
+    }
+
+    void cleanDeadBranches(TaskListener listener) throws InterruptedException, Exception {
+        for (int i = 0; i < 100; i++) {
+            listener.getLogger().println(i + " Work work");
         }
     }
 }
