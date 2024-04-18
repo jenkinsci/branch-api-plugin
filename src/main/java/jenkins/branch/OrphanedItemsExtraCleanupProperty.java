@@ -151,13 +151,13 @@ public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty<Mu
     protected void setOwner(@NonNull MultiBranchProject<?, ?> owner) {
         super.setOwner(owner);
 
-        if (computation == null) {
-            try {
-                FileUtils.forceMkdir(getComputationDir());
-            } catch (IOException x) {
-                LOGGER.log(Level.WARNING, null, x);
-            }
-            synchronized (this) {
+        synchronized (this) {
+            if (computation == null) {
+                try {
+                    FileUtils.forceMkdir(getComputationDir());
+                } catch (IOException x) {
+                    LOGGER.log(Level.WARNING, null, x);
+                }
                 XmlFile file = getCleaning().getDataFile(); //creates the instance
                 if (file.exists()) {
                     try {
