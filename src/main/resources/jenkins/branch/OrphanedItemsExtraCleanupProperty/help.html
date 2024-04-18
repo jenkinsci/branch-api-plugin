@@ -30,4 +30,8 @@
     <p>
         This provides a separate cleanup process of "dead" branch projects that doesn't perform a full scan and doesn't consult the scm and so doesn't suffer from api rate limits et.al.
     </p>
+    <p>
+        <strong>WARNING: </strong> Cleaning up orphaned items should normally be left to a full scan as that is the only time Jenkins has all the relevant information to reliably perform a cleaning.
+        Using this setting could result in unwanted behavior if the timing is not in your favor. This should only be used if you can't run a full scan frequently enough and trust your scm events enough.
+    </p>
 </div>
