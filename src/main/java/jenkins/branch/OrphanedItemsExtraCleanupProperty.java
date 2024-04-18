@@ -29,24 +29,25 @@ import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
-import hudson.Functions;
 import hudson.Util;
 import hudson.XmlFile;
+import hudson.model.Action;
+import hudson.model.Cause;
+import hudson.model.CauseAction;
 import hudson.model.Items;
 import hudson.model.PeriodicWork;
 import hudson.model.Queue;
-import hudson.model.Result;
 import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
 import hudson.scheduler.CronTabList;
+import hudson.triggers.TimerTrigger;
 import hudson.util.DescribableList;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import jenkins.model.TransientActionFactory;
 import jenkins.security.stapler.StaplerDispatchable;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.FileUtils;
@@ -54,23 +55,22 @@ import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectStreamException;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty<MultiBranchProject<?,?>> implements Queue.Task {
+public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty<MultiBranchProject<?,?>> implements Queue.FlyweightTask {
     static final Logger LOGGER = Logger.getLogger(OrphanedItemsExtraCleanupProperty.class.getName());
 
     private long interval;
@@ -143,7 +143,31 @@ public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty<Mu
     private Object readResolve() throws ObjectStreamException {
         this.cronTabSpec = toCrontab(interval);
         this.tabs = CronTabList.create(cronTabSpec);
+
         return this;
+    }
+
+    @Override
+    protected void setOwner(@NonNull MultiBranchProject<?, ?> owner) {
+        super.setOwner(owner);
+
+        if (computation == null) {
+            try {
+                FileUtils.forceMkdir(getComputationDir());
+            } catch (IOException x) {
+                LOGGER.log(Level.WARNING, null, x);
+            }
+            synchronized (this) {
+                XmlFile file = getCleaning().getDataFile(); //creates the instance
+                if (file.exists()) {
+                    try {
+                        file.unmarshal(computation);
+                    } catch (IOException e) {
+                        LOGGER.log(Level.WARNING, "Failed to load " + file, e);
+                    }
+                }
+            }
+        }
     }
 
     @NonNull
@@ -315,16 +339,83 @@ public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty<Mu
                 OrphanedItemsExtraCleanupProperty property = properties.get(OrphanedItemsExtraCleanupProperty.class);
                 CronTabList tabs = property.getTabs();
                 if (tabs.check(cal)) {
-                    Jenkins.get().getQueue().schedule(property, 0);
+                    Jenkins.get().getQueue().schedule(property, 0, new CauseAction(new TimerTrigger.TimerTriggerCause()));
                 }
             });
         }
     }
 
+    @Extension
+    public static class ActionFactory extends TransientActionFactory<MultiBranchProject> {
+
+        @Override
+        public Class<MultiBranchProject> type() {
+            return MultiBranchProject.class;
+        }
+
+        @NonNull
+        @Override
+        public Collection<? extends Action> createFor(@NonNull MultiBranchProject target) {
+            DescribableList<AbstractFolderProperty<?>, AbstractFolderPropertyDescriptor> properties = target.getProperties();
+            if (properties != null) {
+                OrphanedItemsExtraCleanupProperty property = properties.get(OrphanedItemsExtraCleanupProperty.class);
+                if (property != null) {
+                    return List.of(new CleaningAction(), new RunCleaningAction(property));
+                }
+            }
+            return Collections.emptyList();
+        }
+    }
+
+    public static class CleaningAction implements Action {
+
+        @Override
+        public String getIconFileName() {
+            return "icon-terminal";
+        }
+
+        @Override
+        public String getDisplayName() {
+            return ExtensionList.lookupSingleton(DescriptorImpl.class).getDisplayName();
+        }
+
+        @Override
+        public String getUrlName() {
+            return "cleaning";
+        }
+    }
+
+    public static class RunCleaningAction implements Action {
+
+        OrphanedItemsExtraCleanupProperty property;
+
+        public RunCleaningAction(OrphanedItemsExtraCleanupProperty property) {
+            this.property = property;
+        }
+
+        @Override
+        public String getIconFileName() {
+            return "icon-clock";
+        }
+
+        @Override
+        public String getDisplayName() {
+            return "Run " + ExtensionList.lookupSingleton(DescriptorImpl.class).getDisplayName() + " now";
+        }
+
+        @Override
+        public String getUrlName() {
+            return "performCleaning";
+        }
+
+        public void doIndex(StaplerResponse response) throws IOException {
+            Jenkins.get().getQueue().schedule(property, 0, new CauseAction(new Cause.UserIdCause()));
+            response.sendRedirect2("../cleaning/console");
+        }
+    }
+
     static class CleanupComputation extends FolderComputation<MultiBranchProject<?,?>> {
-        private final OrphanedItemsExtraCleanupProperty property;
-        @CheckForNull
-        private volatile Result result = Result.NOT_BUILT;
+        private transient OrphanedItemsExtraCleanupProperty property;
 
         protected CleanupComputation(OrphanedItemsExtraCleanupProperty property, @NonNull ComputedFolder<MultiBranchProject<?,?>> folder, FolderComputation<MultiBranchProject<?,?>> previous) {
             super(folder, previous);
@@ -375,61 +466,12 @@ public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty<Mu
         }
 
         @Override
-        public Result getResult() {
-            return result;
-        }
-
-        @Override
-        public void run() {
-            long start = System.currentTimeMillis();
-            StreamBuildListener listener;
-            try {
-                File logFile = getLogFile();
-                FileUtils.forceMkdir(logFile.getParentFile());
-                OutputStream os = new FileOutputStream(logFile);
-                listener = new StreamBuildListener(os, StandardCharsets.UTF_8);
-            } catch (IOException x) {
-                LOGGER.log(Level.WARNING, null, x);
-                result = Result.FAILURE;
-                return;
-            }
-            listener.started(getCauses());
-            Result _result = Result.NOT_BUILT;
-            try {
-                property.cleanDeadBranches(listener);
-                _result = Result.SUCCESS;
-            } catch (InterruptedException x) {
-                LOGGER.log(Level.FINE, "cleaning of " + getParent().getFullName() + " was aborted", x);
-                listener.getLogger().println("Aborted");
-                _result = Result.ABORTED;
-            } catch (Exception x) {
-                LOGGER.log(Level.FINE, "cleaning of " + getParent().getFullName() + " failed", x);
-                if (x instanceof AbortException) {
-                    listener.fatalError(x.getMessage());
-                } else {
-                    Functions.printStackTrace(x, listener.fatalError("Failed to recompute children of " + getParent().getFullDisplayName()));
-                }
-                _result = Result.FAILURE;
-            } finally {
-                long end = System.currentTimeMillis();
-                LOGGER.log(Level.FINE, "{0} #{1,time,yyyyMMdd.HHmmss} orphaned items cleaning action completed: {2} in {3}",
-                        new Object[]{
-                                getParent().getFullName(), start, getResult(), Util.getTimeSpanString(end - start)
-                        }
-                );
-                listener.finished(_result);
-                listener.closeQuietly();
-                result = _result;
-                try {
-                    save();
-                } catch (IOException x) {
-                    LOGGER.log(Level.WARNING, null, x);
-                }
-            }
+        protected void doRun(StreamBuildListener listener) throws IOException, InterruptedException {
+            property.cleanDeadBranches(listener);
         }
     }
 
-    void cleanDeadBranches(TaskListener listener) throws InterruptedException, Exception {
+    void cleanDeadBranches(TaskListener listener) throws InterruptedException, IOException {
         for (int i = 0; i < 100; i++) {
             listener.getLogger().println(i + " Work work");
         }
