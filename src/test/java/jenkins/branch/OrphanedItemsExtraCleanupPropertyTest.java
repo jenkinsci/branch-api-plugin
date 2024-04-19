@@ -28,6 +28,7 @@ import hudson.model.CauseAction;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.queue.QueueTaskFuture;
+import jenkins.branch.harness.BranchProperty;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.model.Jenkins;
 import jenkins.plugins.git.GitSCMSource;
@@ -88,15 +89,22 @@ public class OrphanedItemsExtraCleanupPropertyTest {
         assertTrue(factory.isProject(newfeature));
         assertTrue(factory.isProject(anotherrelease));
 
-        Branch b = factory.getBranch(newfeature);
-        factory.decorate(factory.setBranch(newfeature, new Branch.Dead(b)));
-        b = factory.getBranch(anotherrelease);
-        factory.decorate(factory.setBranch(anotherrelease, new Branch.Dead(b)));
+        BranchProperty bp = newfeature.removeProperty(BranchProperty.class);
+        //There are multiple branch properties in the project, unclear why.
+        while (newfeature.removeProperty(BranchProperty.class) != null) { System.out.println("More to remove"); }
+        factory.setBranch(newfeature, new Branch.Dead(bp.getBranch()));
+        bp = anotherrelease.removeProperty(BranchProperty.class);
+        while (anotherrelease.removeProperty(BranchProperty.class) != null) { System.out.println("More to remove"); }
+        factory.setBranch(anotherrelease, new Branch.Dead(bp.getBranch()));
 
-        Jenkins.get().getQueue().schedule(stuff.getProperties().get(OrphanedItemsExtraCleanupProperty.class),
+        OrphanedItemsExtraCleanupProperty property = stuff.getProperties().get(OrphanedItemsExtraCleanupProperty.class);
+        Jenkins.get().getQueue().schedule(property,
                 0, new CauseAction(new Cause.UserIdCause()));
 
         r.waitUntilNoActivity();
+        System.out.println("---%<--- " + property.getCleaning().getUrl());
+        property.getCleaning().writeWholeLogTo(System.out);
+        System.out.println("---%<--- ");
 
         newfeature = r.jenkins.getItemByFullName("stuff/newfeature", FreeStyleProject.class);
         assertNull(newfeature);

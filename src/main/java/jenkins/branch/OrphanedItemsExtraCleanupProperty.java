@@ -479,13 +479,13 @@ public class OrphanedItemsExtraCleanupProperty<P extends Job<P, R> & TopLevelIte
 
     void cleanDeadBranches(TaskListener listener) throws InterruptedException, IOException {
         PrintStream log = listener.getLogger();
-        log.format("Searching for orphaned items...");
+        log.println("Searching for orphaned items...");
         BranchProjectFactory factory = this.owner.getProjectFactory();
         List<Job> deadBranches = new ArrayList<>();
 
         for (Job item : this.owner.getItems()) {
             if (factory.isProject(item)) {
-                log.printf("Examining %s... ", item.getName());
+                log.printf("Examining '%s'... ", item.getName());
                 if (factory.getBranch(item) instanceof Branch.Dead) {
                     log.println("Is marked dead...");
                     deadBranches.add(item);
