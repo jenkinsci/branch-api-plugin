@@ -34,14 +34,8 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.Util;
 import hudson.XmlFile;
-import hudson.model.Action;
-import hudson.model.Cause;
-import hudson.model.CauseAction;
-import hudson.model.Items;
-import hudson.model.PeriodicWork;
+import hudson.model.*;
 import hudson.model.Queue;
-import hudson.model.StreamBuildListener;
-import hudson.model.TaskListener;
 import hudson.scheduler.CronTabList;
 import hudson.triggers.TimerTrigger;
 import hudson.util.DescribableList;
@@ -60,17 +54,13 @@ import org.kohsuke.stapler.StaplerResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.ObjectStreamException;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty<MultiBranchProject<?,?>> implements Queue.FlyweightTask {
+public class OrphanedItemsExtraCleanupProperty<P extends Job<P, R> & TopLevelItem,
+        R extends Run<P, R>> extends AbstractFolderProperty<MultiBranchProject<?,?>> implements Queue.FlyweightTask {
     static final Logger LOGGER = Logger.getLogger(OrphanedItemsExtraCleanupProperty.class.getName());
 
     private long interval;
@@ -472,8 +462,21 @@ public class OrphanedItemsExtraCleanupProperty extends AbstractFolderProperty<Mu
     }
 
     void cleanDeadBranches(TaskListener listener) throws InterruptedException, IOException {
-        for (int i = 0; i < 100; i++) {
-            listener.getLogger().println(i + " Work work");
+        BranchProjectFactory factory = this.owner.getProjectFactory();
+        List<Job> deadBranches = new ArrayList<>();
+
+        for (Job item : this.owner.getItems()) {
+            if (factory.isProject(item)) {
+                if (factory.getBranch(item) instanceof Branch.Dead) {
+                    deadBranches.add(item);
+                }
+            }
+        }
+
+        Collection<P> filteredOrphaned = ((MultiBranchProject) this.owner).orphanedItems(deadBranches, listener);
+        for (Job orph : filteredOrphaned) {
+            listener.getLogger().format("Deleting orphaned item: ", orph.getName());
+            orph.delete();
         }
     }
 }
