@@ -208,6 +208,7 @@ public class Branch {
      * @return the properties.
      */
     @NonNull
+    @Exported
     public List<BranchProperty> getProperties() {
         return properties;
     }
@@ -218,6 +219,7 @@ public class Branch {
      * @return all the actions
      */
     @NonNull
+    @Exported
     public List<Action> getActions() {
         return actions == null ? Collections.emptyList() : Collections.unmodifiableList(actions);
     }
