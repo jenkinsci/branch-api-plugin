@@ -501,4 +501,51 @@ public class OrphanedItemsExtraCleanupProperty<P extends Job<P, R> & TopLevelIte
             orph.delete();
         }
     }
+
+    public static class OrganizationChildProperty extends OrganizationFolderProperty<OrganizationFolder> {
+
+        private final String interval;
+
+        @DataBoundConstructor
+        public OrganizationChildProperty(String interval) {
+            this.interval = interval;
+        }
+
+        @Override
+        protected void decorate(@NonNull MultiBranchProject<?, ?> child, @NonNull TaskListener listener) throws IOException {
+            if (StringUtils.isNotEmpty(interval)) {
+                child.addProperty(new OrphanedItemsExtraCleanupProperty(interval));
+            }
+        }
+
+        @Extension @Symbol("orphanedItemsCleanupChildren")
+        public static class DescriptorImpl extends OrganizationFolderPropertyDescriptor {
+
+            public DescriptorImpl() {
+                addHelpFileRedirect("interval", OrphanedItemsExtraCleanupProperty.class, "interval");
+            }
+
+            @NonNull
+            @Override
+            public String getDisplayName() {
+                return Messages.OrganizationChildOrphanedItemsExtraCleanupProperty_DisplayName();
+            }
+
+            @Override
+            public AbstractFolderProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+                return formData.optBoolean("specified") ? super.newInstance(req, formData) : null;
+            }
+
+            @SuppressWarnings("unused") // used by Jelly
+            public ListBoxModel doFillIntervalItems() {
+                OrphanedItemsExtraCleanupProperty.DescriptorImpl descriptor = ExtensionList.lookupSingleton(OrphanedItemsExtraCleanupProperty.DescriptorImpl.class);
+                return descriptor.doFillIntervalItems();
+            }
+
+            @Override
+            public String getHelpFile() {
+                return ExtensionList.lookupSingleton(OrphanedItemsExtraCleanupProperty.DescriptorImpl.class).getHelpFile();
+            }
+        }
+    }
 }

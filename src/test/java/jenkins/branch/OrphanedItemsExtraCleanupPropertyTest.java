@@ -23,24 +23,35 @@
  */
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Cause;
 import hudson.model.CauseAction;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.model.queue.QueueTaskFuture;
+import integration.harness.BasicMultiBranchProject;
 import jenkins.branch.harness.BranchProperty;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.model.Jenkins;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.plugins.git.traits.BranchDiscoveryTrait;
+import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
+import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
+import jenkins.scm.impl.mock.MockSCMDiscoverTags;
+import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.util.Collections;
 
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -110,5 +121,25 @@ public class OrphanedItemsExtraCleanupPropertyTest {
         assertNull(newfeature);
         anotherrelease = r.jenkins.getItemByFullName("stuff/anotherrelease", FreeStyleProject.class);
         assertNull(anotherrelease);
+    }
+
+    @Test
+    public void orgFolder() throws Exception {
+        try (MockSCMController c = MockSCMController.create()) {
+            c.createRepository("stuff");
+            c.createBranch("stuff", "m");
+            OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
+            top.getProjectFactories().add(new OrganizationFolderTest.MockFactory());
+            top.getNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches(), new MockSCMDiscoverTags(), new MockSCMDiscoverChangeRequests()));
+            top.getProperties().add(new OrphanedItemsExtraCleanupProperty.OrganizationChildProperty("5m"));
+            top.scheduleBuild(0);
+            r.waitUntilNoActivity();
+            showComputation(top);
+            MultiBranchProject<?, ?> stuff = top.getItem("stuff");
+            assertThat("Top level has been scanned", stuff, notNullValue());
+            OrphanedItemsExtraCleanupProperty property = stuff.getProperties().get(OrphanedItemsExtraCleanupProperty.class);
+            assertThat("Property has been created", property, notNullValue());
+            assertEquals(property.getInterval(), "5m");
+        }
     }
 }
