@@ -786,7 +786,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
         @Override
         public String getIconFilePathPattern() {
-            return "symbol-business-outline plugin-ionicons-api";
+            return "plugin/branch-api/images/organization-folder.svg";
         }
 
         /**
@@ -819,6 +819,25 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @NonNull
         public final ChildNameGenerator<OrganizationFolder, ? extends TopLevelItem> childNameGenerator() {
             return ChildNameGeneratorImpl.INSTANCE;
+        }
+
+        static {
+            IconSet.icons.addIcon(
+                    new Icon("icon-branch-api-organization-folder icon-sm",
+                            "plugin/branch-api/images/organization-folder.svg",
+                            Icon.ICON_SMALL_STYLE));
+            IconSet.icons.addIcon(
+                    new Icon("icon-branch-api-organization-folder icon-md",
+                            "plugin/branch-api/images/organization-folder.svg",
+                            Icon.ICON_MEDIUM_STYLE));
+            IconSet.icons.addIcon(
+                    new Icon("icon-branch-api-organization-folder icon-lg",
+                            "plugin/branch-api/images/organization-folder.svg",
+                            Icon.ICON_LARGE_STYLE));
+            IconSet.icons.addIcon(
+                    new Icon("icon-branch-api-organization-folder icon-xlg",
+                            "plugin/branch-api/images/organization-folder.svg",
+                            Icon.ICON_XLARGE_STYLE));
         }
     }
 
