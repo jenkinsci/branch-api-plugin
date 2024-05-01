@@ -794,7 +794,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
          */
         @Override
         public String getIconClassName() {
-            return "icon-branch-api-organization-folder";
+            return "symbol-business-outline plugin-ionicons-api";
         }
 
         /**
