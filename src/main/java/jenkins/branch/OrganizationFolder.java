@@ -786,7 +786,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
         @Override
         public String getIconFilePathPattern() {
-            return "plugin/branch-api/images/organization-folder.svg";
+            return "symbol-business-outline plugin-ionicons-api";
         }
 
         /**
