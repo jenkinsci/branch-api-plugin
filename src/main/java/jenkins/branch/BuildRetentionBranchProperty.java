@@ -15,8 +15,9 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 /**
- * @author Stephen Connolly
+ * @deprecated Suppressed by {@code JobPropertyStep.HideSuperfluousBranchProperties} for Pipeline.
  */
+@Deprecated
 public class BuildRetentionBranchProperty extends BranchProperty {
 
     private final BuildDiscarder buildDiscarder;
