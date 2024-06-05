@@ -53,9 +53,9 @@ import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * A branch property that limits how often a specific branch can be built.
- *
- * @author Stephen Connolly
+ * @deprecated Suppressed by {@code JobPropertyStep.HideSuperfluousBranchProperties} for Pipeline.
  */
+@Deprecated
 @SuppressWarnings("unused") // instantiated by stapler
 public class RateLimitBranchProperty extends BranchProperty {
 

@@ -62,9 +62,9 @@ import org.jvnet.tiger_types.Types;
  * locations</li>
  * </ul>
  *
- * @author Stephen Connolly
- * @author Kohsuke Kawaguchi
+ * @deprecated Not used by Pipeline.
  */
+@Deprecated
 public class UntrustedBranchProperty extends BranchProperty {
 
     private final Set<String> publisherWhitelist;
