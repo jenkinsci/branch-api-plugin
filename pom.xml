@@ -68,7 +68,7 @@
     <revision>2</revision>
     <changelist>999999-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
-    <jenkins.version>2.426.3</jenkins.version>
+    <jenkins.version>2.444</jenkins.version>
     <hpi.compatibleSinceVersion>2.0.0</hpi.compatibleSinceVersion>
     <no-test-jar>false</no-test-jar>
   </properties>
@@ -93,6 +93,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>cloudbees-folder</artifactId>
+      <version>6.929.vfb_46f8721148</version>
     </dependency>
     <dependency>
       <groupId>io.jenkins.plugins</groupId>
