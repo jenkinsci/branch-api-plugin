@@ -202,6 +202,11 @@ public abstract class PropertyMigration<F extends AbstractFolder<?>, P extends A
             return !missing.isEmpty();
         }
 
+        @Override
+        public String getDisplayName() {
+            return Messages.PropertyMigration_MonitorImpl_DisplayName();
+        }
+
         public List<PropertyMigration<?, ?>> getPending() {
             List<PropertyMigration<?, ?>> result = new ArrayList<>(missing.size());
             for (PropertyMigration<?, ?> m : missing) {
