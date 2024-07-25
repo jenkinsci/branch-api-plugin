@@ -1,0 +1,37 @@
+<!--
+ ~ The MIT License
+ ~
+ ~ Copyright (c) 2024, CloudBees, Inc.
+ ~
+ ~ Permission is hereby granted, free of charge, to any person obtaining a copy
+ ~ of this software and associated documentation files (the "Software"), to deal
+ ~ in the Software without restriction, including without limitation the rights
+ ~ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ ~ copies of the Software, and to permit persons to whom the Software is
+ ~ furnished to do so, subject to the following conditions:
+ ~
+ ~ The above copyright notice and this permission notice shall be included in
+ ~ all copies or substantial portions of the Software.
+ ~
+ ~ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ ~ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ ~ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ ~ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ ~ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ ~ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ ~ THE SOFTWARE.
+ -->
+<div>
+    <p>
+        Cleanup of orphaned items are normally only done during a full scan of the multibranch project.
+        SCM events can mark a branch project as "dead" if, for example, a branch is deleted in the SCM,
+        but will only be removed when the full scan is performed.
+    </p>
+    <p>
+        This provides a separate cleanup process of "dead" branch projects that does not perform a full scan or consult the SCM and, therefore, does not suffer from API rate limits, etc.
+    </p>
+    <p>
+        <strong>WARNING: </strong> Cleaning up orphaned items should normally be left to a full scan as that is the only time Jenkins has all the relevant information to reliably perform a cleaning.
+        Using this setting could result in unwanted behavior if the timing is not in your favor. This should only be used if you can't run a full scan frequently enough and trust your scm events enough.
+    </p>
+</div>
