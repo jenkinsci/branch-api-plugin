@@ -1069,6 +1069,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * {@inheritDoc}
      */
+    @Exported
     @Override
     public boolean isBuildable() {
         if (sources == null) {
