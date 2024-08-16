@@ -101,10 +101,10 @@ public class ItemColumn extends ListViewColumn {
     }
 
     /**
-     * Gets the tool-tip title of a job.
+     * Gets the title of a job.
      *
      * @param job the job.
-     * @return the tool-tip title unescaped for use in an attribute.
+     * @return the unescaped title for displaying in a table column.
      */
     @SuppressWarnings("unused") // used via Jelly EL binding
     public String getTitle(Object job) {
