@@ -27,14 +27,14 @@ THE SOFTWARE.
          xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
   <d:taglib uri="local">
     <d:tag name="link">
-      <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside jenkins-table__link'>
+      <a href="${jobBaseUrl}${job.shortUrl}" class='model-link jenkins-table__link'>
         <j:choose>
           <j:when test="${it.getTitle(job) == null or h.getRelativeDisplayNameFrom(job, itemGroup).equals(it.getTitle(job))}">
             <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
           </j:when>
           <j:otherwise>
             ${it.getTitle(job)}
-            <span style="opacity: 0.75; margin-left: 10px"><l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/></span>
+            <span style="opacity: 0.75; margin-left: 0.625rem"><l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/></span>
           </j:otherwise>
         </j:choose>
       </a>
