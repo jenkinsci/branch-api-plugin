@@ -34,7 +34,7 @@ THE SOFTWARE.
           </j:when>
           <j:otherwise>
             ${it.getTitle(job)}
-            <span style="opacity: 0.75; margin-left: 0.625rem"><l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/></span>
+            <span style="opacity: 0.75; margin-left: 0.625rem; white-space: nowrap;"><l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/></span>
           </j:otherwise>
         </j:choose>
       </a>
