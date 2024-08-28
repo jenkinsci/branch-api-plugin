@@ -2139,7 +2139,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
             // Default to displaying the project's display name if a trait hasn't been provided
             if (naming == null) {
-                naming = MultiBranchProjectDisplayNamingStrategy.OBJECT_DISPLAY_NAME;
+                naming = MultiBranchProjectDisplayNamingStrategy.RAW_AND_OBJECT_DISPLAY_NAME;
             }
 
             final ObjectMetadataAction action = naming.needsObjectDisplayName()
