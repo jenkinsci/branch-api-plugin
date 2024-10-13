@@ -235,14 +235,20 @@ public class MigrationTest {
     @Test
     @LocalData
     public void nameMangling_folder_reload() throws Exception {
-        r.then((j) -> {
-                OrganizationFolder foo = j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                OrganizationFolder foo = r.j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
                 foo.doReload();
                 assertDataMigrated(foo);
+            }
         });
-        r.then((j) -> {
-                TopLevelItem foo = j.jenkins.getItem("foo");
+        r.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                TopLevelItem foo = r.j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
+            }
         });
     }
 
