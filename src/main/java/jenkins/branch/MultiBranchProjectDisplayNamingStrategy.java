@@ -60,7 +60,14 @@ public enum MultiBranchProjectDisplayNamingStrategy {
                 return rawName;
             }
 
-            return format("%s - %s", rawName, displayName);
+            // The raw name provided here in the context of pull requests is the pull request ID
+            // We tidy up the ID so that they display consistently between SCMs
+            String cleanedUpBranchName = rawName;
+            if (cleanedUpBranchName.startsWith("MR-") || cleanedUpBranchName.startsWith("PR-")) {
+                cleanedUpBranchName = "#" + cleanedUpBranchName.substring(3);
+            }
+
+            return format("%s (%s)", displayName, cleanedUpBranchName);
         }
     },
     ;
