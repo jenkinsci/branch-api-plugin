@@ -2104,22 +2104,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 throw new IllegalStateException(
                     "Name of created project " + project + " did not match expected " + encodedName);
             }
-            // HACK ALERT
-            // ==========
-            // We don't want to trigger a save, so we will do some trickery to ensure that observer.created(project)
-            // performs the save
-            BulkChange bc = new BulkChange(project);
-            try {
-                project.setDisplayName(getProjectDisplayName(project, rawName));
-            } catch (IOException e) {
-                // ignore even if it does happen we didn't want a save
-            } finally {
-                bc.abort();
-            }
             // decorate contract is to ensure it does not trigger a save
             _factory.decorate(project);
             // ok it is now up to the observer to ensure it does the actual save.
-            observer.created(project);
+            try (BulkChange bc = new BulkChange(project);) {
+                observer.created(project);
+                project.setDisplayName(getProjectDisplayName(project, rawName));
+                bc.commit();
+            } catch (IOException e) {
+                // Ignored
+            }
             doAutomaticBuilds(head, revision, rawName, project, revisionActions, null, null);
         }
 
@@ -2137,8 +2131,9 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     .orElse(null);
             }
 
+            // Default to displaying the project's display name if a trait hasn't been provided
             if (naming == null) {
-                return rawName;
+                naming = MultiBranchProjectDisplayNamingStrategy.RAW_AND_OBJECT_DISPLAY_NAME;
             }
 
             final ObjectMetadataAction action = naming.needsObjectDisplayName()

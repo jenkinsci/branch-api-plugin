@@ -25,26 +25,28 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
          xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
-  <td style="${indenter.getCss(job)}">
+  <d:taglib uri="local">
+    <d:tag name="link">
+      <a href="${jobBaseUrl}${job.shortUrl}" class='model-link jenkins-table__link'>
+        <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
+      </a>
+    </d:tag>
+  </d:taglib>
+
+  <td style="${indenter.getCss(job)}" xmlns:local="local">
     <j:choose>
       <j:when test="${it.isOrphaned(job)}">
         <s>
-          <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside jenkins-table_link' title="${it.getTitle(job)}">
-            <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
-          </a>
+          <local:link />
         </s>
       </j:when>
       <j:when test="${it.isPrimary(job)}">
         <strong>
-          <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside jenkins-table_link' title="${it.getTitle(job)}">
-            <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
-          </a>
+          <local:link />
         </strong>
       </j:when>
       <j:otherwise>
-        <a href="${jobBaseUrl}${job.shortUrl}" class='model-link inside jenkins-table_link' title="${it.getTitle(job)}">
-          <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
-        </a>
+        <local:link />
       </j:otherwise>
     </j:choose>
   </td>
