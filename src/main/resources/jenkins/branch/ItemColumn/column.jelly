@@ -35,7 +35,7 @@ THE SOFTWARE.
     </d:tag>
   </d:taglib>
 
-  <td style="${indenter.getCss(job)}" xmlns:local="local">
+  <td style="${indenter.getCss(job)}" xmlns:local="local" data="${job.name}">
     <j:choose>
       <j:when test="${it.isOrphaned(job)}">
         <s>
