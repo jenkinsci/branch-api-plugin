@@ -28,7 +28,9 @@ THE SOFTWARE.
   <d:taglib uri="local">
     <d:tag name="link">
       <a href="${jobBaseUrl}${job.shortUrl}" class='model-link jenkins-table__link'>
-        <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
+        <span>
+          <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
+        </span>
       </a>
     </d:tag>
   </d:taglib>
