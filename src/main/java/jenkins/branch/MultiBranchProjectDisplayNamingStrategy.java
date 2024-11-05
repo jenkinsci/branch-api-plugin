@@ -70,6 +70,16 @@ public enum MultiBranchProjectDisplayNamingStrategy {
             return format("%s (%s)", displayName, cleanedUpBranchName);
         }
     },
+    /**
+     * Use the raw name.
+     */
+    RAW(true, Messages._MultiBranchProjectDisplayNamingTrait_Raw()) {
+        @Override
+        public String generateName(@NonNull final String rawName, final String displayName) {
+            return rawName;
+        }
+    },
+
     ;
 
     private final boolean needsObjectDisplayName;
