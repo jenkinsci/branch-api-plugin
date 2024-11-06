@@ -160,7 +160,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     /**
      * The factory for building child job instances.
      */
-    private BranchProjectFactory<P, R> factory;
+    private volatile BranchProjectFactory<P, R> factory;
 
     private transient String srcDigest, facDigest;
 
@@ -339,11 +339,19 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * @return the {@link BranchProjectFactory}.
      */
     @NonNull
-    public synchronized BranchProjectFactory<P, R> getProjectFactory() {
-        if (factory == null) {
-            setProjectFactory(newProjectFactory());
+    @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "False positive: synchronization is handled via double-checked locking")
+    public BranchProjectFactory<P, R> getProjectFactory() {
+        BranchProjectFactory<P, R> value = factory;
+        if (value == null) {
+            synchronized (this) {
+                value = factory;
+                if (value == null) {
+                    value = newProjectFactory();
+                    setProjectFactory(value);
+                }
+            }
         }
-        return factory;
+        return value;
     }
 
     /**
