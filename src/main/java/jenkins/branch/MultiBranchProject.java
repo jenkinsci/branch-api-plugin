@@ -339,6 +339,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * @return the {@link BranchProjectFactory}.
      */
     @NonNull
+    @SuppressFBWarnings(value = "UG_SYNC_SET_UNSYNC_GET", justification = "False positive: synchronization is handled via double-checked locking")
     public BranchProjectFactory<P, R> getProjectFactory() {
         BranchProjectFactory<P, R> value = factory;
         if (value == null) {
