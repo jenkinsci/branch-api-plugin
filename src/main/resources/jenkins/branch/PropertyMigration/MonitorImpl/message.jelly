@@ -1,5 +1,5 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler">
   <div class="alert alert-warning" role="alert">
     ${%blurb}
     <table width="100%" class="pane bigtable">
@@ -28,8 +28,9 @@
                 </div>
               </j:when>
               <j:otherwise>
+                <st:adjunct includes="jenkins.branch.PropertyMigration.MonitorImpl.branch-api-property-migration-disabled-form"/>
                 <form method="GET" action="${rootURL}/safeRestart" disabled="disabled"
-                      onsubmit="return false;"
+                      class="branch-api-property-migration-monitor-disabled-form"
                       style="float: none; display: inline; position: inherit;">
                   <span class="yui-button yui-link-button">
                     <span class="first-child">
@@ -65,7 +66,6 @@
                         enctype="multipart/form-data"
                         disabled="disabled"
                         action="${rootURL}/pluginManager/install"
-                        onsubmit="return addCrumb('install-${p.pluginName}');"
                         style="float: none; display: inline; position: inherit;">
                     <input type="hidden" name="plugin.${p.pluginName}.default" checked="true"/>
                     <span class="yui-button yui-link-button" name="dynamicLoad">
@@ -94,7 +94,6 @@
                         method="POST"
                         enctype="multipart/form-data"
                         action="${rootURL}/pluginManager/install"
-                        onsubmit="return addCrumb('install-${p.pluginName}');"
                         style="float: none; display: inline; position: inherit;">
                     <input type="hidden" name="${p.pluginInstallId}" checked="true"/>
                     <span class="yui-button yui-link-button primary" name="${p.pluginUpgrade?'Submit':'dynamicLoad'}">

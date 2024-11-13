@@ -136,7 +136,7 @@ public class CategorizationTest {
             assertThat(prj.getItems(),
                     containsInAnyOrder(
                             hasProperty("displayName", is("master")),
-                            hasProperty("displayName", is("CR-" + crNum))
+                            hasProperty("displayName", is("Change request #1 (CR-1)"))
                     )
             );
             assertThat(prj.getViews(),
@@ -204,7 +204,7 @@ public class CategorizationTest {
             assertThat(prj.getItems(),
                     containsInAnyOrder(
                             hasProperty("displayName", is("master-1.0")),
-                            hasProperty("displayName", is("CR-" + crNum))
+                            hasProperty("displayName", is("Change request #1 (CR-1)"))
                     )
             );
             assertThat(prj.getViews(),
@@ -222,7 +222,7 @@ public class CategorizationTest {
                             allOf(
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(ChangeRequestSCMHeadCategory.DEFAULT.getName())),
-                                    hasProperty("items", contains(hasProperty("displayName", is("CR-" + crNum))))
+                                    hasProperty("items", contains(hasProperty("displayName", is("Change request #1 (CR-1)"))))
                             )
                     ));
         }
@@ -253,8 +253,8 @@ public class CategorizationTest {
                             hasProperty("displayName", is("feature")),
                             hasProperty("displayName", is("master-1.0")),
                             hasProperty("displayName", is("master-1.1")),
-                            hasProperty("displayName", is("CR-" + crNum1)),
-                            hasProperty("displayName", is("CR-" + crNum2))
+                            hasProperty("displayName", is("Change request #1 (CR-1)")),
+                            hasProperty("displayName", is("Change request #2 (CR-2)"))
                     )
             );
             assertThat(prj.getViews(),
@@ -279,8 +279,8 @@ public class CategorizationTest {
                                     instanceOf(MultiBranchProjectViewHolder.ViewImpl.class),
                                     hasProperty("viewName", is(ChangeRequestSCMHeadCategory.DEFAULT.getName())),
                                     hasProperty("items", containsInAnyOrder(
-                                            hasProperty("displayName", is("CR-" + crNum2)),
-                                            hasProperty("displayName", is("CR-" + crNum1))
+                                            hasProperty("displayName", is("Change request #1 (CR-1)")),
+                                            hasProperty("displayName", is("Change request #2 (CR-2)"))
                                     ))
                             )
                     ));
