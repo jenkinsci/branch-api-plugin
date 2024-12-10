@@ -66,6 +66,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
@@ -395,9 +397,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
             TopLevelItem tli = (TopLevelItem) item;
             Jenkins jenkins = Jenkins.get();
-            Computer.threadPoolForRemoting.submit(new CleanupTask(tli, jenkins));
             // Starts provisioner Thread which is tasked with starting cleanup Threads
-            new CleanupTaskProvisioner(tli, jenkins.getNodes()).run();
+            new CleanupTaskProvisioner(tli,
+                Stream.concat(Stream.of(jenkins), jenkins.getNodes().stream()).collect(Collectors.toList())).run();
         }
 
         @Override
