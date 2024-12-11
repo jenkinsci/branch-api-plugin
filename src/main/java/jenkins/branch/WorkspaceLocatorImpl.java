@@ -43,6 +43,8 @@ import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.slaves.ComputerListener;
 import hudson.slaves.WorkspaceList;
+import hudson.util.DaemonThreadFactory;
+import hudson.util.NamingThreadFactory;
 import hudson.util.TextFile;
 import java.io.BufferedReader;
 import java.io.File;
@@ -53,6 +55,8 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -61,6 +65,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -384,11 +389,17 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
 
         private static /* almost final */ int CLEANUP_THREAD_LIMIT = SystemProperties.getInteger(Deleter.class.getName() + ".CLEANUP_THREAD_LIMIT", Integer.valueOf(0)).intValue();
 
+        private final transient ExecutorService executorService = Executors.newSingleThreadExecutor(threadFactory());
+
         /** Semaphore for limiting number of scheduled {@link CleanupTask} */
-        private static Semaphore cleanupPool = new Semaphore(CLEANUP_THREAD_LIMIT, true);
+        private static final Semaphore cleanupPool = new Semaphore(CLEANUP_THREAD_LIMIT, true);
 
         /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
         private static int runningTasks;
+
+        private static ThreadFactory threadFactory() {
+            return new NamingThreadFactory(new DaemonThreadFactory(), "DeleterCleanupTask");
+        }
 
         @Override
         public void onDeleted(Item item) {
@@ -397,9 +408,8 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
             TopLevelItem tli = (TopLevelItem) item;
             Jenkins jenkins = Jenkins.get();
-            // Starts provisioner Thread which is tasked with starting cleanup Threads
-            new CleanupTaskProvisioner(tli,
-                Stream.concat(Stream.of(jenkins), jenkins.getNodes().stream()).collect(Collectors.toList())).run();
+            executorService.execute(new CleanupTaskProvisioner(tli,
+                Stream.concat(Stream.of(jenkins), jenkins.getNodes().stream()).collect(Collectors.toList())));
         }
 
         @Override
