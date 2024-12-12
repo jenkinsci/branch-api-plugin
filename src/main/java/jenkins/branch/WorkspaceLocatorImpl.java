@@ -43,7 +43,9 @@ import hudson.security.ACL;
 import hudson.security.ACLContext;
 import hudson.slaves.ComputerListener;
 import hudson.slaves.WorkspaceList;
+import hudson.util.ClassLoaderSanityThreadFactory;
 import hudson.util.DaemonThreadFactory;
+import hudson.util.ExceptionCatchingThreadFactory;
 import hudson.util.NamingThreadFactory;
 import hudson.util.TextFile;
 import java.io.BufferedReader;
@@ -56,8 +58,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -65,7 +65,8 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -76,7 +77,10 @@ import java.util.stream.Stream;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
+import jenkins.security.ImpersonatingExecutorService;
 import jenkins.slaves.WorkspaceLocator;
+import jenkins.util.ContextResettingExecutorService;
+import jenkins.util.ErrorLoggingExecutorService;
 import jenkins.util.SystemProperties;
 import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.lang.StringUtils;
@@ -387,18 +391,25 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
     @Extension
     public static class Deleter extends ItemListener {
 
-        private static /* almost final */ int CLEANUP_THREAD_LIMIT = SystemProperties.getInteger(Deleter.class.getName() + ".CLEANUP_THREAD_LIMIT", Integer.valueOf(0)).intValue();
+        private static final int CLEANUP_THREAD_LIMIT = SystemProperties.getInteger(Deleter.class.getName() + ".CLEANUP_THREAD_LIMIT", 0);
 
-        private final transient ExecutorService executorService = Executors.newSingleThreadExecutor(threadFactory());
-
-        /** Semaphore for limiting number of scheduled {@link CleanupTask} */
-        private static final Semaphore cleanupPool = new Semaphore(CLEANUP_THREAD_LIMIT, true);
+        private static final ExecutorService executorService = executorService();
 
         /** Number of {@link CleanupTask} which have been scheduled but not yet completed. */
         private static int runningTasks;
 
-        private static ThreadFactory threadFactory() {
-            return new NamingThreadFactory(new DaemonThreadFactory(), "DeleterCleanupTask");
+        private static ExecutorService executorService() {
+            return CLEANUP_THREAD_LIMIT > 0
+                ? new ContextResettingExecutorService(
+                    new ImpersonatingExecutorService(
+                        new ErrorLoggingExecutorService(
+                            new ThreadPoolExecutor(0, CLEANUP_THREAD_LIMIT, 10L, TimeUnit.SECONDS, new SynchronousQueue<>(),
+                                new ExceptionCatchingThreadFactory(
+                                    new NamingThreadFactory(
+                                        new ClassLoaderSanityThreadFactory(new DaemonThreadFactory()),
+                                        "Deleter.cleanupTask")))),
+                        ACL.SYSTEM2))
+                : Computer.threadPoolForRemoting;
         }
 
         @Override
@@ -408,8 +419,16 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             }
             TopLevelItem tli = (TopLevelItem) item;
             Jenkins jenkins = Jenkins.get();
-            executorService.execute(new CleanupTaskProvisioner(tli,
-                Stream.concat(Stream.of(jenkins), jenkins.getNodes().stream()).collect(Collectors.toList())));
+            Queue<Node> nodes = Stream
+                .concat(Stream.of(jenkins), jenkins.getNodes().stream())
+                .collect(Collectors.toCollection(LinkedList::new));
+            try {
+                while (!nodes.isEmpty()){
+                    executorService.execute(new CleanupTask(tli, nodes.remove()));
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, e.getMessage());
+            }
         }
 
         @Override
@@ -422,20 +441,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             for (Node node : jenkins.getNodes()) {
                 Computer.threadPoolForRemoting.submit(new MoveTask(oldFullName, newFullName, node));
             }
-        }
-
-        public void acquireThread() throws InterruptedException {
-            if (CLEANUP_THREAD_LIMIT <= 0) {
-                return;
-            }
-            cleanupPool.acquire();
-        }
-
-        public void releaseThread() {
-            if (CLEANUP_THREAD_LIMIT <= 0) {
-                return;
-            }
-            cleanupPool.release();
         }
 
         // Visible for testing
@@ -454,36 +459,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             Deleter.class.notifyAll();
         }
 
-        private static class CleanupTaskProvisioner implements Runnable{
-
-            @NonNull
-            private final TopLevelItem tli;
-
-            @NonNull
-            private final Queue<Node> nodes;
-
-            @NonNull
-            private final Deleter deleter;
-
-            public CleanupTaskProvisioner(TopLevelItem tli, List<Node> nodes) {
-                this.tli = tli;
-                this.nodes = new LinkedList<>(nodes);
-                this.deleter = ExtensionList.lookupSingleton(Deleter.class);
-            }
-
-            @Override
-            public void run() {
-                try {
-                    while (!nodes.isEmpty()){
-                        deleter.acquireThread();
-                        Computer.threadPoolForRemoting.submit(new CleanupTask(tli, nodes.remove()));
-                    }
-                } catch (Exception e) {
-                    LOGGER.log(Level.WARNING, e.getMessage());
-                }
-            }
-        }
-
         private static class CleanupTask implements Runnable {
 
             @NonNull
@@ -492,13 +467,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             @NonNull
             private final Node node;
 
-            @NonNull
-            private final Deleter deleter;
-
             CleanupTask(TopLevelItem tli, Node node) {
                 this.tli = tli;
                 this.node = node;
-                this.deleter = ExtensionList.lookupSingleton(Deleter.class);
                 taskStarted();
             }
 
@@ -541,7 +512,6 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                     }
                 } finally {
                     t.setName(oldName);
-                    deleter.releaseThread();
                     taskFinished();
                 }
             }
