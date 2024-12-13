@@ -83,9 +83,11 @@ public class DescriptionColumn extends ListViewColumn {
     @SuppressWarnings("unused") // used via Jelly EL binding
     public String formattedDescription(@CheckForNull Object p, @NonNull Object job) throws IOException {
         if (p instanceof ObjectMetadataAction) {
-            // when the description comes from the metadata, assume plain text and use Util.escape
-            String objectDescription = ((ObjectMetadataAction) p).getObjectDescription();
-            String description = objectDescription == null ? null : Util.escape(objectDescription);
+            // [JENKINS-74996] Need to display the description as HTML when safeHTML is activated.
+            // If no formatter is set (null), the text is escaped.
+            final String objectDescription = ((ObjectMetadataAction) p).getObjectDescription();
+            final String description = objectDescription == null ? null : Jenkins.get().getMarkupFormatter()
+                    .translate(objectDescription);
             if (StringUtils.isNotBlank(description)) {
                 return description;
             }
