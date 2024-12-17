@@ -65,6 +65,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -399,17 +400,22 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         private static int runningTasks;
 
         private static ExecutorService executorService() {
-            return CLEANUP_THREAD_LIMIT > 0
-                ? new ContextResettingExecutorService(
+            if (CLEANUP_THREAD_LIMIT > 0) {
+                ThreadPoolExecutor tpe = new ThreadPoolExecutor(CLEANUP_THREAD_LIMIT, CLEANUP_THREAD_LIMIT, 10L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+                    new ExceptionCatchingThreadFactory(
+                        new NamingThreadFactory(
+                            new ClassLoaderSanityThreadFactory(new DaemonThreadFactory()),
+                            "Deleter.cleanupTask")));
+                // Use allowCoreThreadTimeOut to keep a lightweight ThreadPoolExecutor. The Thread pool grows to the
+                // limit and then queue tasks. Thread will then be removed when idle
+                tpe.allowCoreThreadTimeOut(true);
+                return new ContextResettingExecutorService(
                     new ImpersonatingExecutorService(
-                        new ErrorLoggingExecutorService(
-                            new ThreadPoolExecutor(0, CLEANUP_THREAD_LIMIT, 10L, TimeUnit.SECONDS, new SynchronousQueue<>(),
-                                new ExceptionCatchingThreadFactory(
-                                    new NamingThreadFactory(
-                                        new ClassLoaderSanityThreadFactory(new DaemonThreadFactory()),
-                                        "Deleter.cleanupTask")))),
-                        ACL.SYSTEM2))
-                : Computer.threadPoolForRemoting;
+                        new ErrorLoggingExecutorService(tpe),
+                            ACL.SYSTEM2));
+            } else {
+                return Computer.threadPoolForRemoting;
+            }
         }
 
         @Override
