@@ -17,12 +17,10 @@
                 <div>
                   <form method="GET" action="${rootURL}/safeRestart"
                         style="float: none; display: inline; position: inherit;">
-                    <span class="yui-button yui-link-button primary">
-                      <span class="first-child primary">
-                        <button type="submit">
-                          ${%Restart Jenkins}
-                        </button>
-                      </span>
+                    <span class="first-child primary">
+                      <button type="submit" class="jenkins-button jenkins-button--primary">
+                        ${%Restart Jenkins}
+                      </button>
                     </span>
                   </form>
                 </div>
@@ -32,13 +30,11 @@
                 <form method="GET" action="${rootURL}/safeRestart" disabled="disabled"
                       class="branch-api-property-migration-monitor-disabled-form"
                       style="float: none; display: inline; position: inherit;">
-                  <span class="yui-button yui-link-button">
                     <span class="first-child">
-                      <button disabled="disabled">
+                      <button disabled="disabled" class="jenkins-button">
                         ${%Restart Jenkins}
                       </button>
                     </span>
-                  </span>
                 </form>
               </j:otherwise>
             </j:choose>
@@ -68,12 +64,10 @@
                         action="${rootURL}/pluginManager/install"
                         style="float: none; display: inline; position: inherit;">
                     <input type="hidden" name="plugin.${p.pluginName}.default" checked="true"/>
-                    <span class="yui-button yui-link-button" name="dynamicLoad">
-                      <span class="first-child">
-                        <button formenctype="multipart/form-data" disabled="disabled">
-                          ${%restart(p.pluginDisplayName)}
-                        </button>
-                      </span>
+                    <span class="first-child">
+                      <button class="jenkins-button" formenctype="multipart/form-data" disabled="disabled">
+                        ${%restart(p.pluginDisplayName)}
+                      </button>
                     </span>
                   </form>
                 </j:when>
@@ -96,9 +90,8 @@
                         action="${rootURL}/pluginManager/install"
                         style="float: none; display: inline; position: inherit;">
                     <input type="hidden" name="${p.pluginInstallId}" checked="true"/>
-                    <span class="yui-button yui-link-button primary" name="${p.pluginUpgrade?'Submit':'dynamicLoad'}">
                       <span class="first-child">
-                        <button formenctype="multipart/form-data" type="submit">
+                        <button class="jenkins-button jenkins-button--primary" formenctype="multipart/form-data" type="submit">
                           <j:choose>
                             <j:when test="${p.pluginUpgrade}">
                               ${%upgrade(p.pluginDisplayName, p.pluginVersion)}
@@ -109,7 +102,6 @@
                           </j:choose>
                         </button>
                       </span>
-                    </span>
                   </form>
                 </j:otherwise>
               </j:choose>
