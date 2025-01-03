@@ -27,7 +27,7 @@ THE SOFTWARE.
          xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
   <d:taglib uri="local">
     <d:tag name="link">
-      <a href="${jobBaseUrl}${job.shortUrl}" class='model-link jenkins-table__link'>
+      <a href="${jobBaseUrl}${job.shortUrl}" class='model-link'>
         <span>
           <l:breakable value="${h.getRelativeDisplayNameFrom(job, itemGroup)}"/>
         </span>
