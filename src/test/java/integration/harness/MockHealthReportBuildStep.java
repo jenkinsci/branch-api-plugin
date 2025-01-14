@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.util.NonLocalizable;
 import net.sf.json.JSONObject;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 public class MockHealthReportBuildStep extends hudson.tasks.Builder {
 
@@ -31,7 +31,7 @@ public class MockHealthReportBuildStep extends hudson.tasks.Builder {
         public DescriptorImpl() {
         }
 
-        public Builder newInstance(StaplerRequest req, @NonNull JSONObject data) {
+        public Builder newInstance(StaplerRequest2 req, @NonNull JSONObject data) {
             throw new UnsupportedOperationException();
         }
     }

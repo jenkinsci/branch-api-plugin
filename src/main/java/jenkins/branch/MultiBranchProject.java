@@ -85,7 +85,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.model.TransientActionFactory;
@@ -112,8 +112,8 @@ import org.apache.commons.lang.StringUtils;
 import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.export.Exported;
 import org.springframework.security.core.Authentication;
 
@@ -912,7 +912,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
      * {@inheritDoc}
      */
     @Override
-    protected void submit(StaplerRequest req, StaplerResponse rsp)
+    protected void submit(StaplerRequest2 req, StaplerResponse2 rsp)
         throws IOException, ServletException, Descriptor.FormException {
         super.submit(req, rsp);
         List<SCMSource> _sources = new ArrayList<>();
