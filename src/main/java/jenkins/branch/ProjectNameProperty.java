@@ -34,7 +34,7 @@ import hudson.model.Descriptor;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMSourceObserver;
 import net.sf.json.JSONObject;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 /**
  * Holds the unmangled project name provided to {@link SCMSourceObserver#observe(String)} and used to create a
@@ -62,7 +62,7 @@ public class ProjectNameProperty extends AbstractFolderProperty<MultiBranchProje
     }
 
     @Override
-    public AbstractFolderProperty<?> reconfigure(StaplerRequest req, JSONObject form) throws Descriptor.FormException {
+    public AbstractFolderProperty<?> reconfigure(StaplerRequest2 req, JSONObject form) throws Descriptor.FormException {
         return this;
     }
 

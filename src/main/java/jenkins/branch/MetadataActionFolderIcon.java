@@ -127,7 +127,7 @@ public class MetadataActionFolderIcon extends FolderIcon {
         String image = iconClassNameImageOf(size);
         return image != null
                 ? image
-                : (Stapler.getCurrentRequest().getContextPath() + Hudson.RESOURCE_PATH
+                : (Stapler.getCurrentRequest2().getContextPath() + Hudson.RESOURCE_PATH
                         + "/plugin/cloudbees-folder/images/" + size + "/folder.png");
     }
 

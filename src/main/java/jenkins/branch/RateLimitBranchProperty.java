@@ -49,7 +49,7 @@ import org.jenkinsci.Symbol;
 import org.jvnet.localizer.ResourceBundleHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 /**
  * A branch property that limits how often a specific branch can be built.
@@ -397,7 +397,7 @@ public class RateLimitBranchProperty extends BranchProperty {
         public static class DescriptorImpl extends JobPropertyDescriptor {
 
             @Override
-            public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+            public JobProperty<?> newInstance(StaplerRequest2 req, JSONObject formData) throws FormException {
                 JobPropertyImpl prop = (JobPropertyImpl) super.newInstance(req, formData);
                 return prop.getThrottle() != null ? prop : null;
             }
