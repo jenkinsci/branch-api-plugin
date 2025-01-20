@@ -9,9 +9,9 @@ import hudson.model.Descriptor.FormException;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import javax.servlet.ServletException;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import jakarta.servlet.ServletException;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 
 /**
  * Holds the basic 'empty view' parent
@@ -100,14 +100,14 @@ public class BaseEmptyView extends View {
      * {@inheritDoc}
      */
     @Override
-    protected void submit(StaplerRequest req) throws IOException, ServletException, FormException {
+    protected void submit(StaplerRequest2 req) throws IOException, ServletException, FormException {
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Item doCreateItem(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
+    public Item doCreateItem(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
         throw new UnsupportedOperationException();
     }
 }

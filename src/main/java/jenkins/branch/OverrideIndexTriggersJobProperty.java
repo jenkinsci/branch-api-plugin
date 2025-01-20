@@ -38,7 +38,7 @@ import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 import java.util.List;
 
@@ -73,7 +73,7 @@ public class OverrideIndexTriggersJobProperty extends JobProperty<Job<?,?>> {
         }
 
         @Override
-        public JobProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+        public JobProperty<?> newInstance(StaplerRequest2 req, JSONObject formData) throws FormException {
             return formData.optBoolean("specified") ? super.newInstance(req, formData) : null;
         }
     }
