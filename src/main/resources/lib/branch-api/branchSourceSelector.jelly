@@ -70,7 +70,6 @@ THE SOFTWARE.
       <j:set var="instance" value="${i}" />
       <div name="${attrs.field}" class="repeated-chunk" descriptorId="${sourceDescriptor.id}">
         <branch:branchSourceBody deleteCaption="${attrs.deleteCaption}">
-          <h1>${descriptor}</h1>
           <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true" />
         </branch:branchSourceBody>
       </div>
@@ -83,7 +82,6 @@ THE SOFTWARE.
       <j:set var="instance" value="${null}" />
       <j:set var="descriptor" value="${it.descriptor.branchSourceDescriptor}" />
       <j:forEach var="sourceDescriptor" items="${attrs.sourceDescriptors}" varStatus="loop">
-        <h1>${sourceDescriptor}</h1>
         <div name="${attrs.field}" title="${sourceDescriptor.displayName}" tooltip="${sourceDescriptor.tooltip}" descriptorId="${sourceDescriptor.id}">
           <j:set var="capture" value="${attrs.capture?:''}" />
           <branch:branchSourceBody deleteCaption="${attrs.deleteCaption}">
