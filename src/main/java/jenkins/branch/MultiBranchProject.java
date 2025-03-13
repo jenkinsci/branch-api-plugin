@@ -131,7 +131,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     R extends Run<P, R>>
     extends ComputedFolder<P> implements SCMSourceOwner, IconSpec {
 
-    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Accessible via System Groovy Scripts")
     private static /* not final */ boolean FIRE_SCM_SOURCE_BUILDS_AFTER_SAVE =
         SystemProperties.getBoolean(MultiBranchProject.class.getName() + ".fireSCMSourceBuildsAfterSave", true);
 
