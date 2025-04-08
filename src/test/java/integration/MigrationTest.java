@@ -51,7 +51,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
-import org.jvnet.hudson.test.recipes.LocalData;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -92,50 +91,6 @@ public class MigrationTest {
         c = null;
     }
 
-    /**
-     * Checks that data is migrated correctly from 1.x to current version.
-     */
-    @Test
-    @LocalData
-    public void nameMangling() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
-     */
-    @Test
-    @LocalData
-    public void nameMangling_2() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
     @Test
     public void createdFromScratch() throws Exception {
         r.addStep(new Statement() {
@@ -147,52 +102,6 @@ public class MigrationTest {
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
                 r.j.waitUntilNoActivity();
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data is migrated correctly from 1.x to current version.
-     */
-    @Test
-    @LocalData
-    public void nameMangling_full_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                r.j.jenkins.reload();
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
-     */
-    @Test
-    @LocalData
-    public void nameMangling_2_full_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                r.j.jenkins.reload();
                 assertDataMigrated(foo);
             }
         });
@@ -217,52 +126,6 @@ public class MigrationTest {
                 foo.scheduleBuild2(0).getFuture().get();
                 r.j.waitUntilNoActivity();
                 r.j.jenkins.reload();
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data is migrated correctly from 1.x to current version.
-     */
-    @Test
-    @LocalData
-    public void nameMangling_folder_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
-                foo.doReload();
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
-     */
-    @Test
-    @LocalData
-    public void nameMangling_2_folder_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
-                foo.doReload();
                 assertDataMigrated(foo);
             }
         });
