@@ -39,14 +39,6 @@ import hudson.scm.NullSCM;
 import hudson.security.Permission;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.logging.Level;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMSource;
@@ -59,24 +51,41 @@ import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LogRecorder;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.springframework.security.core.Authentication;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
 
 import static jenkins.branch.matchers.Extracting.extracting;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeThat;
-import org.jvnet.hudson.test.LoggerRule;
-import org.springframework.security.core.Authentication;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class OrganizationFolderTest {
+@WithJenkins
+class OrganizationFolderTest {
 
     public static class OrganizationFolderBranchProperty extends ParameterDefinitionBranchProperty {
 
@@ -94,14 +103,17 @@ public class OrganizationFolderTest {
         }
     }
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
 
-    @Rule
-    public LoggerRule logging = new LoggerRule().record(ComputedFolder.class, Level.FINE).record(OrganizationFolder.class, Level.FINE);
+    private LogRecorder logging = new LogRecorder().record(ComputedFolder.class, Level.FINE).record(OrganizationFolder.class, Level.FINE);
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        r = rule;
+    }
 
     @Test
-    public void configRoundTrip() throws Exception {
+    void configRoundTrip() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
@@ -124,7 +136,7 @@ public class OrganizationFolderTest {
 
     @Issue("JENKINS-48837")
     @Test
-    public void verifyBranchPropertiesAppliedOnNewProjects() throws Exception {
+    void verifyBranchPropertiesAppliedOnNewProjects() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
@@ -164,7 +176,7 @@ public class OrganizationFolderTest {
 
     @Test
     @Issue("JENKINS-31516")
-    public void indexChildrenOnOrganizationFolderIndex() throws Exception {
+    void indexChildrenOnOrganizationFolderIndex() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("stuff");
             OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
@@ -181,7 +193,7 @@ public class OrganizationFolderTest {
 
     @Issue("JENKINS-32782")
     @Test
-    public void emptyViewEquality() throws Exception {
+    void emptyViewEquality() throws Exception {
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         View emptyView = top.getPrimaryView();
         assertEquals(BaseEmptyView.VIEW_NAME, emptyView.getViewName());
@@ -192,10 +204,10 @@ public class OrganizationFolderTest {
 
     @Issue("JENKINS-34246")
     @Test
-    public void deletedMarker() throws Exception {
-        assumeThat("TODO fails if jth.jenkins-war.path includes WorkflowMultiBranchProjectFactory since SingleSCMSource ignores SCMSourceCriteria",
-            ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).stream().map(d -> d.clazz).toArray(),
-            arrayContainingInAnyOrder(MockFactory.class, BasicMultiBranchProjectFactory.class));
+    void deletedMarker() throws Exception {
+        assumeTrue(
+            ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class).stream().map(d -> d.clazz).toList().containsAll(List.of(MockFactory.class, BasicMultiBranchProjectFactory.class)),
+            "TODO fails if jth.jenkins-war.path includes WorkflowMultiBranchProjectFactory since SingleSCMSource ignores SCMSourceCriteria");
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
         List<MultiBranchProjectFactory> projectFactories = top.getProjectFactories();
         assertThat(projectFactories, extracting(MultiBranchProjectFactory::getDescriptor, hasItem(ExtensionList.lookupSingleton(ConfigRoundTripDescriptor.class))));
@@ -218,19 +230,18 @@ public class OrganizationFolderTest {
      * When an OrganizationFolder is created and provided with no {@link MultiBranchProjectFactory} implementations,
      * it should automatically add the enabled-by-default factories for the current Jenkins instance
      * when {@link OrganizationFolder#onCreatedFromScratch()} is called.
-     * @throws IOException
      */
     @Test
-    public void defaultFactoriesWhenNeeded() throws IOException {
+    void defaultFactoriesWhenNeeded() {
 
         // programmatically create an OrganizationFolder
         OrganizationFolder newbie = new OrganizationFolder( r.jenkins, "newbie" );
 
         // it should have no factories
         assertEquals(
-            "A newly-created OrganizationFolder has no MultiBranchProjectFactories.",
             0,
-            newbie.getProjectFactories().size() );
+            newbie.getProjectFactories().size(),
+            "A newly-created OrganizationFolder has no MultiBranchProjectFactories." );
 
         // these are all of the MultiBranchProjectFactory definitions.
         ExtensionList<MultiBranchProjectFactoryDescriptor> factory_descriptors = r.jenkins.getExtensionList( MultiBranchProjectFactoryDescriptor.class );
@@ -255,8 +266,8 @@ public class OrganizationFolderTest {
                 }
 
                 assertTrue(
-                    "After #onCreatedFromScratch(), the enabled-by-default MultiBranchProjectFactory [" + factory_descriptor.getDisplayName()+ "] is present in an OrganizationFolder created with no initial factories.",
-                    default_factory_was_present );
+                    default_factory_was_present,
+                    "After #onCreatedFromScratch(), the enabled-by-default MultiBranchProjectFactory [" + factory_descriptor.getDisplayName()+ "] is present in an OrganizationFolder created with no initial factories." );
 
             }
         }
@@ -278,8 +289,8 @@ public class OrganizationFolderTest {
             }
 
             assertTrue(
-                "After #onCreatedFromScratch() with no initial project factories, the OrganizationFolder MultiBranchProjectFactory [" + org_factory.getDescriptor().getDisplayName()+ "] is one of the enabled-by-default factories.",
-                org_factory_is_default_factory );
+                org_factory_is_default_factory,
+                "After #onCreatedFromScratch() with no initial project factories, the OrganizationFolder MultiBranchProjectFactory [" + org_factory.getDescriptor().getDisplayName()+ "] is one of the enabled-by-default factories." );
         }
     }
 
@@ -288,16 +299,16 @@ public class OrganizationFolderTest {
      * it should not add any other factories when {@link OrganizationFolder#onCreatedFromScratch()} is called.
      */
     @Test
-    public void noDefaultFactoriesWhenNotNeeded() {
+    void noDefaultFactoriesWhenNotNeeded() {
 
         // programmatically create an OrganizationFolder
         OrganizationFolder newbie = new OrganizationFolder( r.jenkins, "newbie" );
 
         // it should have no factories
         assertEquals(
-            "A newly-created OrganizationFolder has no MultiBranchProjectFactories.",
             0,
-            newbie.getProjectFactories().size() );
+            newbie.getProjectFactories().size(),
+            "A newly-created OrganizationFolder has no MultiBranchProjectFactories." );
 
         // set exactly one non-default factory
         newbie.getProjectFactories().clear();
@@ -308,33 +319,30 @@ public class OrganizationFolderTest {
         newbie.onCreatedFromScratch();
 
         assertEquals(
-            "An OrganizationFolder created with a non-default project factory should only have one factory after onCreatedFromScratch()",
             1,
-            newbie.getProjectFactories().size() );
+            newbie.getProjectFactories().size(),
+            "An OrganizationFolder created with a non-default project factory should only have one factory after onCreatedFromScratch()" );
 
         assertEquals(
-            "An OrganizationFolder created with a non-default project factory should only have that particular factory after onCreatedFromScratch()",
             mock_factory.getDescriptor(),
-            newbie.getProjectFactories().get( 0 ).getDescriptor() ) ;
+            newbie.getProjectFactories().get( 0 ).getDescriptor(),
+            "An OrganizationFolder created with a non-default project factory should only have that particular factory after onCreatedFromScratch()" ) ;
 
     }
 
     @Test
-    public void modifyAclsWhenInComputedFolder() throws IOException, InterruptedException {
+    void modifyAclsWhenInComputedFolder() {
 
         Set<Permission> suppressed_permissions =
-            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-                Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE)));
+                Set.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
 
         // we need a ComputedFolder to be the parent of our OrganizationFolder
-        ComputedFolder<OrganizationFolder> computed_folder = new ComputedFolder<OrganizationFolder>(r.jenkins, "top") {
+        ComputedFolder<OrganizationFolder> computed_folder = new ComputedFolder<>(r.jenkins, "top") {
 
             @Override
             protected void computeChildren(
-                ChildObserver<OrganizationFolder> observer,
-                TaskListener listener)
-                    throws IOException, InterruptedException
-            {
+                    ChildObserver<OrganizationFolder> observer,
+                    TaskListener listener) {
                 /*
                  * We don't actually need to compute children during a unit test.
                  * We just need an OrganizationFolder to have this ComputedFolder
@@ -359,18 +367,17 @@ public class OrganizationFolderTest {
         for( Permission perm : suppressed_permissions ) {
 
             assertFalse(
-                "OrganizationFolders in ComputedFolders should suppress the [" + perm.getId() + "] permission.",
-                org_folder.getACL().hasPermission2( some_user, perm ) );
+                org_folder.getACL().hasPermission2( some_user, perm ),
+                "OrganizationFolders in ComputedFolders should suppress the [" + perm.getId() + "] permission." );
         }
 
     }
 
     @Test
-    public void modifyAclsWhenNotInComputedFolder() throws IOException {
+    void modifyAclsWhenNotInComputedFolder() throws IOException {
 
         Set<Permission> suppressed_permissions =
-            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-                Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE)));
+                Set.of(Item.CONFIGURE, Item.DELETE, View.CONFIGURE, View.CREATE, View.DELETE);
 
         OrganizationFolder top = r.jenkins.createProject(OrganizationFolder.class, "top");
 
@@ -382,8 +389,8 @@ public class OrganizationFolderTest {
         for( Permission perm : suppressed_permissions ) {
 
             assertTrue(
-                "Organization Folders in non-computed parents do not suppress the [" + perm.getId() + "] permission.",
-                top.getACL().hasPermission2( some_user, perm ) );
+                top.getACL().hasPermission2( some_user, perm ),
+                "Organization Folders in non-computed parents do not suppress the [" + perm.getId() + "] permission." );
         }
 
     }
@@ -397,14 +404,14 @@ public class OrganizationFolderTest {
         static boolean live = true;
         @Override
         public boolean recognizes(@NonNull ItemGroup<?> parent, @NonNull String name, @NonNull List<? extends SCMSource> scmSources,
-                                  @NonNull Map<String, Object> attributes, @NonNull TaskListener listener) throws IOException, InterruptedException {
+                                  @NonNull Map<String, Object> attributes, @NonNull TaskListener listener) {
             return live;
         }
         @NonNull
         @Override
         public MultiBranchProject<?, ?> createNewProject(@NonNull ItemGroup<?> parent, @NonNull String name,
                                                          @NonNull List<? extends SCMSource> scmSources, @NonNull Map<String,Object> attributes,
-                                                         @NonNull TaskListener listener) throws IOException, InterruptedException {
+                                                         @NonNull TaskListener listener) {
             return new MultiBranchImpl(parent, name);
         }
     }
