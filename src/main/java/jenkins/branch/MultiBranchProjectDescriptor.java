@@ -264,7 +264,7 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
             return NameMangler.apply(NameEncoder.decode(legacyDirName));
         }
 
-        @Override
+        // TODO remove after it is removed in cloudbees-folder
         public void recordLegacyName(MultiBranchProject<P, R> parent, P item, String legacyDirName) throws IOException {
             // no-op because we already tracked the name in Branch.getName()
         }
