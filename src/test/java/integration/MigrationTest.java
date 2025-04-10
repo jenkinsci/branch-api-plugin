@@ -49,8 +49,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runners.model.Statement;
-import org.jvnet.hudson.test.RestartableJenkinsRule;
+import org.jvnet.hudson.test.JenkinsSessionRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -64,7 +63,7 @@ public class MigrationTest {
     private static MockSCMController c;
 
     @Rule
-    public RestartableJenkinsRule r = new RestartableJenkinsRule();
+    public JenkinsSessionRule r = new JenkinsSessionRule();
 
     @BeforeClass
     public static void setupSCM() throws IOException {
@@ -92,73 +91,55 @@ public class MigrationTest {
     }
 
     @Test
-    public void createdFromScratch() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
+    public void createdFromScratch() throws Throwable {
+        r.then(j -> {
+                OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
                 foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
                 foo.getProjectFactories()
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
-                r.j.waitUntilNoActivity();
+                j.waitUntilNoActivity();
                 assertDataMigrated(foo);
-            }
         });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
+        r.then(j -> {
+                TopLevelItem foo = j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
-            }
         });
     }
 
     @Test
-    public void createdFromScratch_full_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
+    public void createdFromScratch_full_reload() throws Throwable {
+        r.then(j -> {
+                OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
                 foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
                 foo.getProjectFactories()
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
-                r.j.waitUntilNoActivity();
-                r.j.jenkins.reload();
+                j.waitUntilNoActivity();
+                j.jenkins.reload();
                 assertDataMigrated(foo);
-            }
         });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
+        r.then(j -> {
+                TopLevelItem foo = j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
-            }
         });
     }
 
     @Test
-    public void createdFromScratch_folder_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
+    public void createdFromScratch_folder_reload() throws Throwable {
+        r.then(j -> {
+                OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
                 foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
                 foo.getProjectFactories()
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
-                r.j.waitUntilNoActivity();
+                j.waitUntilNoActivity();
                 foo.doReload();
                 assertDataMigrated(foo);
-            }
         });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
+        r.then(j -> {
+                TopLevelItem foo = j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
-            }
         });
     }
 
