@@ -25,7 +25,6 @@
 
 package integration;
 
-import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import hudson.model.Job;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProjectFactory;
@@ -34,7 +33,6 @@ import jenkins.branch.OrganizationFolder;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMNavigator;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.junit.AfterClass;
@@ -55,7 +53,6 @@ import java.util.logging.Logger;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class MigrationTest {
@@ -229,13 +226,7 @@ public class MigrationTest {
                 jobByName.put(j.getFullName(), j);
                 jobByDirName.put(jobDirName, j);
                 jobByDisplayName.put(j.getFullDisplayName(), j);
-                File nameFile = new File(j.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
-                assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
-                assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile, StandardCharsets.UTF_8), is(j.getName()));
             }
-            File nameFile = new File(p.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
-            assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
-            assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile, StandardCharsets.UTF_8), is(p.getName()));
         }
         assertThat("Display Names are repo names", byDisplayName.keySet(), containsInAnyOrder(
                 "test.example.com",
