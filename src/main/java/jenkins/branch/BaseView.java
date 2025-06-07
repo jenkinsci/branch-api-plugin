@@ -8,11 +8,14 @@ import hudson.security.ACL;
 import hudson.security.Permission;
 import java.io.IOException;
 import jenkins.scm.api.SCMCategory;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.springframework.security.core.Authentication;
 
+@Restricted(NoExternalUse.class)
 public abstract class BaseView<T extends SCMCategory<?>> extends ListView {
 
-    protected final T category;
+    private final T category;
 
     public BaseView(ViewGroup owner, @NonNull T category) {
         super(category.getName(), owner);

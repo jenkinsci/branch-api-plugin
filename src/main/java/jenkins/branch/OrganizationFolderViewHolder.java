@@ -27,12 +27,9 @@ package jenkins.branch;
 import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.Extension;
-import hudson.model.ListView;
 import hudson.model.View;
 import hudson.model.ViewDescriptor;
 import hudson.model.ViewGroup;
-import hudson.security.ACL;
-import hudson.security.Permission;
 import hudson.views.DefaultViewsTabBar;
 import hudson.views.StatusColumn;
 import hudson.views.ViewsTabBar;
@@ -45,7 +42,6 @@ import jenkins.scm.api.SCMSourceCategory;
 import net.jcip.annotations.GuardedBy;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.springframework.security.core.Authentication;
 
 import static java.util.Arrays.asList;
 
