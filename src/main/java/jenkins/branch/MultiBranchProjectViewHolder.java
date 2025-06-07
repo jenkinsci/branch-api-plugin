@@ -199,13 +199,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      * A custom category specific view.
      */
     @Restricted(NoExternalUse.class)
-    public static class ViewImpl extends ListView {
-
-        /**
-         * The category that this view selects.
-         */
-        @NonNull
-        private final SCMHeadCategory category;
+    public static class ViewImpl extends BaseView<SCMHeadCategory> {
 
         /**
          * Creates a new view.
@@ -214,10 +208,9 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
          * @param category the category.
          */
         public ViewImpl(ViewGroup owner, @NonNull SCMHeadCategory category) {
-            super(category.getName(), owner);
-            this.category = category;
+            super(owner,category);
             try {
-                getJobFilters().replaceBy(Collections.singletonList(new BranchCategoryFilter(category)));
+                getJobFilters().replaceBy(List.of(new BranchCategoryFilter(category)));
                 DescribableList<ListViewColumn, Descriptor<ListViewColumn>> columns = getColumns();
                 columns.replace(columns.get(StatusColumn.class), new BranchStatusColumn());
                 columns.replace(columns.get(JobColumn.class), new ItemColumn());
@@ -225,50 +218,6 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
                 // ignore
             }
             setRecurse(false);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String getDisplayName() {
-            return category.getDisplayName() + " (" + getItems().size() + ")";
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isRecurse() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @NonNull
-        @Override
-        public ACL getACL() {
-            final ACL acl = super.getACL();
-            return new ACL() {
-                @Override
-                public boolean hasPermission2(@NonNull Authentication a, @NonNull Permission permission) {
-                    if (View.CREATE.equals(permission)
-                            || View.CONFIGURE.equals(permission)
-                            || View.DELETE.equals(permission)) {
-                        return false;
-                    }
-                    return acl.hasPermission2(a, permission);
-                }
-            };
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void save() throws IOException {
-            // no-op
         }
 
         /**
