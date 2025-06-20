@@ -71,7 +71,7 @@ public class MetadataActionFolderIcon extends FolderIcon {
     public String getIconClassName() {
         if (owner != null) {
             if (owner.isDisabled()) {
-                return "icon-folder-disabled";
+                return "symbol-folder-disabled-outline plugin-branch-api";
             }
             AvatarMetadataAction action = owner.getAction(AvatarMetadataAction.class);
             if (action != null) {
