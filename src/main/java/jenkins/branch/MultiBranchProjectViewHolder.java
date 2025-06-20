@@ -28,12 +28,9 @@ import com.cloudbees.hudson.plugins.folder.views.AbstractFolderViewHolder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.Extension;
 import hudson.model.Descriptor;
-import hudson.model.ListView;
 import hudson.model.View;
 import hudson.model.ViewDescriptor;
 import hudson.model.ViewGroup;
-import hudson.security.ACL;
-import hudson.security.Permission;
 import hudson.util.DescribableList;
 import hudson.views.DefaultViewsTabBar;
 import hudson.views.JobColumn;
@@ -49,7 +46,6 @@ import jenkins.scm.api.SCMHeadCategory;
 import net.jcip.annotations.GuardedBy;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.springframework.security.core.Authentication;
 
 /**
  * Holds the view configuration for an {@link MultiBranchProject}.
@@ -199,13 +195,7 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
      * A custom category specific view.
      */
     @Restricted(NoExternalUse.class)
-    public static class ViewImpl extends ListView {
-
-        /**
-         * The category that this view selects.
-         */
-        @NonNull
-        private final SCMHeadCategory category;
+    public static class ViewImpl extends BaseView<SCMHeadCategory> {
 
         /**
          * Creates a new view.
@@ -214,10 +204,9 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
          * @param category the category.
          */
         public ViewImpl(ViewGroup owner, @NonNull SCMHeadCategory category) {
-            super(category.getName(), owner);
-            this.category = category;
+            super(owner,category);
             try {
-                getJobFilters().replaceBy(Collections.singletonList(new BranchCategoryFilter(category)));
+                getJobFilters().replaceBy(List.of(new BranchCategoryFilter(category)));
                 DescribableList<ListViewColumn, Descriptor<ListViewColumn>> columns = getColumns();
                 columns.replace(columns.get(StatusColumn.class), new BranchStatusColumn());
                 columns.replace(columns.get(JobColumn.class), new ItemColumn());
@@ -225,50 +214,6 @@ public class MultiBranchProjectViewHolder extends AbstractFolderViewHolder {
                 // ignore
             }
             setRecurse(false);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String getDisplayName() {
-            return category.getDisplayName() + " (" + getItems().size() + ")";
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public boolean isRecurse() {
-            return false;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @NonNull
-        @Override
-        public ACL getACL() {
-            final ACL acl = super.getACL();
-            return new ACL() {
-                @Override
-                public boolean hasPermission2(@NonNull Authentication a, @NonNull Permission permission) {
-                    if (View.CREATE.equals(permission)
-                            || View.CONFIGURE.equals(permission)
-                            || View.DELETE.equals(permission)) {
-                        return false;
-                    }
-                    return acl.hasPermission2(a, permission);
-                }
-            };
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void save() throws IOException {
-            // no-op
         }
 
         /**
