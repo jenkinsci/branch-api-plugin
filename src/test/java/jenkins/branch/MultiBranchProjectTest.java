@@ -1,17 +1,17 @@
 package jenkins.branch;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Stephen Connolly
  */
-public class MultiBranchProjectTest {
+class MultiBranchProjectTest {
 
     @Test
-    public void smokes() {
+    void smokes() {
         assertThat(MultiBranchProject.rawDecode("Hello world"), is("Hello world"));
         assertThat(MultiBranchProject.rawDecode("Hello+world"), is("Hello+world"));
         assertThat(MultiBranchProject.rawDecode("origin/production"), is("origin/production"));
