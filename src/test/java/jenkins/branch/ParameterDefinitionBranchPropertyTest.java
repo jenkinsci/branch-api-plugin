@@ -34,43 +34,56 @@ import hudson.model.TopLevelItem;
 import hudson.util.VersionNumber;
 import integration.harness.BasicDummyStepBranchProperty;
 import integration.harness.BasicMultiBranchProject;
-import java.util.Arrays;
-import java.util.Collections;
-
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assume.assumeThat;
+import java.util.Arrays;
+import java.util.Collections;
 
-public class ParameterDefinitionBranchPropertyTest {
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+@WithJenkins
+class ParameterDefinitionBranchPropertyTest {
+
     /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    private static JenkinsRule r;
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void getSetParameterDefinitions() throws Exception {
+    void getSetParameterDefinitions() {
         ParameterDefinitionBranchPropertyImpl instance = new ParameterDefinitionBranchPropertyImpl();
         instance.setParameterDefinitions(Collections.singletonList(
                 new StringParameterDefinition("PARAM_STR", "PARAM_DEFAULT_0812673", "The param")
@@ -87,14 +100,14 @@ public class ParameterDefinitionBranchPropertyTest {
     }
 
     @Test
-    public void isApplicable_Job() throws Exception {
+    void isApplicable_Job() {
         assertThat("Jobs are not parameterized",
                 new ParameterDefinitionBranchPropertyImpl().isApplicable((Class) Job.class), is(false));
 
     }
 
     @Test
-    public void isApplicable_Job_implementing_ParameterizedJob() throws Exception {
+    void isApplicable_Job_implementing_ParameterizedJob() {
         assertThat("Parameterized Jobs are are Applicable",
                 new ParameterDefinitionBranchPropertyImpl().isApplicable((Class) ParamJob.class), is(true));
 
@@ -107,19 +120,19 @@ public class ParameterDefinitionBranchPropertyTest {
     }
 
     @Test
-    public void jobDecorator_Job() throws Exception {
+    void jobDecorator_Job() {
         assertThat(new ParameterDefinitionBranchPropertyImpl().jobDecorator((Class) Job.class), nullValue());
     }
 
     @Test
-    public void jobDecorator_Job_implementing_ParameterizedJob() throws Exception {
+    void jobDecorator_Job_implementing_ParameterizedJob() {
         assertThat(new ParameterDefinitionBranchPropertyImpl().jobDecorator((Class) ParamJob.class), notNullValue());
     }
 
     @Issue("JENKINS-61438")
     @Test
-    public void choiceParameterIssue() throws Exception {
-        assumeThat(Jenkins.getVersion(), greaterThanOrEqualTo(new VersionNumber("2.242")));
+    void choiceParameterIssue() throws Exception {
+        assumeTrue(Jenkins.getVersion().isNewerThanOrEqualTo(new VersionNumber("2.242")));
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -149,8 +162,9 @@ public class ParameterDefinitionBranchPropertyTest {
                     ));
         }
     }
+
     @Test
-    public void configRoundtrip() throws Exception {
+    void configRoundtrip() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -182,7 +196,7 @@ public class ParameterDefinitionBranchPropertyTest {
     }
 
     @Test
-    public void parametersAreConfiguredOnBranchJobs() throws Exception {
+    void parametersAreConfiguredOnBranchJobs() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
