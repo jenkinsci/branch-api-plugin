@@ -34,7 +34,6 @@ import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
-import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -263,12 +262,5 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
         public String dirNameFromLegacy(@NonNull MultiBranchProject<P, R> parent, @NonNull String legacyDirName) {
             return NameMangler.apply(NameEncoder.decode(legacyDirName));
         }
-
-        // TODO remove after it is removed in cloudbees-folder
-        public void recordLegacyName(MultiBranchProject<P, R> parent, P item, String legacyDirName) throws IOException {
-            // no-op because we already tracked the name in Branch.getName()
-        }
-
     }
-
 }

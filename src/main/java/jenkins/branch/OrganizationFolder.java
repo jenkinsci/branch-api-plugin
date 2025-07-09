@@ -884,12 +884,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         public String dirNameFromLegacy(@NonNull OrganizationFolder parent, @NonNull String legacyDirName) {
             return NameMangler.apply(NameEncoder.decode(legacyDirName));
         }
-
-        // TODO remove after it is removed in cloudbees-folder
-        public void recordLegacyName(OrganizationFolder parent, MultiBranchProject<?, ?> item, String legacyDirName)
-                throws IOException {
-            item.addProperty(new ProjectNameProperty(legacyDirName));
-        }
     }
 
     /**
