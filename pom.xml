@@ -69,8 +69,8 @@
     <changelist>999999-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-    <jenkins.baseline>2.479</jenkins.baseline>
-    <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+    <jenkins.baseline>2.504</jenkins.baseline>
+    <jenkins.version>${jenkins.baseline}.1</jenkins.version>
 
     <hpi.compatibleSinceVersion>2.0.0</hpi.compatibleSinceVersion>
     <no-test-jar>false</no-test-jar>
@@ -84,6 +84,12 @@
         <version>5015.vb_52d36583443</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <!-- TODO remove when in BOM -->
+      <dependency>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>cloudbees-folder</artifactId>
+        <version>6.1034.v4159e5986617</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
