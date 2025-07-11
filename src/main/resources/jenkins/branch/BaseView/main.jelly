@@ -1,0 +1,14 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:t="/lib/hudson" xmlns:st="jelly:stapler">
+  <j:set var="views" value="${it.owner.views}"/>
+  <j:set var="currentView" value="${it}"/>
+  <j:if test="${items.isEmpty()}">
+    <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>
+    <st:include it="${it}" page="noJob.jelly"/>
+  </j:if>
+  <j:if test="${!items.isEmpty()}">
+    <t:projectView jobs="${items}" showViewTabs="true" columnExtensions="${it.columns}" indenter="${it.indenter}" itemGroup="${it.owner.itemGroup}">
+      <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>
+    </t:projectView>
+  </j:if>
+</j:jelly>
