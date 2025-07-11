@@ -85,12 +85,6 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- TODO remove when in BOM -->
-      <dependency>
-        <groupId>org.jenkins-ci.plugins</groupId>
-        <artifactId>cloudbees-folder</artifactId>
-        <version>6.1034.v4159e5986617</version>
-      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
