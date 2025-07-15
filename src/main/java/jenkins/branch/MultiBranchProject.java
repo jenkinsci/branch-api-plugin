@@ -24,7 +24,6 @@
 
 package jenkins.branch;
 
-import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIcon;
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
@@ -131,7 +130,6 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     R extends Run<P, R>>
     extends ComputedFolder<P> implements SCMSourceOwner, IconSpec {
 
-    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Accessible via System Groovy Scripts")
     private static /* not final */ boolean FIRE_SCM_SOURCE_BUILDS_AFTER_SAVE =
         SystemProperties.getBoolean(MultiBranchProject.class.getName() + ".fireSCMSourceBuildsAfterSave", true);
 
@@ -2093,21 +2091,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
 
         private void observeNew(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull Branch branch, String rawName, String encodedName, Action[] revisionActions) {
-            P project;
             if (!observer.mayCreate(encodedName)) {
                 listener.getLogger().println("Ignoring duplicate branch project " + rawName);
                 return;
             }
-            try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                MultiBranchProject.this, encodedName, branch.getName()
-            )) {
-                if (getItem(encodedName) != null) {
-                    throw new IllegalStateException(
-                        "JENKINS-42511: attempted to redundantly create " + encodedName + " in "
-                            + MultiBranchProject.this);
-                }
-                project = _factory.newInstance(branch);
+            if (getItem(encodedName) != null) {
+                throw new IllegalStateException(
+                    "JENKINS-42511: attempted to redundantly create " + encodedName + " in "
+                        + MultiBranchProject.this);
             }
+            P project = _factory.newInstance(branch);
             if (!project.getName().equals(encodedName)) {
                 throw new IllegalStateException(
                     "Name of created project " + project + " did not match expected " + encodedName);

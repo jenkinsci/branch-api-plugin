@@ -34,7 +34,6 @@ import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
-import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -231,9 +230,9 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
             if (factory.isProject(item)) {
                 return NameEncoder.encode(factory.getBranch(item).getName());
             }
-            String idealName = idealNameFromItem(parent, item);
-            if (idealName != null) {
-                return NameEncoder.encode(idealName);
+            String name = item.getName();
+            if (name != null) {
+                return NameEncoder.encode(name);
             }
             return null;
         }
@@ -245,9 +244,9 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
             if (factory.isProject(item)) {
                 return NameMangler.apply(factory.getBranch(item).getName());
             }
-            String idealName = idealNameFromItem(parent, item);
-            if (idealName != null) {
-                return NameMangler.apply(idealName);
+            String name = item.getName();
+            if (name != null) {
+                return NameMangler.apply(name);
             }
             return null;
         }
@@ -263,12 +262,5 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
         public String dirNameFromLegacy(@NonNull MultiBranchProject<P, R> parent, @NonNull String legacyDirName) {
             return NameMangler.apply(NameEncoder.decode(legacyDirName));
         }
-
-        @Override
-        public void recordLegacyName(MultiBranchProject<P, R> parent, P item, String legacyDirName) throws IOException {
-            // no-op because we already tracked the name in Branch.getName()
-        }
-
     }
-
 }

@@ -25,13 +25,10 @@
 
 package integration;
 
-import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import hudson.model.Job;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProjectFactory;
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,21 +39,17 @@ import jenkins.branch.OrganizationFolder;
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMNavigator;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runners.model.Statement;
-import org.jvnet.hudson.test.RestartableJenkinsRule;
-import org.jvnet.hudson.test.recipes.LocalData;
+import org.jvnet.hudson.test.JenkinsSessionRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class MigrationTest {
@@ -65,7 +58,7 @@ public class MigrationTest {
     private static MockSCMController c;
 
     @Rule
-    public RestartableJenkinsRule r = new RestartableJenkinsRule();
+    public JenkinsSessionRule r = new JenkinsSessionRule();
 
     @BeforeClass
     public static void setupSCM() throws IOException {
@@ -92,210 +85,56 @@ public class MigrationTest {
         c = null;
     }
 
-    /**
-     * Checks that data is migrated correctly from 1.x to current version.
-     */
     @Test
-    @LocalData
-    public void nameMangling() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
-     */
-    @Test
-    @LocalData
-    public void nameMangling_2() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
-    @Test
-    public void createdFromScratch() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
+    public void createdFromScratch() throws Throwable {
+        r.then(j -> {
+                OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
                 foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
                 foo.getProjectFactories()
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
-                r.j.waitUntilNoActivity();
+                j.waitUntilNoActivity();
                 assertDataMigrated(foo);
-            }
         });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
+        r.then(j -> {
+                TopLevelItem foo = j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data is migrated correctly from 1.x to current version.
-     */
-    @Test
-    @LocalData
-    public void nameMangling_full_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                r.j.jenkins.reload();
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
-     */
-    @Test
-    @LocalData
-    public void nameMangling_2_full_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                r.j.jenkins.reload();
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
         });
     }
 
     @Test
-    public void createdFromScratch_full_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
+    public void createdFromScratch_full_reload() throws Throwable {
+        r.then(j -> {
+                OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
                 foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
                 foo.getProjectFactories()
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
-                r.j.waitUntilNoActivity();
-                r.j.jenkins.reload();
+                j.waitUntilNoActivity();
+                j.jenkins.reload();
                 assertDataMigrated(foo);
-            }
         });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
+        r.then(j -> {
+                TopLevelItem foo = j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data is migrated correctly from 1.x to current version.
-     */
-    @Test
-    @LocalData
-    public void nameMangling_folder_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
-                foo.doReload();
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
-        });
-    }
-
-    /**
-     * Checks that data migrated from 1.x to 2.0.0 name mangling is still valid when re-migrated to 2.0.2 name mangling
-     */
-    @Test
-    @LocalData
-    public void nameMangling_2_folder_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.jenkins.getItemByFullName("foo", OrganizationFolder.class);
-                foo.doReload();
-                assertDataMigrated(foo);
-            }
-        });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-            }
         });
     }
 
     @Test
-    public void createdFromScratch_folder_reload() throws Exception {
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                OrganizationFolder foo = r.j.createProject(OrganizationFolder.class, "foo");
+    public void createdFromScratch_folder_reload() throws Throwable {
+        r.then(j -> {
+                OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
                 foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
                 foo.getProjectFactories()
                         .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
                 foo.scheduleBuild2(0).getFuture().get();
-                r.j.waitUntilNoActivity();
+                j.waitUntilNoActivity();
                 foo.doReload();
                 assertDataMigrated(foo);
-            }
         });
-        r.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                TopLevelItem foo = r.j.jenkins.getItem("foo");
+        r.then(j -> {
+                TopLevelItem foo = j.jenkins.getItem("foo");
                 assertDataMigrated(foo);
-            }
         });
     }
 
@@ -384,13 +223,7 @@ public class MigrationTest {
                 jobByName.put(j.getFullName(), j);
                 jobByDirName.put(jobDirName, j);
                 jobByDisplayName.put(j.getFullDisplayName(), j);
-                File nameFile = new File(j.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
-                assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
-                assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile, StandardCharsets.UTF_8), is(j.getName()));
             }
-            File nameFile = new File(p.getRootDir(), ChildNameGenerator.CHILD_NAME_FILE);
-            assertThat("Exists: " + nameFile, nameFile.isFile(), is(true));
-            assertThat("Contents: " + nameFile, FileUtils.readFileToString(nameFile, StandardCharsets.UTF_8), is(p.getName()));
         }
         assertThat("Display Names are repo names", byDisplayName.keySet(), containsInAnyOrder(
                 "test.example.com",
