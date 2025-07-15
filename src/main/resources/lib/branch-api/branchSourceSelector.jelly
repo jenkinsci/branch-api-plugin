@@ -75,7 +75,7 @@ THE SOFTWARE.
       </div>
     </j:forEach>
 
-    <div class="repeatable-insertion-point" />
+    <template class="repeatable-insertion-point" />
 
     <div class="prototypes to-be-removed">
       <!-- render one prototype for each type -->
@@ -95,8 +95,6 @@ THE SOFTWARE.
       </j:forEach>
     </div>
 
-    <div>
-      <input type="button" value="${attrs.addCaption?:'%Add'}" class="hetero-list-add" menualign="${attrs.menuAlign}" suffix="${attrs.field}"/>
-    </div>
+    <input type="button" value="${attrs.addCaption?:'%Add'}" class="hetero-list-add" menualign="${attrs.menuAlign}" suffix="${attrs.field}"/>
   </div>
 </j:jelly>

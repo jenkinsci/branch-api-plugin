@@ -34,12 +34,9 @@ THE SOFTWARE.
   <div>
     <j:set var="help" value="${sourceDescriptor.helpFile}" />
     <j:if test="${hasHeader}">
-      <div class="tr">
-        <div>
-          <div class="dd-handle">
-            <b>${sourceDescriptor.displayName}</b>
-          </div>
-        </div>
+    <div class="repeated-chunk__header">
+      <div class="dd-handle" />
+      ${sourceDescriptor.displayName}
         <j:if test="${help!=null}">
           <div>
             <a href="#" class="help-button" helpURL="${rootURL}${help}"><l:icon class="icon-help icon-md" alt="[help]"/></a>
@@ -52,14 +49,12 @@ THE SOFTWARE.
       </j:if>
     </j:if>
 
-    <d:invokeBody/>
+    <div class="jenkins-repeated-chunk__content">
+      <d:invokeBody/>
+    </div>
 
-    <f:block>
-      <div align="right">
-        <input type="hidden" name="stapler-class" value="${descriptor.clazz.name}" />
-        <f:repeatableDeleteButton value="${attrs.deleteCaption}" />
-      </div>
-    </f:block>
+    <input type="hidden" name="stapler-class" value="${descriptor.clazz.name}" />
+    <f:repeatableDeleteButton />
   </div>
   <input type="hidden" name="kind" value="${descriptor.id}" />
 </j:jelly>
