@@ -71,7 +71,7 @@ public class MetadataActionFolderIcon extends FolderIcon {
     public String getIconClassName() {
         if (owner != null) {
             if (owner.isDisabled()) {
-                return "icon-folder-disabled";
+                return "symbol-folder-disabled-outline plugin-branch-api";
             }
             AvatarMetadataAction action = owner.getAction(AvatarMetadataAction.class);
             if (action != null) {
@@ -100,11 +100,9 @@ public class MetadataActionFolderIcon extends FolderIcon {
                 }
                 // otherwise the metadata doesn't want to control the icon, so fall back to the descriptor's default
             }
-            if (owner instanceof IconSpec) {
-                String result = ((IconSpec) owner).getIconClassName();
-                if (result != null) {
-                    return result;
-                }
+            String result = ((IconSpec) owner).getIconClassName();
+            if (result != null) {
+                return result;
             }
             return owner.getDescriptor().getIconClassName();
         }

@@ -95,7 +95,7 @@ import net.sf.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jenkins.ui.icon.Icon;
 import org.jenkins.ui.icon.IconSet;
 import org.jenkins.ui.icon.IconSpec;
@@ -852,9 +852,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             if (property != null) {
                 return NameEncoder.encode(property.getName());
             }
-            String idealName = idealNameFromItem(parent, item);
-            if (idealName != null) {
-                return NameEncoder.encode(idealName);
+            String name = item.getName();
+            if (name != null) {
+                return NameEncoder.encode(name);
             }
             return null;
         }
@@ -866,9 +866,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
             if (property != null) {
                 return NameMangler.apply(property.getName());
             }
-            String idealName = idealNameFromItem(parent, item);
-            if (idealName != null) {
-                return NameMangler.apply(idealName);
+            String name = item.getName();
+            if (name != null) {
+                return NameMangler.apply(name);
             }
             return null;
         }
@@ -883,12 +883,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @NonNull
         public String dirNameFromLegacy(@NonNull OrganizationFolder parent, @NonNull String legacyDirName) {
             return NameMangler.apply(NameEncoder.decode(legacyDirName));
-        }
-
-        // TODO remove after it is removed in cloudbees-folder
-        public void recordLegacyName(OrganizationFolder parent, MultiBranchProject<?, ?> item, String legacyDirName)
-                throws IOException {
-            item.addProperty(new ProjectNameProperty(legacyDirName));
         }
     }
 
@@ -1436,19 +1430,14 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 .println("Ignoring duplicate child " + projectName + " named " + folderName);
                         return;
                     }
-                    MultiBranchProject<?, ?> project;
-                    try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                            OrganizationFolder.this, folderName, projectName
-                    )) {
-                        if (getItem(folderName) != null) {
-                            throw new IllegalStateException(
-                                    "JENKINS-42511: attempted to redundantly create " + folderName + " in "
-                                            + OrganizationFolder.this);
-                        }
-                        project = factory.createNewProject(
-                                OrganizationFolder.this, folderName, sources, attributes, listener
-                        );
+                    if (getItem(folderName) != null) {
+                        throw new IllegalStateException(
+                                "JENKINS-42511: attempted to redundantly create " + folderName + " in "
+                                        + OrganizationFolder.this);
                     }
+                    MultiBranchProject<?, ?> project = factory.createNewProject(
+                            OrganizationFolder.this, folderName, sources, attributes, listener
+                    );
                     BulkChange bc = new BulkChange(project);
                     try {
                         if (!projectName.equals(folderName)) {

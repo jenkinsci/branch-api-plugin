@@ -29,7 +29,7 @@ import jenkins.scm.api.metadata.ObjectMetadataAction;
 import org.jvnet.localizer.Localizable;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 /**
  * Possible Display naming strategies.

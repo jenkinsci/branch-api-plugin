@@ -24,7 +24,6 @@
 
 package jenkins.branch;
 
-import com.cloudbees.hudson.plugins.folder.ChildNameGenerator;
 import com.cloudbees.hudson.plugins.folder.FolderIcon;
 import com.cloudbees.hudson.plugins.folder.computed.ChildObserver;
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
@@ -108,7 +107,7 @@ import jenkins.triggers.SCMTriggerItem;
 import jenkins.util.SystemProperties;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -2092,21 +2091,16 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
 
         private void observeNew(@NonNull SCMHead head, @NonNull SCMRevision revision, @NonNull Branch branch, String rawName, String encodedName, Action[] revisionActions) {
-            P project;
             if (!observer.mayCreate(encodedName)) {
                 listener.getLogger().println("Ignoring duplicate branch project " + rawName);
                 return;
             }
-            try (ChildNameGenerator.Trace trace = ChildNameGenerator.beforeCreateItem(
-                MultiBranchProject.this, encodedName, branch.getName()
-            )) {
-                if (getItem(encodedName) != null) {
-                    throw new IllegalStateException(
-                        "JENKINS-42511: attempted to redundantly create " + encodedName + " in "
-                            + MultiBranchProject.this);
-                }
-                project = _factory.newInstance(branch);
+            if (getItem(encodedName) != null) {
+                throw new IllegalStateException(
+                    "JENKINS-42511: attempted to redundantly create " + encodedName + " in "
+                        + MultiBranchProject.this);
             }
+            P project = _factory.newInstance(branch);
             if (!project.getName().equals(encodedName)) {
                 throw new IllegalStateException(
                     "Name of created project " + project + " did not match expected " + encodedName);
