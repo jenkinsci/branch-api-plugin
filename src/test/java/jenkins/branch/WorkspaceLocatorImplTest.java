@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
@@ -56,6 +57,8 @@ import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.WithoutJenkins;
 
 public class WorkspaceLocatorImplTest {
+
+    private static final Logger LOGGER = Logger.getLogger(WorkspaceLocatorImplTest.class.getName());
 
     @ClassRule
     public static BuildWatcher buildWatcher = new BuildWatcher();
@@ -218,19 +221,23 @@ public class WorkspaceLocatorImplTest {
     @Issue("JENKINS-2111")
     @Test
     public void deleteOffline() throws Exception {
-        assumeFalse("TODO: Fails on Windows CI runs", Functions.isWindows() && System.getenv("CI") != null);
+        assumeFalse("TODO observed to fail on Windows https://github.com/jenkinsci/branch-api-plugin/runs/45521728008", Functions.isWindows() && System.getenv("CI") != null);
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
         FreeStyleProject p = r.createFreeStyleProject("a'b");
+        LOGGER.info("building project on agent");
         DumbSlave s = r.createSlave("remote", null, null);
         p.setAssignedNode(s);
         assertEquals(s, r.buildAndAssertSuccess(p).getBuiltOn());
         assertEquals(Collections.singletonList("a_b"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
         s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
-        s.toComputer().disconnect(null);
+        LOGGER.info("disconnecting agent");
+        s.toComputer().disconnect(null).get();
         p.delete();
         s = (DumbSlave) r.jenkins.getNode("remote");
+        LOGGER.info("reconnecting agent");
         s.toComputer().connect(true).get();
         assertEquals(Collections.emptyList(), s.getWorkspaceRoot().listDirectories());
+        LOGGER.info("displaying launch log");
         s.toComputer().getLogText().writeLogTo(0, System.out);
     }
 
