@@ -27,6 +27,6 @@
     <f:textbox/>
   </f:entry>
   <f:entry title="${%Properties}" field="props">
-    <f:repeatableHeteroProperty field="props" hasHeader="true" oneEach="true" honorOrder="true" addCaption="${%Add property}" deleteCaption="${%Delete property}"/>
+    <f:repeatableHeteroProperty field="props" hasHeader="true" oneEach="true" honorOrder="true" addCaption="${%Add property}" />
   </f:entry>
 </j:jelly>
