@@ -132,6 +132,13 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     private static /* not final */ boolean FIRE_SCM_SOURCE_BUILDS_AFTER_SAVE =
         SystemProperties.getBoolean(MultiBranchProject.class.getName() + ".fireSCMSourceBuildsAfterSave", true);
+    
+    /**
+     * Maximum concurrent indexing.
+     * Can be configured via system property jenkins.branch.MultiBranchProject.maxConcurrentIndexing
+     */
+    private static final int MAX_CONCURRENT_INDEXING = 
+        SystemProperties.getInteger(MultiBranchProject.class.getName() + ".maxConcurrentIndexing", 5);
 
     /**
      * Our logger.
@@ -905,6 +912,15 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     public synchronized BranchIndexing<P, R> getIndexing() {
         return (BranchIndexing) getComputation();
     }
+    
+    /**
+     * Returns the maximum concurrent indexing limit.
+     *
+     * @return the maximum concurrent indexing limit
+     */
+    public static int getMaxConcurrentIndexing() {
+        return MAX_CONCURRENT_INDEXING;
+    }
 
     /**
      * {@inheritDoc}
@@ -1081,6 +1097,35 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             return false; // still loading
         }
         return super.isBuildable() && !sources.isEmpty();
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public hudson.model.queue.CauseOfBlockage getCauseOfBlockage() {
+        // Check if we've exceeded the maximum concurrent indexing limit
+        if (indexingCount() > MAX_CONCURRENT_INDEXING) {
+            return hudson.model.queue.CauseOfBlockage.fromMessage(
+                Messages._MultiBranchProject_MaxConcurrentIndexing(MAX_CONCURRENT_INDEXING)
+            );
+        }
+        return super.getCauseOfBlockage();
+    }
+    
+    /**
+     * Count the number of multibranch projects currently indexing.
+     * 
+     * @return the number of projects currently indexing
+     */
+    private static int indexingCount() {
+        int count = 0;
+        for (MultiBranchProject<?, ?> project : Jenkins.get().getAllItems(MultiBranchProject.class)) {
+            if (project.getComputation() != null && project.getComputation().isBuilding()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /**
