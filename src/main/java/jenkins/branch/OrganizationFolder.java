@@ -983,96 +983,104 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 int matchCount = 0;
                 if (CREATED == event.getType() || UPDATED == event.getType()) {
                     try {
-                        for (OrganizationFolder p : Jenkins.get().getAllItems(OrganizationFolder.class)) {
-                            if (!p.isBuildable()) {
-                                if (LOGGER.isLoggable(Level.FINER)) {
-                                    LOGGER.log(Level.FINER,
-                                            "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
-                                            new Object[]{
-                                                    globalEventDescription,
-                                                    event.getType().name(), event.getTimestamp(), p.getFullName()
-                                            }
-                                    );
-                                }
-                                continue;
-                            }
-                            // we want to catch when a branch is created / updated and consequently becomes eligible
-                            // against the criteria. First check if the event matches one of the navigators
-                            SCMNavigator navigator = null;
-                            for (SCMNavigator n : p.getSCMNavigators()) {
-                                if (event.isMatch(n)) {
-                                    matchCount++;
-                                    global.getLogger().format("Found match against %s%n", p.getFullName());
-                                    navigator = n;
-                                    break;
-                                }
-                            }
-                            if (navigator == null) {
-                                continue;
-                            }
-                            // ok, now check if any of the sources are a match... if they are then this event is not our
-                            // concern
-                            for (SCMSource s : p.getSCMSources()) {
-                                if (event.isMatch(s)) {
-                                    // already have a source that will see this
-                                    global.getLogger()
-                                            .format("Project %s already has a corresponding sub-project%n",
-                                                    p.getFullName());
-                                    navigator = null;
-                                    break;
-                                }
-                            }
-                            if (navigator != null) {
-                                global.getLogger()
-                                        .format("Project %s does not have a corresponding sub-project%n",
-                                                p.getFullName());
-                                String localEventDescription = StringUtils.defaultIfBlank(
-                                        event.descriptionFor(navigator),
-                                        globalEventDescription
-                                );
-                                try (StreamTaskListener listener = p.getComputation().createEventsListener();
-                                     ChildObserver childObserver = p.openEventsChildObserver()) {
-                                    long start = System.currentTimeMillis();
-                                    listener.getLogger()
-                                            .format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                                    start, localEventDescription, event.getType().name(),
-                                                    event.getOrigin(),
-                                                    event.getTimestamp());
-                                    try {
-                                        navigator.visitSources(
-                                                p.new SCMSourceObserverImpl(listener, childObserver, navigator, event),
-                                                event);
-                                    } catch (IOException e) {
-                                        printStackTrace(e, listener.error(e.getMessage()));
-                                    } catch (InterruptedException e) {
-                                        listener.error(e.getMessage());
-                                        throw e;
-                                    } finally {
-                                        long end = System.currentTimeMillis();
-                                        listener.getLogger().format(
-                                                "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                                end, localEventDescription, event.getType().name(),
-                                                event.getOrigin(), event.getTimestamp(),
-                                                Util.getTimeSpanString(end - start));
+                        List<OrganizationFolder> folders = Jenkins.get().getAllItems(OrganizationFolder.class);
+                        
+                        // Use async helper for conditional async processing
+                        matchCount = OrganizationFolderAsyncHelper.processWithTimeout(
+                            folders,
+                            (p, globalListener) -> {
+                                if (!p.isBuildable()) {
+                                    if (LOGGER.isLoggable(Level.FINER)) {
+                                        LOGGER.log(Level.FINER,
+                                                "{0} {1} {2,date} {2,time}: Ignoring {3} because it is disabled",
+                                                new Object[]{
+                                                        globalEventDescription,
+                                                        event.getType().name(), event.getTimestamp(), p.getFullName()
+                                                }
+                                        );
                                     }
-                                } catch (IOException e) {
-                                    printStackTrace(e, global.error(
-                                            "[%tc] %s encountered an error while processing %s %s event from %s with "
-                                                    + "timestamp %tc",
-                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            globalEventDescription, event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
-                                } catch (InterruptedException e) {
-                                    global.error(
-                                            "[%tc] %s was interrupted while processing %s %s event from %s with "
-                                                    + "timestamp %tc",
-                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            globalEventDescription, event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp());
-                                    throw e;
+                                    return false;
                                 }
-                            }
-                        }
+                                // we want to catch when a branch is created / updated and consequently becomes eligible
+                                // against the criteria. First check if the event matches one of the navigators
+                                SCMNavigator navigator = null;
+                                for (SCMNavigator n : p.getSCMNavigators()) {
+                                    if (event.isMatch(n)) {
+                                        globalListener.getLogger().format("Found match against %s%n", p.getFullName());
+                                        navigator = n;
+                                        break;
+                                    }
+                                }
+                                if (navigator == null) {
+                                    return false;
+                                }
+                                // ok, now check if any of the sources are a match... if they are then this event is not our
+                                // concern
+                                for (SCMSource s : p.getSCMSources()) {
+                                    if (event.isMatch(s)) {
+                                        // already have a source that will see this
+                                        globalListener.getLogger()
+                                                .format("Project %s already has a corresponding sub-project%n",
+                                                        p.getFullName());
+                                        navigator = null;
+                                        break;
+                                    }
+                                }
+                                if (navigator != null) {
+                                    globalListener.getLogger()
+                                            .format("Project %s does not have a corresponding sub-project%n",
+                                                    p.getFullName());
+                                    String localEventDescription = StringUtils.defaultIfBlank(
+                                            event.descriptionFor(navigator),
+                                            globalEventDescription
+                                    );
+                                    try (StreamTaskListener listener = p.getComputation().createEventsListener();
+                                         ChildObserver childObserver = p.openEventsChildObserver()) {
+                                        long start = System.currentTimeMillis();
+                                        listener.getLogger()
+                                                .format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                                                        start, localEventDescription, event.getType().name(),
+                                                        event.getOrigin(),
+                                                        event.getTimestamp());
+                                        try {
+                                            navigator.visitSources(
+                                                    p.new SCMSourceObserverImpl(listener, childObserver, navigator, event),
+                                                    event);
+                                        } catch (IOException e) {
+                                            printStackTrace(e, listener.error(e.getMessage()));
+                                        } catch (InterruptedException e) {
+                                            listener.error(e.getMessage());
+                                            throw e;
+                                        } finally {
+                                            long end = System.currentTimeMillis();
+                                            listener.getLogger().format(
+                                                    "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                                                    end, localEventDescription, event.getType().name(),
+                                                    event.getOrigin(), event.getTimestamp(),
+                                                    Util.getTimeSpanString(end - start));
+                                        }
+                                    } catch (IOException e) {
+                                        printStackTrace(e, globalListener.error(
+                                                "[%tc] %s encountered an error while processing %s %s event from %s with "
+                                                        + "timestamp %tc",
+                                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                                globalEventDescription, event.getType().name(),
+                                                event.getOrigin(), event.getTimestamp()));
+                                    } catch (InterruptedException e) {
+                                        globalListener.error(
+                                                "[%tc] %s was interrupted while processing %s %s event from %s with "
+                                                        + "timestamp %tc",
+                                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                                globalEventDescription, event.getType().name(),
+                                                event.getOrigin(), event.getTimestamp());
+                                        throw e;
+                                    }
+                                    return true; // Found and processed a match
+                                }
+                                return false; // No navigator match
+                            },
+                            global
+                        );
                     } catch (InterruptedException e) {
                         printStackTrace(e, global.error(
                                 "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
@@ -1103,18 +1111,21 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         event.getOrigin(), event.getTimestamp());
                 int matchCount = 0;
                 if (UPDATED == event.getType()) {
-                    Set<SCMNavigator> matches = new HashSet<>();
                     try {
-                        for (OrganizationFolder p : Jenkins.get().getAllItems(OrganizationFolder.class)) {
-                            matches.clear();
-                            for (SCMNavigator n : p.getSCMNavigators()) {
-                                if (event.isMatch(n)) {
-                                    matches.add(n);
+                        List<OrganizationFolder> folders = Jenkins.get().getAllItems(OrganizationFolder.class);
+                        
+                        // Use async helper for conditional async processing
+                        matchCount = OrganizationFolderAsyncHelper.processWithTimeout(
+                            folders,
+                            (p, globalListener) -> {
+                                Set<SCMNavigator> matches = new HashSet<>();
+                                for (SCMNavigator n : p.getSCMNavigators()) {
+                                    if (event.isMatch(n)) {
+                                        matches.add(n);
+                                    }
                                 }
-                            }
-                            if (!matches.isEmpty()) {
-                                matchCount++;
-                                try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
+                                if (!matches.isEmpty()) {
+                                    try (StreamTaskListener listener = p.getComputation().createEventsListener()) {
                                     Map<SCMNavigator, List<Action>> navigatorActions = new HashMap<>();
                                     for (SCMNavigator navigator : matches) {
                                         try {
@@ -1157,25 +1168,29 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                             bc.abort();
                                         }
                                     }
-                                } catch (IOException e) {
-                                    printStackTrace(e, global.error(
-                                            "[%tc] %s encountered an error while processing %s %s event from %s with "
-                                                    + "timestamp %tc",
+                                    } catch (IOException e) {
+                                        printStackTrace(e, globalListener.error(
+                                                "[%tc] %s encountered an error while processing %s %s event from %s with "
+                                                        + "timestamp %tc",
 
-                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
-                                } catch (InterruptedException e) {
-                                    global.error(
-                                            "[%tc] %s was interrupted while processing %s %s event from %s with "
-                                                    + "timestamp %tc",
-                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp());
-                                    throw e;
+                                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                                event.getClass().getName(), event.getType().name(),
+                                                event.getOrigin(), event.getTimestamp()));
+                                    } catch (InterruptedException e) {
+                                        globalListener.error(
+                                                "[%tc] %s was interrupted while processing %s %s event from %s with "
+                                                        + "timestamp %tc",
+                                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                                event.getClass().getName(), event.getType().name(),
+                                                event.getOrigin(), event.getTimestamp());
+                                        throw e;
+                                    }
+                                    return true; // Found and processed matches
                                 }
-                            }
-                        }
+                                return false; // No matches
+                            },
+                            global
+                        );
                     } catch (InterruptedException e) {
                         printStackTrace(e, global.error(
                                 "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
@@ -1206,17 +1221,21 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 int matchCount = 0;
                 if (CREATED == event.getType()) {
                     try {
-                        for (OrganizationFolder p : Jenkins.get().getAllItems(OrganizationFolder.class)) {
-                            boolean haveMatch = false;
-                            for (SCMNavigator n : p.getSCMNavigators()) {
-                                if (event.isMatch(n)) {
-                                    global.getLogger().format("Found match against %s%n", p.getFullName());
-                                    haveMatch = true;
-                                    break;
+                        List<OrganizationFolder> folders = Jenkins.get().getAllItems(OrganizationFolder.class);
+                        
+                        // Use async helper for conditional async processing
+                        matchCount = OrganizationFolderAsyncHelper.processWithTimeout(
+                            folders,
+                            (p, globalListener) -> {
+                                boolean haveMatch = false;
+                                for (SCMNavigator n : p.getSCMNavigators()) {
+                                    if (event.isMatch(n)) {
+                                        globalListener.getLogger().format("Found match against %s%n", p.getFullName());
+                                        haveMatch = true;
+                                        break;
+                                    }
                                 }
-                            }
-                            if (haveMatch) {
-                                matchCount++;
+                                if (haveMatch) {
                                 try (StreamTaskListener listener = p.getComputation().createEventsListener();
                                      ChildObserver childObserver = p.openEventsChildObserver()) {
                                     long start = System.currentTimeMillis();
@@ -1249,25 +1268,29 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                                 event.getOrigin(), event.getTimestamp(),
                                                 Util.getTimeSpanString(end - start));
                                     }
-                                } catch (IOException e) {
-                                    printStackTrace(e, global.error(
-                                            "[%tc] %s encountered an error while processing %s %s event from %s with "
-                                                    + "timestamp %tc",
+                                    } catch (IOException e) {
+                                        printStackTrace(e, globalListener.error(
+                                                "[%tc] %s encountered an error while processing %s %s event from %s with "
+                                                        + "timestamp %tc",
 
-                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp()));
-                                } catch (InterruptedException e) {
-                                    global.error(
-                                            "[%tc] %s was interrupted while processing %s %s event from %s with "
-                                                    + "timestamp %tc",
-                                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
-                                            event.getClass().getName(), event.getType().name(),
-                                            event.getOrigin(), event.getTimestamp());
-                                    throw e;
+                                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                                event.getClass().getName(), event.getType().name(),
+                                                event.getOrigin(), event.getTimestamp()));
+                                    } catch (InterruptedException e) {
+                                        globalListener.error(
+                                                "[%tc] %s was interrupted while processing %s %s event from %s with "
+                                                        + "timestamp %tc",
+                                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p),
+                                                event.getClass().getName(), event.getType().name(),
+                                                event.getOrigin(), event.getTimestamp());
+                                        throw e;
+                                    }
+                                    return true; // Found and processed a match
                                 }
-                            }
-                        }
+                                return false; // No match
+                            },
+                            global
+                        );
                     } catch (InterruptedException e) {
                         printStackTrace(e, global.error(
                                 "[%tc] Interrupted while processing %s %s event from %s with timestamp %tc",
