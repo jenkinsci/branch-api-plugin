@@ -49,6 +49,7 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -60,6 +61,8 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @WithJenkins
 class WorkspaceLocatorImplTest {
+
+    private static final Logger LOGGER = Logger.getLogger(WorkspaceLocatorImplTest.class.getName());
 
     @SuppressWarnings("unused")
     @RegisterExtension
@@ -224,19 +227,23 @@ class WorkspaceLocatorImplTest {
     @Issue("JENKINS-2111")
     @Test
     void deleteOffline() throws Exception {
-        assumeFalse(Functions.isWindows() && System.getenv("CI") != null, "TODO: Fails on Windows CI runs");
+        assumeFalse(Functions.isWindows() && System.getenv("CI") != null, "TODO observed to fail on Windows https://github.com/jenkinsci/branch-api-plugin/runs/45521728008");
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
         FreeStyleProject p = r.createFreeStyleProject("a'b");
+        LOGGER.info("building project on agent");
         DumbSlave s = r.createSlave("remote", null, null);
         p.setAssignedNode(s);
         assertEquals(s, r.buildAndAssertSuccess(p).getBuiltOn());
         assertEquals(Collections.singletonList("a_b"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).toList());
         s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
-        s.toComputer().disconnect(null);
+        LOGGER.info("disconnecting agent");
+        s.toComputer().disconnect(null).get();
         p.delete();
         s = (DumbSlave) r.jenkins.getNode("remote");
+        LOGGER.info("reconnecting agent");
         s.toComputer().connect(true).get();
         assertEquals(Collections.emptyList(), s.getWorkspaceRoot().listDirectories());
+        LOGGER.info("displaying launch log");
         s.toComputer().getLogText().writeLogTo(0, System.out);
     }
 
