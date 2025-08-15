@@ -24,26 +24,31 @@
 
 package jenkins.branch;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.TestExtension;
-
 import hudson.model.Item;
 import hudson.model.listeners.ItemListener;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.scm.api.SCMSourceOwner;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class MultibranchImplementationTest {
+@WithJenkins
+class MultibranchImplementationTest {
 
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    private static Exception check = null;
 
-    public static Exception check = null;
+    private JenkinsRule r;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        r = rule;
+    }
 
     @Test
-    public void createMultiBranchProjectWithListenerTest() throws Exception {
-        j.jenkins.createProject(MultiBranchImpl.class, "test");
+    void createMultiBranchProjectWithListenerTest() throws Exception {
+        r.jenkins.createProject(MultiBranchImpl.class, "test");
         if (check != null) {
             throw check;
         }

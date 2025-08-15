@@ -25,17 +25,13 @@
 
 package jenkins.branch;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TopLevelItem;
 import hudson.model.View;
 import hudson.scm.SCM;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.SCMHeadCategory;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
@@ -45,19 +41,24 @@ import jenkins.scm.impl.UncategorizedSCMHeadCategory;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockTagSCMHead;
 import org.hamcrest.Matchers;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import org.junit.Ignore;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class BranchCategoryFilterTest {
+class BranchCategoryFilterTest {
 
-    @Ignore("TODO fails in Mockito 5; SCMSource.getCategories is empty")
+    @Disabled("TODO fails in Mockito 5; SCMSource.getCategories is empty")
     @Test
-    public void filter_uncategorizedCategory() throws Exception {
+    void filter_uncategorizedCategory() {
         MultiBranchProject owner = mock(MultiBranchProject.class);
         View filteringView = mock(View.class);
         when(filteringView.getOwner()).thenReturn(owner);
@@ -112,7 +113,7 @@ public class BranchCategoryFilterTest {
     }
 
     @Test
-    public void filter_specificCategory() throws Exception {
+    void filter_specificCategory() {
         MultiBranchProject owner = mock(MultiBranchProject.class);
         View filteringView = mock(View.class);
         when(filteringView.getOwner()).thenReturn(owner);
