@@ -105,7 +105,8 @@ class OrganizationFolderTest {
 
     private JenkinsRule r;
 
-    private LogRecorder logging = new LogRecorder().record(ComputedFolder.class, Level.FINE).record(OrganizationFolder.class, Level.FINE);
+    @SuppressWarnings("unused")
+    private final LogRecorder logging = new LogRecorder().record(ComputedFolder.class, Level.FINE).record(OrganizationFolder.class, Level.FINE);
 
     @BeforeEach
     void setUp(JenkinsRule rule) {

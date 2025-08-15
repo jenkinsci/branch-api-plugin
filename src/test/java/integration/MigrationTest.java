@@ -35,15 +35,13 @@ import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsSessionRule;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.jvnet.hudson.test.junit.jupiter.JenkinsSessionExtension;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -55,16 +53,16 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.notNullValue;
 
-public class MigrationTest {
+class MigrationTest {
     private static final Logger LOGGER = Logger.getLogger(MigrationTest.class.getName());
 
     private static MockSCMController c;
 
-    @Rule
-    public JenkinsSessionRule story = new JenkinsSessionRule();
+    @RegisterExtension
+    private final JenkinsSessionExtension story = new JenkinsSessionExtension();
 
-    @BeforeClass
-    public static void setupSCM() throws IOException {
+    @BeforeAll
+    static void setupSCM() throws IOException {
         c = MockSCMController.recreate("ee708b58-864e-415c-a8fe-f5e458cda8d9");
         c.createRepository("test.example.com");
         c.createRepository("Éireann");
@@ -82,14 +80,14 @@ public class MigrationTest {
         c.createBranch("대한민국", "특색/새로운");
     }
 
-    @AfterClass
-    public static void closeSCM() {
+    @AfterAll
+    static void closeSCM() {
         IOUtils.closeQuietly(c);
         c = null;
     }
 
     @Test
-    public void createdFromScratch() throws Throwable {
+    void createdFromScratch() throws Throwable {
         story.then(j -> {
             OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
             foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -106,7 +104,7 @@ public class MigrationTest {
     }
 
     @Test
-    public void createdFromScratch_full_reload() throws Throwable {
+    void createdFromScratch_full_reload() throws Throwable {
         story.then(j -> {
             OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
             foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -124,7 +122,7 @@ public class MigrationTest {
     }
 
     @Test
-    public void createdFromScratch_folder_reload() throws Throwable {
+    void createdFromScratch_folder_reload() throws Throwable {
         story.then(j -> {
             OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
             foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -141,7 +139,7 @@ public class MigrationTest {
         });
     }
 
-    private void assertDataMigrated(TopLevelItem foo) throws Exception {
+    private void assertDataMigrated(TopLevelItem foo) {
         assertThat(foo, instanceOf(OrganizationFolder.class));
         OrganizationFolder prj = (OrganizationFolder) foo;
         Map<String, MultiBranchProject> byName = new HashMap<>();

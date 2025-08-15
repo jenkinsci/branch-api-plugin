@@ -87,7 +87,8 @@ class RateLimitBranchPropertyTest {
      */
     private static JenkinsRule r;
 
-    private static LogRecorder logging = new LogRecorder().record(RateLimitBranchProperty.class, Level.FINE);
+    @SuppressWarnings("unused")
+    private static final LogRecorder logging = new LogRecorder().record(RateLimitBranchProperty.class, Level.FINE);
     /**
      * Our logger.
      */

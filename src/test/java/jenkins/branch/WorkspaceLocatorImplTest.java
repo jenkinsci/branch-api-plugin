@@ -30,25 +30,23 @@ import hudson.model.FreeStyleProject;
 import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.WorkspaceList;
-import hudson.util.ReflectionUtils;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.model.Jenkins;
 import jenkins.scm.impl.SingleSCMSource;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
-import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.LogRecorder;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.io.File;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.logging.Level;
 
@@ -63,10 +61,15 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 @WithJenkins
 class WorkspaceLocatorImplTest {
 
-    private static BuildWatcher buildWatcher = new BuildWatcher();
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    private static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
+
+    @SuppressWarnings("unused")
+    private final LogRecorder logging = new LogRecorder().record(WorkspaceLocatorImpl.class, Level.FINER);
 
     private JenkinsRule r;
-    private LogRecorder logging = new LogRecorder().record(WorkspaceLocatorImpl.class, Level.FINER);
+
     @TempDir
     private File tmp;
 
@@ -78,22 +81,11 @@ class WorkspaceLocatorImplTest {
         r = rule;
         WorkspaceLocatorImpl.PATH_MAX = WorkspaceLocatorImpl.PATH_MAX_DEFAULT;
         origMode = WorkspaceLocatorImpl.MODE;
-
-        Method before = ReflectionUtils.findMethod(BuildWatcher.class, "before");
-        ReflectionUtils.makeAccessible(before);
-        ReflectionUtils.invokeMethod(before, buildWatcher);
     }
 
     @AfterEach
     void restoreMode() {
         WorkspaceLocatorImpl.MODE = origMode;
-    }
-
-    @AfterAll
-    static void tearDown() {
-        Method after = ReflectionUtils.findMethod(BuildWatcher.class, "after");
-        ReflectionUtils.makeAccessible(after);
-        ReflectionUtils.invokeMethod(after, buildWatcher);
     }
 
     @WithoutJenkins
