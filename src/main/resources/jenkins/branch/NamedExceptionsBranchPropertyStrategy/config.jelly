@@ -39,7 +39,7 @@
   </f:section>
   <f:section title="${%Defaults}">
   <f:block>
-    <f:repeatableHeteroProperty field="defaultProperties" hasHeader="true" oneEach="true" honorOrder="true" addCaption="${%Add property}" deleteCaption="${%Delete property}"/>
+    <f:repeatableHeteroProperty field="defaultProperties" hasHeader="true" oneEach="true" honorOrder="true" addCaption="${%Add property}" />
   </f:block>
   </f:section>
 </j:jelly>
