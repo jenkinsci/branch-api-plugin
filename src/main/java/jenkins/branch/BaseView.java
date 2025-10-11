@@ -7,6 +7,8 @@ import hudson.model.ViewGroup;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import java.io.IOException;
+
+import jenkins.management.Badge;
 import jenkins.scm.api.SCMCategory;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -27,7 +29,13 @@ public abstract class BaseView<T extends SCMCategory<?>> extends ListView {
      */
     @Override
     public String getDisplayName() {
-        return category.getDisplayName() + " (" + getItems().size() + ")";
+        return category.getDisplayName().toString();
+    }
+
+    @Override
+    public Badge getBadge() {
+        int count = getItems().size();
+        return new Badge(String.valueOf(count), count + " items", Badge.Severity.INFO);
     }
 
     /**

@@ -853,10 +853,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 return NameEncoder.encode(property.getName());
             }
             String name = item.getName();
-            if (name != null) {
+//            if (name != null) {
                 return NameEncoder.encode(name);
-            }
-            return null;
+//            }
+//            return null;
         }
 
         @Override
@@ -867,10 +867,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                 return NameMangler.apply(property.getName());
             }
             String name = item.getName();
-            if (name != null) {
+//            if (name != null) {
                 return NameMangler.apply(name);
-            }
-            return null;
+//            }
+//            return null;
         }
 
         @Override
