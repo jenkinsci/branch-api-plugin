@@ -38,6 +38,11 @@ public abstract class BaseView<T extends SCMCategory<?>> extends ListView {
         return new Badge(String.valueOf(count), count + " items", Badge.Severity.INFO);
     }
 
+    @Override
+    public String getIconFileName() {
+        return category.getIconFileName();
+    }
+
     /**
      * {@inheritDoc}
      */

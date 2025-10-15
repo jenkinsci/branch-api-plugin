@@ -3,12 +3,23 @@
   <j:set var="views" value="${it.owner.views}"/>
   <j:set var="currentView" value="${it}"/>
   <j:if test="${items.isEmpty()}">
-    <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>
+<!--    <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>-->
     <st:include it="${it}" page="noJob.jelly"/>
   </j:if>
+
   <j:if test="${!items.isEmpty()}">
-    <t:projectView jobs="${items}" showViewTabs="true" columnExtensions="${it.columns}" indenter="${it.indenter}" itemGroup="${it.owner.itemGroup}">
-      <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>
-    </t:projectView>
+    <div class="jenkins-inline-page">
+      <div style="display: flex; flex-direction: column;">
+        <j:if test="${h.hasPermission(app.READ)}">
+          <j:forEach var="w" items="${it.widgets}">
+            <j:set var="view" value="${it}" />
+            <st:include it="${w}" page="index.jelly" />
+          </j:forEach>
+        </j:if>
+      </div>
+      <t:projectView jobs="${items}" showViewTabs="true" columnExtensions="${it.columns}" indenter="${it.indenter}" itemGroup="${it.owner.itemGroup}">
+<!--        <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>-->
+      </t:projectView>
+    </div>
   </j:if>
 </j:jelly>
