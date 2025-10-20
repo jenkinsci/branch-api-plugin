@@ -1,25 +1,36 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:t="/lib/hudson" xmlns:st="jelly:stapler">
+<j:jelly xmlns:j="jelly:core" xmlns:t="/lib/hudson" xmlns:st="jelly:stapler" xmlns:l="/lib/layout">
+  <l:userExperimentalFlag var="newDashboardPage" flagClassName="jenkins.model.experimentalflags.NewDashboardPageUserExperimentalFlag" />
+
   <j:set var="views" value="${it.owner.views}"/>
   <j:set var="currentView" value="${it}"/>
   <j:if test="${items.isEmpty()}">
-<!--    <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>-->
+    <j:if test="${!newDashboardPage}">
+      <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>
+    </j:if>
     <st:include it="${it}" page="noJob.jelly"/>
   </j:if>
 
   <j:if test="${!items.isEmpty()}">
-    <div class="jenkins-inline-page">
-      <div class="jenkins-inline-page__side-panel">
-        <j:if test="${h.hasPermission(app.READ)}">
-          <j:forEach var="w" items="${it.widgets}">
-            <j:set var="view" value="${it}" />
-            <st:include it="${w}" page="index.jelly" />
-          </j:forEach>
-        </j:if>
-      </div>
-      <t:projectView jobs="${items}" showViewTabs="true" columnExtensions="${it.columns}" indenter="${it.indenter}" itemGroup="${it.owner.itemGroup}">
-<!--        <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>-->
-      </t:projectView>
-    </div>
+    <j:choose>
+      <j:when test="${newDashboardPage}">
+        <div class="jenkins-inline-page">
+          <div class="jenkins-inline-page__side-panel">
+            <j:if test="${h.hasPermission(app.READ)}">
+              <j:forEach var="w" items="${it.widgets}">
+                <j:set var="view" value="${it}" />
+                <st:include it="${w}" page="index.jelly" />
+              </j:forEach>
+            </j:if>
+          </div>
+          <t:projectView jobs="${items}" showViewTabs="true" columnExtensions="${it.columns}" indenter="${it.indenter}" itemGroup="${it.owner.itemGroup}" />
+        </div>
+      </j:when>
+      <j:otherwise>
+        <t:projectView jobs="${items}" showViewTabs="true" columnExtensions="${it.columns}" indenter="${it.indenter}" itemGroup="${it.owner.itemGroup}">
+          <st:include it="${it.owner.viewsTabBar}" page="viewTabs"/>
+        </t:projectView>
+      </j:otherwise>
+    </j:choose>
   </j:if>
 </j:jelly>
