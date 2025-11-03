@@ -231,10 +231,10 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
                 return NameEncoder.encode(factory.getBranch(item).getName());
             }
             String name = item.getName();
-            if (name != null) {
+//            if (name != null) {
                 return NameEncoder.encode(name);
-            }
-            return null;
+//            }
+//            return null;
         }
 
         @Override
@@ -245,10 +245,10 @@ public abstract class MultiBranchProjectDescriptor extends AbstractFolderDescrip
                 return NameMangler.apply(factory.getBranch(item).getName());
             }
             String name = item.getName();
-            if (name != null) {
+//            if (name != null) {
                 return NameMangler.apply(name);
-            }
-            return null;
+//            }
+//            return null;
         }
 
         @Override
