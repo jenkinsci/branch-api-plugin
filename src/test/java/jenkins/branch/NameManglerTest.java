@@ -23,15 +23,15 @@
  */
 package jenkins.branch;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class NameManglerTest {
+class NameManglerTest {
 
     @Test
-    public void safeNames() {
+    void safeNames() {
         assertThat(NameMangler.apply("foo"), is("foo"));
         assertThat(NameMangler.apply("foo-bar"), is("foo-bar"));
         assertThat(NameMangler.apply("foo bar"), is("foo-bar.074vf0"));
@@ -40,7 +40,7 @@ public class NameManglerTest {
     }
 
     @Test
-    public void reservedNames() {
+    void reservedNames() {
         assertThat(NameMangler.apply("."), is("0-.tkvgu3"));
         assertThat(NameMangler.apply(".."), is("0--.mpdh40"));
         assertThat(NameMangler.apply("con"), is("con.lkb1gc"));
@@ -68,7 +68,7 @@ public class NameManglerTest {
     }
 
     @Test
-    public void slashNames() {
+    void slashNames() {
         assertThat(NameMangler.apply("foo/bar"), is("foo-bar.nj9av9"));
         assertThat(NameMangler.apply("foo/bar/fu manchu"), is("foo-bar-fu-manchu.k630nd"));
         assertThat(NameMangler.apply("foo/bar/fu manchu/1"), is("foo-bar-fu-manchu-1.vgnr4j"));
@@ -90,7 +90,7 @@ public class NameManglerTest {
     }
 
     @Test
-    public void longNames() {
+    void longNames() {
         assertThat(NameMangler.apply("cafebabedeadbeefcafebabedeadbeef"), is("cafebabedeadbeefcafebabedeadbeef"));
         assertThat(NameMangler.apply("cafebabedeadbeefcafebabedeadbeefcafebabedeadbeef"), is("cafebabed.98h82o58mhfo.edeadbeef"));
         assertThat(NameMangler.apply("cafebabedeadbeefcafebabeDeadbeefcafebabedeadbeef"), is("cafebabed.a67pve49oi0n.edeadbeef"));
@@ -99,7 +99,7 @@ public class NameManglerTest {
     }
 
     @Test
-    public void nonSafeNames() {
+    void nonSafeNames() {
         assertThat(NameMangler.apply("Is maith liom criospaí"), is("Is-maith-liom-criospa_ed.0g5uh9"));
         assertThat(NameMangler.apply("Ich liebe Fußball"), is("Ich-liebe-Fu_dfball.fp53tq"));
         assertThat(NameMangler.apply("我喜欢披萨"), is("0_62_11_55_9.f9c1g4._62_ab_84_28"));
@@ -111,13 +111,14 @@ public class NameManglerTest {
     }
 
     @Test
-    public void spain() {
+    void spain() {
         assertThat(NameMangler.apply("Espana"), is("Espana"));
         assertThat(NameMangler.apply("España"), is("Espa_f1a.9jabqu"));
         assertThat(NameMangler.apply("Espa\u006e\u0303a"), is("Espan_03_03a.eqqe01"));
     }
+
     @Test
-    public void ireland() {
+    void ireland() {
         assertThat(NameMangler.apply("Eireann"), is("Eireann"));
         assertThat(NameMangler.apply("Éireann"), is("0_c9ireann.giuvlt"));
         assertThat(NameMangler.apply("E\u0301ireann"), is("E_03_01ireann.0qtq11"));
