@@ -205,9 +205,18 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         }
         // optimize lookup of sources by building a temporary map that is equivalent to getSCMSource(id) in results
         Map<String, SCMSource> sourceMap = new HashMap<>();
+        int count = 1;
         for (BranchSource source : sources) {
             SCMSource s = source.getSource();
             String id = s.getId();
+            if (id.isBlank()) {
+                // Generate ids of the form "1", "2", … on demand
+                while (sourceMap.containsKey(Integer.toString(count))) {
+                    count++;
+                }
+                id = Integer.toString(count);
+                s.setId(id);
+            }
             if (!sourceMap.containsKey(id)) { // only the first match should win
                 sourceMap.put(id, s);
             }
@@ -477,8 +486,18 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     private Set<String> sourceIds(List<BranchSource> sources) {
         Set<String> result = new HashSet<>();
+        int count = 1;
         for (BranchSource s : sources) {
-            result.add(s.getSource().getId());
+            var id = s.getSource().getId();
+            if (id.isBlank()) {
+                // Generate ids of the form "1", "2", … on demand
+                while (result.contains(Integer.toString(count))) {
+                    count++;
+                }
+                id = Integer.toString(count);
+                s.getSource().setId(id);
+            }
+            result.add(id);
         }
         return result;
     }
