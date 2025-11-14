@@ -81,9 +81,16 @@
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
         <artifactId>bom-${jenkins.baseline}.x</artifactId>
-        <version>5043.v855ff4819a_0f</version>
+        <version>5659.vecf9e2dc5a_ed</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <!-- TODO until in BOM -->
+      <dependency>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>scm-api</artifactId>
+        <!-- TODO https://github.com/jenkinsci/scm-api-plugin/pull/357 -->
+        <version>720.v0ea_1d82049ec</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
