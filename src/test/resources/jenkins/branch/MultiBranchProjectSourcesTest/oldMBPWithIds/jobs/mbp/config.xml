@@ -1,0 +1,55 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<integration.harness.BasicMultiBranchProject>
+  <actions/>
+  <description></description>
+  <properties/>
+  <folderViews class="jenkins.branch.MultiBranchProjectViewHolder">
+    <owner class="integration.harness.BasicMultiBranchProject" reference="../.."/>
+  </folderViews>
+  <healthMetrics/>
+  <icon class="jenkins.branch.MetadataActionFolderIcon">
+    <owner class="integration.harness.BasicMultiBranchProject" reference="../.."/>
+  </icon>
+  <orphanedItemStrategy class="com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy" plugin="cloudbees-folder@6.1053.vd62fb_b_f7367b_">
+    <pruneDeadBranches>true</pruneDeadBranches>
+    <daysToKeep>-1</daysToKeep>
+    <numToKeep>-1</numToKeep>
+    <abortBuilds>false</abortBuilds>
+  </orphanedItemStrategy>
+  <triggers/>
+  <disabled>false</disabled>
+  <sources class="jenkins.branch.MultiBranchProject$BranchSourceList">
+    <data>
+      <jenkins.branch.BranchSource>
+        <source class="jenkins.scm.impl.mock.MockSCMSource">
+          <id>30d15538-4f60-437f-81cd-9c46ee6e7ec6</id>
+          <controllerId>c6fb4b23-2907-4f7c-9337-e07d687ecccb</controllerId>
+          <repository>xxx</repository>
+          <traits>
+            <jenkins.scm.impl.mock.MockSCMDiscoverBranches/>
+          </traits>
+        </source>
+        <strategy class="jenkins.branch.DefaultBranchPropertyStrategy">
+          <properties class="empty-list"/>
+        </strategy>
+      </jenkins.branch.BranchSource>
+      <jenkins.branch.BranchSource>
+        <source class="jenkins.scm.impl.mock.MockSCMSource">
+          <id>01d26901-3b39-45ac-915e-e65d806fbcba</id>
+          <controllerId>c6fb4b23-2907-4f7c-9337-e07d687ecccb</controllerId>
+          <repository>yyy</repository>
+          <traits>
+            <jenkins.scm.impl.mock.MockSCMDiscoverBranches/>
+          </traits>
+        </source>
+        <strategy class="jenkins.branch.DefaultBranchPropertyStrategy">
+          <properties class="empty-list"/>
+        </strategy>
+      </jenkins.branch.BranchSource>
+    </data>
+    <owner class="integration.harness.BasicMultiBranchProject" reference="../.."/>
+  </sources>
+  <factory class="integration.harness.BasicBranchProjectFactory">
+    <owner class="integration.harness.BasicMultiBranchProject" reference="../.."/>
+  </factory>
+</integration.harness.BasicMultiBranchProject>

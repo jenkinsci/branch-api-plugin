@@ -256,6 +256,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
                 id = Integer.toString(count);
                 s.setId(id);
+                LOGGER.fine(() -> "assigned id to " + s + " in " + this);
             }
             if (!sourceMap.containsKey(id)) { // only the first match should win
                 sourceMap.put(id, s);
@@ -502,6 +503,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
                 id = Integer.toString(count);
                 s.getSource().setId(id);
+                LOGGER.fine(() -> "assigned id to " + s.getSource() + " in " + this);
             }
             result.add(id);
         }
