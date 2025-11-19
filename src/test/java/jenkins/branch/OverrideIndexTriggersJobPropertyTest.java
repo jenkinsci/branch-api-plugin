@@ -27,31 +27,41 @@ package jenkins.branch;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.queue.QueueTaskFuture;
-import java.util.Collections;
-import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.plugins.git.junit.jupiter.WithGitSampleRepo;
 import jenkins.plugins.git.traits.BranchDiscoveryTrait;
 import jenkins.scm.impl.SingleSCMNavigator;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class OverrideIndexTriggersJobPropertyTest {
+import java.util.Collections;
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
-    @Rule
-    public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
+import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+@WithJenkins
+@WithGitSampleRepo
+class OverrideIndexTriggersJobPropertyTest {
+
+    private JenkinsRule r;
+    private GitSampleRepoRule sampleRepo;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule, GitSampleRepoRule repo) {
+        r = rule;
+        sampleRepo = repo;
+    }
 
     @Issue("JENKINS-37219")
     @Test
-    public void overridesDisabledBranch() throws Exception {
+    void overridesDisabledBranch() throws Exception {
         sampleRepo.init();
         sampleRepo.git("checkout", "-b", "newfeature");
         sampleRepo.write("stuff", "content");
@@ -106,14 +116,14 @@ public class OverrideIndexTriggersJobPropertyTest {
         showComputation(stuff);
 
         FreeStyleBuild releaseBuild = release.getBuildByNumber(1);
-        assertNotNull("release branch build was not triggered by commit", releaseBuild);
+        assertNotNull(releaseBuild, "release branch build was not triggered by commit");
         assertEquals(1, releaseBuild.getNumber());
         assertEquals(2, release.getNextBuildNumber());
     }
 
     @Issue("JENKINS-37219")
     @Test
-    public void overridesDisabledOrg() throws Exception {
+    void overridesDisabledOrg() throws Exception {
         sampleRepo.init();
         sampleRepo.git("checkout", "-b", "newfeature");
         sampleRepo.write("stuff", "content");
@@ -179,14 +189,14 @@ public class OverrideIndexTriggersJobPropertyTest {
         showComputation(stuff);
 
         FreeStyleBuild releaseBuild = release.getBuildByNumber(1);
-        assertNotNull("release branch build was not triggered by commit", releaseBuild);
+        assertNotNull(releaseBuild, "release branch build was not triggered by commit");
         assertEquals(1, releaseBuild.getNumber());
         assertEquals(2, release.getNextBuildNumber());
     }
 
     @Issue("JENKINS-37219")
     @Test
-    public void overridesEnabled() throws Exception {
+    void overridesEnabled() throws Exception {
         sampleRepo.init();
         sampleRepo.write("stuff", "content");
         sampleRepo.git("add", "stuff");
@@ -214,7 +224,7 @@ public class OverrideIndexTriggersJobPropertyTest {
 
 
         QueueTaskFuture<FreeStyleBuild> masterBuild = master.scheduleBuild2(0);
-        assertNotNull("was not able to schedule a manual build of the master branch", masterBuild);
+        assertNotNull(masterBuild, "was not able to schedule a manual build of the master branch");
         assertEquals(2, masterBuild.get().getNumber());
         assertEquals(3, master.getNextBuildNumber());
     }
