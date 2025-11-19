@@ -692,6 +692,14 @@ public class BrandingTest {
         }
 
         @Extension()
-        public static class DescriptorImpl extends MockSCMSource.DescriptorImpl {}
+        public static class DescriptorImpl extends MockSCMSource.DescriptorImpl {
+
+            @NonNull
+            @Override
+            public String getDisplayName() {
+                return "Branded Mock SCM";
+            }
+
+        }
     }
 }
