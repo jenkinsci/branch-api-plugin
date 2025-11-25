@@ -111,6 +111,9 @@ import static hudson.Functions.printStackTrace;
 import static jenkins.scm.api.SCMEvent.Type.CREATED;
 import static jenkins.scm.api.SCMEvent.Type.UPDATED;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * A folder-like collection of {@link MultiBranchProject}s, one per repository.
  */
@@ -1317,6 +1320,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         @Override
         public ProjectObserver observe(@NonNull final String projectName) {
             return new ProjectObserver() {
+                String newProjectName = projectName;
                 List<SCMSource> sources = new ArrayList<>();
 
                 @Override
@@ -1358,35 +1362,49 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
                 @Override
                 public void complete() throws IllegalStateException, IOException, InterruptedException {
+                    Boolean createMultipleProjects = true;
+                    // Jenkinsfile path "Jenkinsfile-win" in repo "my-product", will create project named "my-product-win"
+                    String projectNamePatten = ".*?(-[^\\.]+).*";
                     try {
-                        MultiBranchProjectFactory factory = null;
                         Map<String, Object> attributes = Collections.emptyMap();
                         for (MultiBranchProjectFactory candidateFactory : projectFactories) {
                             boolean recognizes = recognizes(attributes, candidateFactory);
                             LOGGER.fine(() -> candidateFactory + " recognizes " + projectName + " with " + attributes + "? " + recognizes);
                             if (recognizes) {
-                                factory = candidateFactory;
-                                break;
+                                newProjectName = projectName;
+
+                                if (createMultipleProjects && projectNamePatten != "") {
+                                    String scriptPath = (String) candidateFactory.getClass().getMethod("getScriptPath").invoke(candidateFactory);
+                                    LOGGER.info(() -> "scriptPath: " + scriptPath);
+                                    Pattern pattern = Pattern.compile(projectNamePatten);
+                                    Matcher matcher = pattern.matcher(scriptPath);
+                                    if (matcher.matches()) {
+                                        newProjectName = projectName + matcher.group(1);
+                                    }
+                                    LOGGER.info("newProjectName: " + newProjectName);
+                                }
+
+                                String folderName = NameEncoder.encode(newProjectName);
+                                // HACK: observer.shouldUpdate will restore the buildable flag of the child, so pre-inspect
+                                MultiBranchProject<?, ?> existing = items.get(folderName);
+                                boolean wasBuildable = existing != null && existing.isBuildable();
+                                boolean wasDisabled = existing != null && existing.isDisabled();
+                                // END_HACK: now that we know if it was buildable, we can now proceed to see about updating
+                                existing = observer.shouldUpdate(folderName);
+                                try {
+                                    if (existing != null) {
+                                        completeExisting(candidateFactory, attributes, existing, wasBuildable, wasDisabled);
+                                    } else {
+                                        completeNew(candidateFactory, attributes, folderName);
+                                    }
+                                } finally {
+                                    observer.completed(folderName);
+                                }
+
+                                if (!createMultipleProjects) {
+                                    break;
+                                }
                             }
-                        }
-                        if (factory == null) {
-                            return;
-                        }
-                        String folderName = NameEncoder.encode(projectName);
-                        // HACK: observer.shouldUpdate will restore the buildable flag of the child, so pre-inspect
-                        MultiBranchProject<?, ?> existing = items.get(folderName);
-                        boolean wasBuildable = existing != null && existing.isBuildable();
-                        boolean wasDisabled = existing != null && existing.isDisabled();
-                        // END_HACK: now that we know if it was buildable, we can now proceed to see about updating
-                        existing = observer.shouldUpdate(folderName);
-                        try {
-                            if (existing != null) {
-                                completeExisting(factory, attributes, existing, wasBuildable, wasDisabled);
-                            } else {
-                                completeNew(factory, attributes, folderName);
-                            }
-                        } finally {
-                            observer.completed(folderName);
                         }
                     } catch (InterruptedException | IOException x) {
                         throw x;
@@ -1402,9 +1420,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         factory.updateExistingProject(existing, attributes, listener);
                         ProjectNameProperty property =
                                 existing.getProperties().get(ProjectNameProperty.class);
-                        if (property == null || !projectName.equals(property.getName())) {
+                        if (property == null || !newProjectName.equals(property.getName())) {
                             existing.getProperties().remove(ProjectNameProperty.class);
-                            existing.addProperty(new ProjectNameProperty(projectName));
+                            existing.addProperty(new ProjectNameProperty(newProjectName));
+                            existing.setDisplayName(newProjectName);
                         }
                         for (AbstractFolderProperty<?> folderProperty : getProperties()) {
                             if (folderProperty instanceof OrganizationFolderProperty) {
@@ -1441,9 +1460,9 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                     BulkChange bc = new BulkChange(project);
                     try {
                         if (!projectName.equals(folderName)) {
-                            project.setDisplayName(projectName);
+                            project.setDisplayName(newProjectName);
                         }
-                        project.addProperty(new ProjectNameProperty(projectName));
+                        project.addProperty(new ProjectNameProperty(newProjectName));
                         project.getSourcesList().addAll(createBranchSources());
                         for (AbstractFolderProperty<?> property: getProperties()) {
                             if (property instanceof OrganizationFolderProperty) {
