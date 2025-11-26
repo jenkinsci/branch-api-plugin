@@ -149,6 +149,21 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     private BranchPropertyStrategy strategy;
 
     /**
+     * Whether to create multiple projects based on Jenkinsfile path pattern.
+     *
+     * @since 2.0
+     */
+    private boolean createMultipleProjects = false;
+
+    /**
+     * Pattern for extracting project name suffix from Jenkinsfile path.
+     * Default pattern extracts suffix after last hyphen before dot.
+     *
+     * @since 2.0
+     */
+    private String projectNamePattern = ".*?(-[^.]+).*";
+
+    /**
      * The persisted state maintained outside of the config file.
      *
      * @since 2.0
@@ -367,6 +382,46 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
     }
 
     /**
+     * Gets whether to create multiple projects based on Jenkinsfile path pattern.
+     *
+     * @return true if multiple projects should be created.
+     * @since 2.0
+     */
+    public boolean isCreateMultipleProjects() {
+        return createMultipleProjects;
+    }
+
+    /**
+     * Sets whether to create multiple projects based on Jenkinsfile path pattern.
+     *
+     * @param createMultipleProjects true to enable multiple projects creation.
+     * @since 2.0
+     */
+    public void setCreateMultipleProjects(boolean createMultipleProjects) {
+        this.createMultipleProjects = createMultipleProjects;
+    }
+
+    /**
+     * Gets the pattern for extracting project name suffix from Jenkinsfile path.
+     *
+     * @return the project name pattern.
+     * @since 2.0
+     */
+    public String getProjectNamePattern() {
+        return projectNamePattern != null ? projectNamePattern : ".*?(-[^.]+).*";
+    }
+
+    /**
+     * Sets the pattern for extracting project name suffix from Jenkinsfile path.
+     *
+     * @param projectNamePattern the pattern to use.
+     * @since 2.0
+     */
+    public void setProjectNamePattern(String projectNamePattern) {
+        this.projectNamePattern = projectNamePattern;
+    }
+
+    /**
      * The {@link BranchBuildStrategy}s to apply.
      *
      * @return The {@link BranchBuildStrategy}s to apply.
@@ -388,6 +443,16 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         projectFactories.rebuildHetero(req, json, ExtensionList.lookup(MultiBranchProjectFactoryDescriptor.class), "projectFactories");
         buildStrategies.rebuildHetero(req, json, ExtensionList.lookup(BranchBuildStrategyDescriptor.class), "buildStrategies");
         strategy = req.bindJSON(BranchPropertyStrategy.class, json.getJSONObject("strategy"));
+        
+        // Handle multiple projects configuration and track changes
+        boolean oldCreateMultipleProjects = this.createMultipleProjects;
+        String oldProjectNamePattern = this.projectNamePattern;
+        
+        createMultipleProjects = json.optBoolean("createMultipleProjects", false);
+        projectNamePattern = Util.fixEmptyAndTrim(json.optString("projectNamePattern", ".*?(-[^.]+).*"));
+        if (projectNamePattern == null) {
+            projectNamePattern = ".*?(-[^.]+).*";
+        }
 
         for (SCMNavigator n : navigators) {
             n.afterSave(this);
@@ -424,6 +489,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
         this.facDigest = facDigest;
         this.propsDigest = propsDigest;
         this.bbsDigest = bbsDigest;
+        
+        // Trigger rescan if multiple projects configuration changed
+        recalculateAfterSubmitted(oldCreateMultipleProjects != this.createMultipleProjects);
+        recalculateAfterSubmitted(!StringUtils.equals(oldProjectNamePattern, this.projectNamePattern));
     }
 
     /**
@@ -1362,10 +1431,11 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
 
                 @Override
                 public void complete() throws IllegalStateException, IOException, InterruptedException {
-                    Boolean createMultipleProjects = true;
-                    // Jenkinsfile path "Jenkinsfile-win" in repo "my-product", will create project named "my-product-win"
-                    String projectNamePatten = ".*?(-[^\\.]+).*";
+                    String projectNamePatten = getProjectNamePattern();
+                    LOGGER.info("createMultipleProjects: " + createMultipleProjects);
+                    LOGGER.info("projectNamePatten: " + projectNamePatten);
                     try {
+                        LOGGER.info("Scan " + projectName + " ...");
                         Map<String, Object> attributes = Collections.emptyMap();
                         for (MultiBranchProjectFactory candidateFactory : projectFactories) {
                             boolean recognizes = recognizes(attributes, candidateFactory);
@@ -1373,7 +1443,7 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             if (recognizes) {
                                 newProjectName = projectName;
 
-                                if (createMultipleProjects && projectNamePatten != "") {
+                                if (createMultipleProjects && projectNamePatten != null && !projectNamePatten.isEmpty()) {
                                     String scriptPath = (String) candidateFactory.getClass().getMethod("getScriptPath").invoke(candidateFactory);
                                     LOGGER.info(() -> "scriptPath: " + scriptPath);
                                     Pattern pattern = Pattern.compile(projectNamePatten);
