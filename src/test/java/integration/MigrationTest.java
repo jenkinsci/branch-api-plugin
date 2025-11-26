@@ -28,12 +28,6 @@ package integration;
 import hudson.model.Job;
 import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProjectFactory;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import jenkins.branch.MultiBranchProject;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.impl.mock.MockSCMController;
@@ -41,27 +35,34 @@ import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsSessionRule;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.jvnet.hudson.test.junit.jupiter.JenkinsSessionExtension;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.notNullValue;
 
-public class MigrationTest {
+class MigrationTest {
     private static final Logger LOGGER = Logger.getLogger(MigrationTest.class.getName());
 
     private static MockSCMController c;
 
-    @Rule
-    public JenkinsSessionRule r = new JenkinsSessionRule();
+    @RegisterExtension
+    private final JenkinsSessionExtension story = new JenkinsSessionExtension();
 
-    @BeforeClass
-    public static void setupSCM() throws IOException {
+    @BeforeAll
+    static void setupSCM() throws IOException {
         c = MockSCMController.recreate("ee708b58-864e-415c-a8fe-f5e458cda8d9");
         c.createRepository("test.example.com");
         c.createRepository("Éireann");
@@ -79,66 +80,66 @@ public class MigrationTest {
         c.createBranch("대한민국", "특색/새로운");
     }
 
-    @AfterClass
-    public static void closeSCM() {
+    @AfterAll
+    static void closeSCM() {
         IOUtils.closeQuietly(c);
         c = null;
     }
 
     @Test
-    public void createdFromScratch() throws Throwable {
-        r.then(j -> {
-                OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
-                foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
-                foo.getProjectFactories()
-                        .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
-                foo.scheduleBuild2(0).getFuture().get();
-                j.waitUntilNoActivity();
-                assertDataMigrated(foo);
+    void createdFromScratch() throws Throwable {
+        story.then(j -> {
+            OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
+            foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
+            foo.getProjectFactories()
+                    .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+            foo.scheduleBuild2(0).getFuture().get();
+            j.waitUntilNoActivity();
+            assertDataMigrated(foo);
         });
-        r.then(j -> {
-                TopLevelItem foo = j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
-        });
-    }
-
-    @Test
-    public void createdFromScratch_full_reload() throws Throwable {
-        r.then(j -> {
-                OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
-                foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
-                foo.getProjectFactories()
-                        .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
-                foo.scheduleBuild2(0).getFuture().get();
-                j.waitUntilNoActivity();
-                j.jenkins.reload();
-                assertDataMigrated(foo);
-        });
-        r.then(j -> {
-                TopLevelItem foo = j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
+        story.then(j -> {
+            TopLevelItem foo = j.jenkins.getItem("foo");
+            assertDataMigrated(foo);
         });
     }
 
     @Test
-    public void createdFromScratch_folder_reload() throws Throwable {
-        r.then(j -> {
-                OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
-                foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
-                foo.getProjectFactories()
-                        .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
-                foo.scheduleBuild2(0).getFuture().get();
-                j.waitUntilNoActivity();
-                foo.doReload();
-                assertDataMigrated(foo);
+    void createdFromScratch_full_reload() throws Throwable {
+        story.then(j -> {
+            OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
+            foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
+            foo.getProjectFactories()
+                    .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+            foo.scheduleBuild2(0).getFuture().get();
+            j.waitUntilNoActivity();
+            j.jenkins.reload();
+            assertDataMigrated(foo);
         });
-        r.then(j -> {
-                TopLevelItem foo = j.jenkins.getItem("foo");
-                assertDataMigrated(foo);
+        story.then(j -> {
+            TopLevelItem foo = j.jenkins.getItem("foo");
+            assertDataMigrated(foo);
         });
     }
 
-    private void assertDataMigrated(TopLevelItem foo) throws Exception {
+    @Test
+    void createdFromScratch_folder_reload() throws Throwable {
+        story.then(j -> {
+            OrganizationFolder foo = j.createProject(OrganizationFolder.class, "foo");
+            foo.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
+            foo.getProjectFactories()
+                    .replaceBy(Collections.singletonList(new BasicMultiBranchProjectFactory(null)));
+            foo.scheduleBuild2(0).getFuture().get();
+            j.waitUntilNoActivity();
+            foo.doReload();
+            assertDataMigrated(foo);
+        });
+        story.then(j -> {
+            TopLevelItem foo = j.jenkins.getItem("foo");
+            assertDataMigrated(foo);
+        });
+    }
+
+    private void assertDataMigrated(TopLevelItem foo) {
         assertThat(foo, instanceOf(OrganizationFolder.class));
         OrganizationFolder prj = (OrganizationFolder) foo;
         Map<String, MultiBranchProject> byName = new HashMap<>();
