@@ -204,14 +204,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             state.reset();
         }
         // optimize lookup of sources by building a temporary map that is equivalent to getSCMSource(id) in results
-        Map<String, SCMSource> sourceMap = new HashMap<>();
-        for (BranchSource source : sources) {
-            SCMSource s = source.getSource();
-            String id = s.getId();
-            if (!sourceMap.containsKey(id)) { // only the first match should win
-                sourceMap.put(id, s);
-            }
-        }
+        Map<String, SCMSource> sourceMap = buildSourceMap();
         for (P item : getItems(factory::isProject)) {
             Branch oldBranch = factory.getBranch(item);
             SCMSource source = sourceMap.get(oldBranch.getSourceId());
@@ -248,6 +241,28 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 scheduleBuild();
             }
         }
+    }
+
+    private Map<String, SCMSource> buildSourceMap() {
+        Map<String, SCMSource> sourceMap = new HashMap<>();
+        int count = 1;
+        for (BranchSource source : sources) {
+            SCMSource s = source.getSource();
+            String id = s.getId();
+            if (id.isBlank()) {
+                // Generate ids of the form "1", "2", … on demand
+                while (sourceMap.containsKey(Integer.toString(count))) {
+                    count++;
+                }
+                id = Integer.toString(count);
+                s.setId(id);
+                LOGGER.fine(() -> "assigned id to " + s + " in " + this);
+            }
+            if (!sourceMap.containsKey(id)) { // only the first match should win
+                sourceMap.put(id, s);
+            }
+        }
+        return sourceMap;
     }
 
     /**
@@ -426,6 +441,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         if (this.sources.isEmpty() || sources.isEmpty()) {
             // easy
             this.sources.replaceBy(sources);
+            buildSourceMap();
             return;
         }
         Set<String> oldIds = sourceIds(this.sources);
@@ -477,10 +493,27 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
 
     private Set<String> sourceIds(List<BranchSource> sources) {
         Set<String> result = new HashSet<>();
+        int count = 1;
         for (BranchSource s : sources) {
-            result.add(s.getSource().getId());
+            var id = s.getSource().getId();
+            if (id.isBlank()) {
+                // Generate ids of the form "1", "2", … on demand
+                while (result.contains(Integer.toString(count))) {
+                    count++;
+                }
+                id = Integer.toString(count);
+                s.getSource().setId(id);
+                LOGGER.fine(() -> "assigned id to " + s.getSource() + " in " + this);
+            }
+            result.add(id);
         }
         return result;
+    }
+
+    @Override
+    public synchronized void save() throws IOException {
+        buildSourceMap();
+        super.save();
     }
 
     private boolean equalButForId(SCMSource a, SCMSource b) {

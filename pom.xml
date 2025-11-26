@@ -81,9 +81,21 @@
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
         <artifactId>bom-${jenkins.baseline}.x</artifactId>
-        <version>5043.v855ff4819a_0f</version>
+        <version>5659.vecf9e2dc5a_ed</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <!-- TODO until in BOM -->
+      <dependency>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>scm-api</artifactId>
+        <version>724.v7d839074eb_5c</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>scm-api</artifactId>
+        <classifier>tests</classifier>
+        <version>724.v7d839074eb_5c</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
