@@ -1450,8 +1450,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                         Matcher matcher = pattern.matcher(scriptPath);
                                         if (matcher.matches()) {
                                             newProjectName = projectName + matcher.group(1);
+                                            LOGGER.info("newProjectName: " + newProjectName);
                                         }
-                                        LOGGER.info("newProjectName: " + newProjectName);
                                     } catch (Exception e) {
                                         LOGGER.warning(() -> "Failed to get new project name from " + candidateFactory + ": " + e.getMessage());
                                         continue;
@@ -1497,8 +1497,8 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                         if (property == null || !newProjectName.equals(property.getName())) {
                             existing.getProperties().remove(ProjectNameProperty.class);
                             existing.addProperty(new ProjectNameProperty(newProjectName));
-                            existing.setDisplayName(newProjectName);
                         }
+                        existing.setDisplayName(newProjectName);
                         for (AbstractFolderProperty<?> folderProperty : getProperties()) {
                             if (folderProperty instanceof OrganizationFolderProperty) {
                                 ((OrganizationFolderProperty) folderProperty).applyDecoration(existing,
