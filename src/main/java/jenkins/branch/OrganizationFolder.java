@@ -1442,16 +1442,20 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                             LOGGER.fine(() -> candidateFactory + " recognizes " + projectName + " with " + attributes + "? " + recognizes);
                             if (recognizes) {
                                 newProjectName = projectName;
-
                                 if (createMultipleProjects && projectNamePatten != null && !projectNamePatten.isEmpty()) {
-                                    String scriptPath = (String) candidateFactory.getClass().getMethod("getScriptPath").invoke(candidateFactory);
-                                    LOGGER.info(() -> "scriptPath: " + scriptPath);
-                                    Pattern pattern = Pattern.compile(projectNamePatten);
-                                    Matcher matcher = pattern.matcher(scriptPath);
-                                    if (matcher.matches()) {
-                                        newProjectName = projectName + matcher.group(1);
+                                    try {
+                                        String scriptPath = (String) candidateFactory.getClass().getMethod("getScriptPath").invoke(candidateFactory);
+                                        LOGGER.info("scriptPath: " + scriptPath);
+                                        Pattern pattern = Pattern.compile(projectNamePatten);
+                                        Matcher matcher = pattern.matcher(scriptPath);
+                                        if (matcher.matches()) {
+                                            newProjectName = projectName + matcher.group(1);
+                                        }
+                                        LOGGER.info("newProjectName: " + newProjectName);
+                                    } catch (Exception e) {
+                                        LOGGER.warning(() -> "Failed to get new project name from " + candidateFactory + ": " + e.getMessage());
+                                        continue;
                                     }
-                                    LOGGER.info("newProjectName: " + newProjectName);
                                 }
 
                                 String folderName = NameEncoder.encode(newProjectName);
