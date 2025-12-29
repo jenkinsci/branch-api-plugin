@@ -28,6 +28,14 @@
     <f:entry field="navigators" title="${%Repository Sources}">
       <f:repeatableHeteroProperty field="navigators" hasHeader="true"/>
     </f:entry>
+
+    <f:entry field="createMultipleProjects" title="${%CreateMultipleProjects.DisplayName}">
+      <f:checkbox default="false" title="${%CreateMultipleProjects.Description}"/>
+      <f:entry field="projectNamePattern" title="${%ProjectNamePattern.DisplayName}">
+          <f:textbox default=".*?(-[^.]+).*"/>
+      </f:entry>
+    </f:entry>
+
     <f:entry field="projectFactories" title="${%Project Recognizers}">
       <f:repeatableHeteroProperty field="projectFactories" hasHeader="true" />
     </f:entry>
