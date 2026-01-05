@@ -1,0 +1,26 @@
+<div>
+  Controls whether to create multiple projects of the same repository based on Jenkinsfile path patterns.
+  
+  <p>
+    When enabled, the system will examine Jenkinsfile paths and create separate projects
+    for different variants of the same repository based on the configured pattern.
+  </p>
+  
+  <h3>Example</h3>
+  <p>
+    If you have Jenkinsfiles like:
+    <ul>
+      <li><code>Jenkinsfile</code> (main build)</li>
+      <li><code>Jenkinsfile-win</code> (Windows-specific build)</li>
+      <li><code>Jenkinsfile-mac</code> (Mac-specific build)</li>
+    </ul>
+  </p>
+  <p>
+    With the default pattern <code>.*?(-[^.]+).*</code>, this would create:
+    <ul>
+      <li><code>myproject</code> from <code>Jenkinsfile</code></li>
+      <li><code>myproject-win</code> from <code>Jenkinsfile-win</code></li>
+      <li><code>myproject-mac</code> from <code>Jenkinsfile-mac</code></li>
+    </ul>
+  </p>
+</div>
