@@ -29,33 +29,44 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.tasks.LogRotator;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
 import java.io.IOException;
-import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertTrue;
-import org.junit.ClassRule;
-import org.jvnet.hudson.test.JenkinsRule;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class BuildRetentionBranchPropertyTest {
+@WithJenkins
+class BuildRetentionBranchPropertyTest {
 
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    /**
+     * All tests in this class only create items and do not affect other global configuration, thus we trade test
+     * execution time for the restriction on only touching items.
+     */
+    private static JenkinsRule r;
+
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
 
     @Test
-    public void decoratesStandardJobByFieldReflectionAccess() throws Exception {
+    void decoratesStandardJobByFieldReflectionAccess() {
         BuildRetentionBranchProperty instance = new BuildRetentionBranchProperty(new LogRotator(5, 5, 5, 5));
         Job job = new FreeStyleProject(mock(ItemGroup.class), "foo");
         assertThat(instance.jobDecorator((Class) Job.class).project(job).getBuildDiscarder(), is(instance.getBuildDiscarder()));
     }
 
     @Test
-    public void decoratesNonStandardJobBySetter() throws Exception {
+    void decoratesNonStandardJobBySetter() throws Exception {
         BuildRetentionBranchProperty instance = new BuildRetentionBranchProperty(new LogRotator(5, 5, 5, 5));
         Job job = mock(Job.class);
         when(job.getBuildDiscarder()).thenReturn(new LogRotator(0, 0, 0, 0));
@@ -64,13 +75,12 @@ public class BuildRetentionBranchPropertyTest {
     }
 
     @Test
-    public void decoratesIsBestEffort() throws Exception {
+    void decoratesIsBestEffort() throws Exception {
         BuildRetentionBranchProperty instance = new BuildRetentionBranchProperty(new LogRotator(5, 5, 5, 5));
         Job job = mock(Job.class);
         when(job.getBuildDiscarder()).thenReturn(new LogRotator(0, 0, 0, 0));
         doThrow(new IOException("boom")).when(job).setBuildDiscarder(new LogRotator(5, 5, 5, 5));
-        instance.jobDecorator((Class) Job.class).project(job);
-        assertTrue("The IOException was caught and ignored", true);
+        assertDoesNotThrow(() -> instance.jobDecorator((Class) Job.class).project(job));
         verify(job).setBuildDiscarder(instance.getBuildDiscarder());
     }
 }
