@@ -9,10 +9,11 @@ import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMSource;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,27 +23,38 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * multi-branch jobs via {@link MultiBranchProjectDisplayNamingTrait} are used to set the display name of change
  * request jobs inside the multi-branch project.
  */
-public class ProjectNamingStrategyTest {
-    @ClassRule
-    public static final JenkinsRule r = new JenkinsRule();
+@WithJenkins
+class ProjectNamingStrategyTest {
+
+    /**
+     * All tests in this class only create items and do not affect other global configuration, thus we trade test
+     * execution time for the restriction on only touching items.
+     */
+    private static JenkinsRule r;
 
     public static final String REPO_NAME = "MyRepo";
 
+
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
     @Test
     @Issue("JENKINS-55348")
-    public void testCompositeStrategy() throws Exception {
+    void testCompositeStrategy() throws Exception {
         testNamingStrategy(MultiBranchProjectDisplayNamingStrategy.RAW_AND_OBJECT_DISPLAY_NAME);
     }
 
     @Test
     @Issue("JENKINS-74811")
-    public void testRawStrategy() throws Exception {
+    void testRawStrategy() throws Exception {
         testNamingStrategy(MultiBranchProjectDisplayNamingStrategy.RAW);
     }
 
     @Test
     @Issue("JENKINS-55348")
-    public void testObjectNameStrategy() throws Exception {
+    void testObjectNameStrategy() throws Exception {
         testNamingStrategy(MultiBranchProjectDisplayNamingStrategy.OBJECT_DISPLAY_NAME);
     }
 

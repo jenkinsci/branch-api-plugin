@@ -32,9 +32,6 @@ import hudson.util.DescribableList;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
-import java.util.Collections;
-import java.util.List;
-
 import jenkins.scm.impl.SingleSCMNavigator;
 import jenkins.scm.impl.SingleSCMSource;
 import jenkins.scm.impl.mock.MockSCM;
@@ -42,29 +39,48 @@ import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMHead;
 import jenkins.scm.impl.mock.MockSCMNavigator;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
+import java.util.Collections;
+import java.util.List;
 
 import static jenkins.branch.matchers.Extracting.extracting;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
-public class OrganizationChildHealthMetricsPropertyTest {
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+@WithJenkins
+class OrganizationChildHealthMetricsPropertyTest {
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    /**
+     * All tests in this class only create items and do not affect other global configuration, thus we trade test
+     * execution time for the restriction on only touching items.
+     */
+    private static JenkinsRule r;
+
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void configRoundTrip() throws Exception {
+    void configRoundTrip() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("stuff");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "top");
@@ -85,7 +101,7 @@ public class OrganizationChildHealthMetricsPropertyTest {
     }
 
     @Test
-    public void given__orgFolder__when__created__then__property_is_missing() throws Exception {
+    void given__orgFolder__when__created__then__property_is_missing() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -100,7 +116,7 @@ public class OrganizationChildHealthMetricsPropertyTest {
     }
 
     @Test
-    public void given__orgFolder__when__scan__then__child_metrics_applied() throws Exception {
+    void given__orgFolder__when__scan__then__child_metrics_applied() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -123,7 +139,7 @@ public class OrganizationChildHealthMetricsPropertyTest {
     }
 
     @Test
-    public void given__orgFolder_property_changed__when__scan__then__child_metrics_updated() throws Exception {
+    void given__orgFolder_property_changed__when__scan__then__child_metrics_updated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));

@@ -5,49 +5,55 @@ import integration.harness.BasicMultiBranchProject;
 import jenkins.scm.impl.mock.MockSCMController;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.ReaderInputStream;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 
-import static junit.framework.TestCase.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
-public class UpdatingFromXmlTest {
+@WithJenkins
+class UpdatingFromXmlTest {
 
     /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    private static JenkinsRule r;
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void given_multibranch_when_createFromXml_then_hasItems() throws Exception {
+    void given_multibranch_when_createFromXml_then_hasItems() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.cloneBranch("foo", "master", "feature");
             c.addFile("foo", "feature", "add new feature", "FEATURE", "new".getBytes());
             String configXml = IOUtils.toString(getClass().getResourceAsStream("UpdatingFromXmlTest/config.xml"), StandardCharsets.UTF_8).replace("fixme", c.getId());
-            BasicMultiBranchProject prj = (BasicMultiBranchProject) r.jenkins.createProjectFromXML("foo", new ReaderInputStream(new StringReader(configXml), StandardCharsets.UTF_8));
+            BasicMultiBranchProject prj = (BasicMultiBranchProject) r.jenkins.createProjectFromXML("foo", ReaderInputStream.builder().setReader(new StringReader(configXml)).setCharset(StandardCharsets.UTF_8).get());
             r.waitUntilNoActivity();
-            assertTrue(prj.getItems().size() > 0);
+            assertFalse(prj.getItems().isEmpty());
         }
     }
 
     @Test
-    public void given_multibranch_when_updateFromXml_then_hasItems() throws Exception {
+    void given_multibranch_when_updateFromXml_then_hasItems() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.cloneBranch("foo", "master", "feature");
@@ -56,7 +62,7 @@ public class UpdatingFromXmlTest {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.updateByXml((Source) new StreamSource(new StringReader(configXml)));
             r.waitUntilNoActivity();
-            assertTrue(prj.getItems().size() > 0);
+            assertFalse(prj.getItems().isEmpty());
         }
     }
 

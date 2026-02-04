@@ -23,25 +23,16 @@
  */
 package jenkins.branch;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.queue.QueueTaskFuture;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.plugins.git.junit.jupiter.WithGitSampleRepo;
 import jenkins.plugins.git.traits.BranchDiscoveryTrait;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEvents;
@@ -53,21 +44,39 @@ import jenkins.scm.impl.mock.MockSCMHeadEvent;
 import jenkins.scm.impl.mock.MockSCMSource;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.ReaderInputStream;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class NoTriggerBranchPropertyTest {
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
-    @Rule
-    public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+@WithJenkins
+@WithGitSampleRepo
+class NoTriggerBranchPropertyTest {
+
+    private JenkinsRule r;
+    private GitSampleRepoRule sampleRepo;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule, GitSampleRepoRule repo) {
+        r = rule;
+        sampleRepo = repo;
+    }
 
     @Issue("JENKINS-32396")
     @Test
-    public void smokes() throws Exception {
+    void smokes() throws Exception {
         sampleRepo.init();
         sampleRepo.git("checkout", "-b", "newfeature");
         sampleRepo.write("stuff", "content");
@@ -113,7 +122,7 @@ public class NoTriggerBranchPropertyTest {
         assertEquals(1, release.getNextBuildNumber());
         assertEquals(3, newfeature.getNextBuildNumber());
         QueueTaskFuture<FreeStyleBuild> releaseBuild = release.scheduleBuild2(0);
-        assertNotNull("was able to schedule a manual build of the release branch", releaseBuild);
+        assertNotNull(releaseBuild, "was able to schedule a manual build of the release branch");
         assertEquals(1, releaseBuild.get().getNumber());
         assertEquals(2, release.getNextBuildNumber());
     }
@@ -127,7 +136,7 @@ public class NoTriggerBranchPropertyTest {
 
     @Issue("JENKINS-63673")
     @Test
-    public void suppressNothing() throws Exception {
+    void suppressNothing() throws Exception {
         try (MockSCMController controller = MockSCMController.create()) {
             ProjectWrapper project = createProject(controller, NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy.NONE);
             assertThat(project.getNextBuildNumber(), is(1));
@@ -144,7 +153,7 @@ public class NoTriggerBranchPropertyTest {
 
     @Issue("JENKINS-63673")
     @Test
-    public void suppressIndexing() throws Exception {
+    void suppressIndexing() throws Exception {
         try (MockSCMController controller = MockSCMController.create()) {
             ProjectWrapper project = createProject(controller, NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy.INDEXING);
             assertThat(project.getNextBuildNumber(), is(1));
@@ -161,7 +170,7 @@ public class NoTriggerBranchPropertyTest {
 
     @Issue("JENKINS-63673")
     @Test
-    public void suppressEvents() throws Exception {
+    void suppressEvents() throws Exception {
         try (MockSCMController controller = MockSCMController.create()) {
             ProjectWrapper project = createProject(controller, NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy.EVENTS);
             assertThat(project.getNextBuildNumber(), is(1));
@@ -193,7 +202,7 @@ public class NoTriggerBranchPropertyTest {
 
     @Issue("JENKINS-63673")
     @Test
-    public void suppressAllWhenJobCreatedBeforeAddingTheSuppressionStrategyParameter() throws Exception {
+    void suppressAllWhenJobCreatedBeforeAddingTheSuppressionStrategyParameter() throws Exception {
         try (MockSCMController controller = MockSCMController.create()) {
             String repositoryName = "repoName";
             controller.createRepository(repositoryName);
@@ -201,7 +210,7 @@ public class NoTriggerBranchPropertyTest {
             String configXml = IOUtils.toString(configStream, StandardCharsets.UTF_8)
                     .replace("CONTROLLER_ID_PLACEHOLDER", controller.getId())
                     .replace("REPOSITORY_NAME_PLACEHOLDER", repositoryName);
-            InputStream configReader = new ReaderInputStream(new StringReader(configXml), StandardCharsets.UTF_8);
+            InputStream configReader = ReaderInputStream.builder().setReader(new StringReader(configXml)).setCharset(StandardCharsets.UTF_8).get();
             MultiBranchImpl loadedProject = (MultiBranchImpl) r.jenkins.createProjectFromXML("oldJob", configReader);
             r.waitUntilNoActivity();
 

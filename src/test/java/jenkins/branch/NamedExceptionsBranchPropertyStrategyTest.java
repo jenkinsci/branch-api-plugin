@@ -1,6 +1,6 @@
 package jenkins.branch;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static jenkins.branch.NamedExceptionsBranchPropertyStrategy.Named.isMatch;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -9,9 +9,10 @@ import static org.hamcrest.Matchers.is;
 /**
  * @author Stephen Connolly
  */
-public class NamedExceptionsBranchPropertyStrategyTest {
+class NamedExceptionsBranchPropertyStrategyTest {
+
     @Test
-    public void examplesFromHelpText() throws Exception {
+    void examplesFromHelpText() {
         // "production"  matches one and only one branch
         assertThat(isMatch("production", "production"), is(true));
         assertThat(isMatch("Production", "production"), is(true));
