@@ -1450,7 +1450,6 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                         Matcher matcher = pattern.matcher(scriptPath);
                                         if (matcher.matches()) {
                                             newProjectName = projectName + matcher.group(1);
-                                            LOGGER.info("newProjectName: " + newProjectName);
                                         }
                                     } catch (Exception e) {
                                         LOGGER.warning(() -> "Failed to get new project name from " + candidateFactory + ": " + e.getMessage());
@@ -1467,8 +1466,10 @@ public final class OrganizationFolder extends ComputedFolder<MultiBranchProject<
                                 existing = observer.shouldUpdate(folderName);
                                 try {
                                     if (existing != null) {
+                                        LOGGER.info("Update existing project: " + folderName);
                                         completeExisting(candidateFactory, attributes, existing, wasBuildable, wasDisabled);
                                     } else {
+                                        LOGGER.info("Create new project: " + folderName);
                                         completeNew(candidateFactory, attributes, folderName);
                                     }
                                 } finally {
