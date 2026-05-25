@@ -1,32 +1,35 @@
 package jenkins.branch.matchers;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 
 import static jenkins.branch.matchers.Extracting.extracting;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.is;
 
-public class ExtractingTest {
+class ExtractingTest {
 
     @Test
-    public void shouldExtractNothingFromEmptyIterable() {
+    void shouldExtractNothingFromEmptyIterable() {
         final Iterable<Tuple> data = Collections.emptyList();
 
         assertThat(data, extracting(Tuple::getFoo, is(empty())));
     }
 
     @Test
-    public void shouldExtractProperty() {
+    void shouldExtractProperty() {
         final Iterable<Tuple> data = Arrays.asList(tuple("a",1), tuple("b", 2));
 
         assertThat(data, extracting(Tuple::getFoo, hasItem("a")));
     }
 
     @Test
-    public void shouldExtractPropertyFromMultipleObjects() {
+    void shouldExtractPropertyFromMultipleObjects() {
         final Iterable<Tuple> data = Arrays.asList(tuple("a",1), tuple("b", 2));
 
         assertThat(data, extracting(Tuple::getFoo, hasItems("a", "b")));
@@ -34,7 +37,7 @@ public class ExtractingTest {
     }
 
     @Test
-    public void shouldSupportPartialMatchers() {
+    void shouldSupportPartialMatchers() {
         final Iterable<Tuple> data = Arrays.asList(tuple("a",1), tuple("b", 2), tuple("c", 3));
 
         assertThat(data, extracting(Tuple::getFoo, hasItems("a", "c")));

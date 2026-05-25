@@ -39,10 +39,11 @@ import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMSource;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -54,24 +55,29 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 
-public class CategorizationTest {
+@WithJenkins
+class CategorizationTest {
 
     /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    private static JenkinsRule r;
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void given_multibranch_when_noSourcesDefined_then_welcomeViewPresent() throws Exception {
+    void given_multibranch_when_noSourcesDefined_then_welcomeViewPresent() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
@@ -82,7 +88,7 @@ public class CategorizationTest {
     }
 
     @Test
-    public void given_multibranch_when_atLeastOneSourceDefinedButNoItems_then_welcomeViewPresent()
+    void given_multibranch_when_atLeastOneSourceDefinedButNoItems_then_welcomeViewPresent()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -96,7 +102,7 @@ public class CategorizationTest {
     }
 
     @Test
-    public void given_multibranch_when_onlyUncategorizedCategory_then_onlyUncategorizedViewPresent() throws Exception {
+    void given_multibranch_when_onlyUncategorizedCategory_then_onlyUncategorizedViewPresent() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createTag("foo", "master", "master-1.0");
@@ -122,7 +128,7 @@ public class CategorizationTest {
     }
 
     @Test
-    public void given_multibranch_when_changeRequestsWanted_then_onlyUncategorizedAndChangeRequetsViewsPresent()
+    void given_multibranch_when_changeRequestsWanted_then_onlyUncategorizedAndChangeRequetsViewsPresent()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -156,7 +162,7 @@ public class CategorizationTest {
     }
 
     @Test
-    public void given_multibranch_when_tagsWanted_then_onlyUncategorizedAndTagsViewsPresent()
+    void given_multibranch_when_tagsWanted_then_onlyUncategorizedAndTagsViewsPresent()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -190,7 +196,7 @@ public class CategorizationTest {
     }
 
     @Test
-    public void given_multibranch_when_noBranchesWanted_then_uncategorizedViewPresentButEmpty()
+    void given_multibranch_when_noBranchesWanted_then_uncategorizedViewPresentButEmpty()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -229,7 +235,7 @@ public class CategorizationTest {
     }
 
     @Test
-    public void given_multibranch_when_wantsEverything_then_hasEverything()
+    void given_multibranch_when_wantsEverything_then_hasEverything()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");

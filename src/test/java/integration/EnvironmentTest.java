@@ -38,10 +38,11 @@ import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMSource;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -49,24 +50,29 @@ import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.nullValue;
 
-public class EnvironmentTest {
+@WithJenkins
+class EnvironmentTest {
 
     /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    private static JenkinsRule r;
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void given_multibranch_when_buildingABranch_then_environmentContainsBranchName() throws Exception {
+    void given_multibranch_when_buildingABranch_then_environmentContainsBranchName() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -83,7 +89,7 @@ public class EnvironmentTest {
     }
 
     @Test
-    public void given_multibranch_when_buildingAChangeRequest_then_environmentContainsBranchName() throws Exception {
+    void given_multibranch_when_buildingAChangeRequest_then_environmentContainsBranchName() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             Integer crNum = c.openChangeRequest("foo", "master");
@@ -102,7 +108,7 @@ public class EnvironmentTest {
     }
 
     @Test
-    public void given_multibranch_when_buildingAChangeRequest_then_environmentContainsChangeDetails() throws Exception {
+    void given_multibranch_when_buildingAChangeRequest_then_environmentContainsChangeDetails() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             Integer crNum = c.openChangeRequest("foo", "master");
@@ -121,7 +127,7 @@ public class EnvironmentTest {
                             containsString("CHANGE_URL=http://changes.example.com/" + crNum),
                             anyOf(
                                     containsString("CHANGE_TITLE='Change request #" + crNum + "'"), // unix
-                                    containsString("CHANGE_TITLE=Change request #" + crNum + "") // win
+                                    containsString("CHANGE_TITLE=Change request #" + crNum) // win
                             ),
                             containsString("CHANGE_AUTHOR=bob"),
                             anyOf(
@@ -135,7 +141,7 @@ public class EnvironmentTest {
     }
 
     @Test
-    public void given_multibranch_when_buildingATag_then_environmentContainsTagName() throws Exception {
+    void given_multibranch_when_buildingATag_then_environmentContainsTagName() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createTag("foo", "master", "release");

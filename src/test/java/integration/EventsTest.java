@@ -43,21 +43,6 @@ import integration.harness.BasicBranchProjectFactory;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
-import java.io.IOException;
-import java.lang.management.ThreadInfo;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import jenkins.branch.Branch;
 import jenkins.branch.BranchBuildStrategy;
 import jenkins.branch.BranchBuildStrategyDescriptor;
@@ -93,12 +78,30 @@ import jenkins.scm.impl.mock.MockSCMSourceEvent;
 import jenkins.scm.impl.mock.MockSCMSourceSaveListener;
 import jenkins.scm.impl.trait.WildcardSCMSourceFilterTrait;
 import org.hamcrest.Matchers;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
+import java.io.IOException;
+import java.lang.management.ThreadInfo;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -113,13 +116,14 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assume.assumeThat;
-import org.junit.Ignore;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class EventsTest {
+@WithJenkins
+class EventsTest {
 
     /**
      * A branch name that contains a slash
@@ -130,7 +134,7 @@ public class EventsTest {
      */
     private static final String SLASHY_JOB_NAME = "feature%2Fux-1";
     /**
-     * A branch name with unicode characters that have a two canonical forms (Korean for New Features).
+     * A branch name with unicode characters that have two canonical forms (Korean for New Features).
      * There are two normalize forms: {@code "\uc0c8\ub85c\uc6b4 \ud2b9\uc9d5"} and
      * {@code "\u1109\u1162\u1105\u1169\u110b\u116e\u11ab \u1110\u1173\u11a8\u110c\u1175\u11bc"}
      */
@@ -139,18 +143,21 @@ public class EventsTest {
      * The encoded name of {@link #I18N_BRANCH_NAME}, see {@link NameEncoder#encode(String)}
      */
     private static final String I18N_JOB_NAME = "\uc0c8\ub85c\uc6b4 \ud2b9\uc9d5";
+
     /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
-    static {
+    private static JenkinsRule r;
+
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
         r.timeout = 600;
     }
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
@@ -169,7 +176,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_inspectingProjectFactory_then_ProjectTypeCorrectlyInferred() throws Exception {
+    void given_multibranch_when_inspectingProjectFactory_then_ProjectTypeCorrectlyInferred() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -178,7 +185,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_inspectingProject_then_ProjectTypeCorrectlyInferred() throws Exception {
+    void given_multibranch_when_inspectingProject_then_ProjectTypeCorrectlyInferred() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -187,7 +194,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_noSources_then_noBranchProjects() throws Exception {
+    void given_multibranch_when_noSources_then_noBranchProjects() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -198,7 +205,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_addingCriteriaWithoutSources_then_noBranchProjects() throws Exception {
+    void given_multibranch_when_addingCriteriaWithoutSources_then_noBranchProjects() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -215,7 +222,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_addingSources_then_noIndexingIsTriggered() throws Exception {
+    void given_multibranch_when_addingSources_then_noIndexingIsTriggered() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -228,7 +235,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSources_when_indexing_then_branchesAreFoundAndBuilt() throws Exception {
+    void given_multibranchWithSources_when_indexing_then_branchesAreFoundAndBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -248,7 +255,7 @@ public class EventsTest {
 
     @Test
     @Issue("JENKINS-41255")
-    public void given_multibranchWithSource_when_replacingSource_then_noBuildStorm() throws Exception {
+    void given_multibranchWithSource_when_replacingSource_then_noBuildStorm() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -277,7 +284,7 @@ public class EventsTest {
 
     @Test
     @Issue("JENKINS-41255")
-    public void given_multibranchWithSources_when_replacingSources_then_noBuildStorm() throws Exception {
+    void given_multibranchWithSources_when_replacingSources_then_noBuildStorm() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             Integer id = c.openChangeRequest("foo", "master");
@@ -334,7 +341,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesWantingBranchesOnly_when_indexing_then_onlyBranchesAreFoundAndBuilt()
+    void given_multibranchWithSourcesWantingBranchesOnly_when_indexing_then_onlyBranchesAreFoundAndBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -362,7 +369,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesWantingTagsOnly_when_indexing_then_onlyTagsAreFoundAndBuilt()
+    void given_multibranchWithSourcesWantingTagsOnly_when_indexing_then_onlyTagsAreFoundAndBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -389,8 +396,7 @@ public class EventsTest {
     }
 
     @Test
-    public void
-    given_multibranchWithSourcesWantingChangeRequestsOnly_when_indexing_then_onlyChangeRequestsAreFoundAndBuilt()
+    void given_multibranchWithSourcesWantingChangeRequestsOnly_when_indexing_then_onlyChangeRequestsAreFoundAndBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -418,8 +424,7 @@ public class EventsTest {
     }
 
     @Test
-    public void
-    given_multibranchWithUntrustedChangeRequestBuildStrategy_when_indexing_then_onlyTrustedChangeRequestsAreFoundAndBuilt()
+    void given_multibranchWithUntrustedChangeRequestBuildStrategy_when_indexing_then_onlyTrustedChangeRequestsAreFoundAndBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo", MockRepositoryFlags.TRUST_AWARE);
@@ -452,7 +457,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithMergeableChangeRequests_when_indexing_then_mergableChangeRequestsBuilt()
+    void given_multibranchWithMergeableChangeRequests_when_indexing_then_mergableChangeRequestsBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -492,7 +497,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithMergeableChangeRequests_when_reindexing_then_mergableChangeRequestsRebuilt()
+    void given_multibranchWithMergeableChangeRequests_when_reindexing_then_mergableChangeRequestsRebuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -505,25 +510,23 @@ public class EventsTest {
             prj.getSourcesList().add(new BranchSource(source));
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
-            assumeThat("We now have projects",
-                    prj.getItems(), not(Matchers.empty()));
+            assumeFalse(prj.getItems().isEmpty(), "We now have projects");
             FreeStyleProject master = prj.getItem("master");
-            assumeThat("We have no master branch", master, nullValue());
+            assumeTrue(master == null, "We have no master branch");
             FreeStyleProject tag = prj.getItem("master-1.0");
-            assumeThat("We have no master-1.0 tag", tag, nullValue());
+            assumeTrue(tag == null, "We have no master-1.0 tag");
             FreeStyleProject cr = prj.getItem("CR-" + crNum);
-            assumeThat("We have no plan CR", cr, nullValue());
+            assumeTrue(cr == null, "We have no plan CR");
             FreeStyleProject crMerge = prj.getItem("CR-" + crNum+"-merge");
-            assumeThat("We now have the merge change request", crMerge, notNullValue());
+            assumeTrue(crMerge != null, "We now have the merge change request");
             FreeStyleProject crHead = prj.getItem("CR-" + crNum+"-head");
-            assumeThat("We now have the head change request", crHead, notNullValue());
-            assumeThat("We have change requests but no tags or branches",
-                    prj.getItems(), containsInAnyOrder(crMerge, crHead));
+            assumeTrue(crHead != null, "We now have the head change request");
+            assumeTrue(prj.getItems().containsAll(List.of(crMerge, crHead)), "We have change requests but no tags or branches");
             r.waitUntilNoActivity();
-            assumeThat("The merge change request was built", crMerge.getLastBuild(), notNullValue());
-            assumeThat("The merge change request was built", crMerge.getLastBuild().getNumber(), is(1));
-            assumeThat("The head change request was built", crHead.getLastBuild(), notNullValue());
-            assumeThat("The head change request was built", crHead.getLastBuild().getNumber(), is(1));
+            assumeTrue(crMerge.getLastBuild() != null, "The merge change request was built");
+            assumeTrue(crMerge.getLastBuild().getNumber() == 1, "The merge change request was built");
+            assumeTrue(crHead.getLastBuild() != null, "The head change request was built");
+            assumeTrue(crHead.getLastBuild().getNumber() == 1, "The head change request was built");
             c.addFile("foo", "master", "change the target", "file.txt", new byte[]{0});
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
@@ -546,7 +549,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesWantingBranchesAndTags_when_indexing_then_branchesAndTagsAreFoundAndBuilt()
+    void given_multibranchWithSourcesWantingBranchesAndTags_when_indexing_then_branchesAndTagsAreFoundAndBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -575,7 +578,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_indexedMultibranch_when_indexingFails_then_previouslyIndexedBranchesAreNotDeleted()
+    void given_indexedMultibranch_when_indexingFails_then_previouslyIndexedBranchesAreNotDeleted()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -611,7 +614,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesWantingEverything_when_indexing_then_everythingIsFoundAndBuilt()
+    void given_multibranchWithSourcesWantingEverything_when_indexing_then_everythingIsFoundAndBuilt()
 
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
@@ -660,7 +663,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesWantingEverythingAndBuildingTags_when_indexing_then_everythingIsFoundAndBuiltEvenTags()
+    void given_multibranchWithSourcesWantingEverythingAndBuildingTags_when_indexing_then_everythingIsFoundAndBuiltEvenTags()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -734,7 +737,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesWantingEverythingAndBuildingCRs_when_indexing_then_everythingIsFoundAndOnlyCRsBuilt()
+    void given_multibranchWithSourcesWantingEverythingAndBuildingCRs_when_indexing_then_everythingIsFoundAndOnlyCRsBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -768,7 +771,7 @@ public class EventsTest {
 
     @Issue("JENKINS-54052")
     @Test
-    public void given_multibranchWithSources_when_zero_quiet_period_then_two_runs() throws Exception {
+    void given_multibranchWithSources_when_zero_quiet_period_then_two_runs() throws Exception {
         int savedQuietPeriod = BasicBranchProjectFactory.quietPeriodSeconds;
         try (MockSCMController c = MockSCMController.create()) {
             BasicBranchProjectFactory.quietPeriodSeconds = 0;
@@ -781,7 +784,7 @@ public class EventsTest {
 
     @Issue("JENKINS-54052")
     @Test
-    public void given_multibranchWithSources_when_system_quiet_period_then_one_run() throws Exception {
+    void given_multibranchWithSources_when_system_quiet_period_then_one_run() throws Exception {
         int savedQuietPeriod = BasicBranchProjectFactory.quietPeriodSeconds;
         try (MockSCMController c = MockSCMController.create()) {
             BasicBranchProjectFactory.quietPeriodSeconds = -1;
@@ -816,7 +819,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSources_when_matchingEvent_then_branchesAreFoundAndBuilt() throws Exception {
+    void given_multibranchWithSources_when_matchingEvent_then_branchesAreFoundAndBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -834,7 +837,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSlashySources_when_matchingEvent_then_branchesAreFoundAndBuilt() throws Exception {
+    void given_multibranchWithSlashySources_when_matchingEvent_then_branchesAreFoundAndBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", SLASHY_BRANCH_NAME);
@@ -856,7 +859,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithI18nSources_when_matchingEvent_then_branchesAreFoundAndBuilt() throws Exception {
+    void given_multibranchWithI18nSources_when_matchingEvent_then_branchesAreFoundAndBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", I18N_BRANCH_NAME);
@@ -878,7 +881,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
+    void given_multibranchWithSources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -897,7 +900,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSlashySources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
+    void given_multibranchWithSlashySources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", SLASHY_BRANCH_NAME);
@@ -920,7 +923,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithI18nSources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
+    void given_multibranchWithI18nSources_when_matchingEventWithMatchingRevision_then_branchesAreBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", I18N_BRANCH_NAME);
@@ -943,7 +946,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
+    void given_multibranchWithSources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -962,7 +965,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSlashySources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
+    void given_multibranchWithSlashySources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", SLASHY_BRANCH_NAME);
@@ -983,7 +986,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithI18nSources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
+    void given_multibranchWithI18nSources_when_matchingEventWithMatchingPreviousRevision_then_branchesAreNotBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", I18N_BRANCH_NAME);
@@ -1004,7 +1007,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSources_when_createEventForExistingBranch_then_eventIgnored() throws Exception {
+    void given_multibranchWithSources_when_createEventForExistingBranch_then_eventIgnored() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -1029,7 +1032,7 @@ public class EventsTest {
 
     @Test
     @Issue("JENKINS-42511")
-    public void given_multibranchWithSources_when_createEventWhileIndexing_then_onlyOneBuildCreated() throws Exception {
+    void given_multibranchWithSources_when_createEventWhileIndexing_then_onlyOneBuildCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -1096,8 +1099,7 @@ public class EventsTest {
 
     @Test
     @Issue("JENKINS-47308")
-    public void
-    given_multibranchWithRevisionSpecificStrategy_when_indexing_then_everythingIsFoundButMagicRevisionOnlyBuilt()
+    void given_multibranchWithRevisionSpecificStrategy_when_indexing_then_everythingIsFoundButMagicRevisionOnlyBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -1149,8 +1151,7 @@ public class EventsTest {
                                         @NonNull SCMRevision currRevision,
                                         SCMRevision lastBuiltRevision, SCMRevision lastSeenRevision,
                                         @NonNull TaskListener listener) {
-            if (currRevision instanceof ChangeRequestSCMRevision) {
-                ChangeRequestSCMRevision<?> currCR = (ChangeRequestSCMRevision<?>) currRevision;
+            if (currRevision instanceof ChangeRequestSCMRevision<?> currCR) {
                 if (lastBuiltRevision instanceof ChangeRequestSCMRevision) {
                     // if we have a previous, only build if the change is affecting the head not the target
                     return !currCR.equivalent((ChangeRequestSCMRevision<?>) lastBuiltRevision);
@@ -1171,8 +1172,7 @@ public class EventsTest {
 
     @Test
     @Issue("JENKINS-48535")
-    public void
-    given_multibranchWithIgnoreTargetChangesStrategy_when_reindexing_then_onlyCRsWithHeadChangesRebuilt()
+    void given_multibranchWithIgnoreTargetChangesStrategy_when_reindexing_then_onlyCRsWithHeadChangesRebuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -1310,7 +1310,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSources_when_nonMatchingEvent_then_branchesAreNotFoundAndBuilt() throws Exception {
+    void given_multibranchWithSources_when_nonMatchingEvent_then_branchesAreNotFoundAndBuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -1325,7 +1325,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSources_when_branchChangeEvent_then_branchFromEventIsRebuilt() throws Exception {
+    void given_multibranchWithSources_when_branchChangeEvent_then_branchFromEventIsRebuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", "feature");
@@ -1365,7 +1365,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSources_when_lateBranchChangeEvent_then_branchIsNotRebuilt() throws Exception {
+    void given_multibranchWithSources_when_lateBranchChangeEvent_then_branchIsNotRebuilt() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", "feature");
@@ -1406,7 +1406,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesAndTwoBranches_when_indexing_then_deadBranchIsDeleted() throws Exception {
+    void given_multibranchWithSourcesAndTwoBranches_when_indexing_then_deadBranchIsDeleted() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", "feature");
@@ -1433,8 +1433,7 @@ public class EventsTest {
     }
 
     @Test
-    public void
-    given_multibranchWithSourcesAndSomeRetentionOfDeadBranches_when_indexing_then_oldestDeadBranchIsDeleted()
+    void given_multibranchWithSourcesAndSomeRetentionOfDeadBranches_when_indexing_then_oldestDeadBranchIsDeleted()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -1499,7 +1498,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesAndTwoBranches_when_eventForBranchRemoval_then_branchIsDisabled()
+    void given_multibranchWithSourcesAndTwoBranches_when_eventForBranchRemoval_then_branchIsDisabled()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -1528,7 +1527,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesAndOneDeadBranches_when_indexing_then_branchIsDeleted() throws Exception {
+    void given_multibranchWithSourcesAndOneDeadBranches_when_indexing_then_branchIsDeleted() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", "feature");
@@ -1558,7 +1557,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesAndCriteria_when_indexingAndNoMatchingBranches_then_noProjectsCreated()
+    void given_multibranchWithSourcesAndCriteria_when_indexingAndNoMatchingBranches_then_noProjectsCreated()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -1574,8 +1573,7 @@ public class EventsTest {
     }
 
     @Test
-    public void
-    given_multibranchWithSourcesCriteriaAndNoMatchingBranches_when_eventDoesntAddMatch_then_noProjectsCreated()
+    void given_multibranchWithSourcesCriteriaAndNoMatchingBranches_when_eventDoesntAddMatch_then_noProjectsCreated()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -1596,7 +1594,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesCriteriaAndNoMatchingBranches_when_eventAddsMatch_then_projectsCreated()
+    void given_multibranchWithSourcesCriteriaAndNoMatchingBranches_when_eventAddsMatch_then_projectsCreated()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -1617,7 +1615,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesCriteriaAndMatchingBranches_when_eventAddsMatch_then_projectsCreated()
+    void given_multibranchWithSourcesCriteriaAndMatchingBranches_when_eventAddsMatch_then_projectsCreated()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -1653,7 +1651,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_eventStorm_then_projectsCreated()
+    void given_multibranch_when_eventStorm_then_projectsCreated()
             throws Exception {
         List<String> branchNames = Arrays.asList( // top 20 names for boys and girls 2016 in case you are wondering
                 "Sophia", "Jackson", "Emma", "Aiden", "Olivia", "Lucas", "Ava", "Liam", "Mia", "Noah", "Isabella",
@@ -1696,7 +1694,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_eventStorm_then_eventsConcurrent()
+    void given_multibranch_when_eventStorm_then_eventsConcurrent()
             throws Exception {
         List<String> branchNames = Arrays.asList( // top 20 names for boys and girls 2016 in case you are wondering
                 "Sophia", "Jackson", "Emma", "Aiden", "Olivia", "Lucas", "Ava", "Liam", "Mia", "Noah", "Isabella",
@@ -1756,9 +1754,9 @@ public class EventsTest {
         assertThat("More than one event processed concurrently", maxInflight.get(), greaterThan(1));
     }
 
-    @Ignore("TODO passes locally, but on CI often (and on Windows, always?) fails; seems to be a ClosedByInterruptException")
+    @Disabled("TODO passes locally, but on CI often (and on Windows, always?) fails; seems to be a ClosedByInterruptException")
     @Test
-    public void given_multibranch_when_oneEventBlocking_then_otherEventsProcessed() throws Exception {
+    void given_multibranch_when_oneEventBlocking_then_otherEventsProcessed() throws Exception {
         List<String> branchNames = Arrays.asList( // top 20 names for boys and girls 2016 in case you are wondering
                 "Sophia", "Jackson", "Emma", "Aiden", "Olivia", "Lucas", "Ava", "Liam", "Mia", "Noah", "Isabella",
                 "Ethan", "Riley", "Mason", "Aria", "Caden", "Zoe", "Oliver", "Charlotte", "Elijah", "Lily", "Grayson",
@@ -1839,7 +1837,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesCriteriaAndMatchingBranches_when_eventRemoveMatch_then_projectsDisables()
+    void given_multibranchWithSourcesCriteriaAndMatchingBranches_when_eventRemoveMatch_then_projectsDisables()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -1871,7 +1869,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_noRepos_then_scanCreatesNoProjects() throws Exception {
+    void given_orgFolder_when_noRepos_then_scanCreatesNoProjects() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -1890,7 +1888,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_noMatchingRepos_then_scanCreatesNoProjects() throws Exception {
+    void given_orgFolder_when_noMatchingRepos_then_scanCreatesNoProjects() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -1909,7 +1907,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_someReposMatch_then_scanCreatesMatchingProjects() throws Exception {
+    void given_orgFolder_when_someReposMatch_then_scanCreatesMatchingProjects() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -1935,7 +1933,7 @@ public class EventsTest {
 
     @Issue("JENKINS-48536")
     @Test
-    public void given_orgFolder_when_someReposMatch_then_scanFiresSCMSourceAfterSave() throws Exception {
+    void given_orgFolder_when_someReposMatch_then_scanFiresSCMSourceAfterSave() throws Exception {
         final ConcurrentMap<SCMSourceOwner,MockSCMSource> saved = new ConcurrentHashMap<>();
         try (MockSCMController c = MockSCMController.create().withSaveListener(new MockSCMSourceSaveListener() {
             @Override
@@ -1968,7 +1966,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolderWithFilteringTrait_when_someReposMatch_then_scanCreatesMatchingProjects() throws Exception {
+    void given_orgFolderWithFilteringTrait_when_someReposMatch_then_scanCreatesMatchingProjects() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches(),
@@ -1998,7 +1996,7 @@ public class EventsTest {
 
     @Test
     @Issue("JENKINS-42000")
-    public void given_orgFolder_when_navigatorIoErrorScanning_then_scanRecordedAsFailure() throws Exception {
+    void given_orgFolder_when_navigatorIoErrorScanning_then_scanRecordedAsFailure() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2052,7 +2050,7 @@ public class EventsTest {
 
     @Test
     @Issue("JENKINS-42000")
-    public void given_orgFolder_when_sourceIoErrorScanning_then_scanRecordedAsFailure() throws Exception {
+    void given_orgFolder_when_sourceIoErrorScanning_then_scanRecordedAsFailure() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2104,7 +2102,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_someReposMatch_then_eventCreatesMatchingProject() throws Exception {
+    void given_orgFolder_when_someReposMatch_then_eventCreatesMatchingProject() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2126,7 +2124,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_someSlashyReposMatch_then_eventCreatesMatchingProject() throws Exception {
+    void given_orgFolder_when_someSlashyReposMatch_then_eventCreatesMatchingProject() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2152,7 +2150,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_someI18nReposMatch_then_eventCreatesMatchingProject() throws Exception {
+    void given_orgFolder_when_someI18nReposMatch_then_eventCreatesMatchingProject() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2178,7 +2176,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_someReposMatch_then_eventsAreValidated() throws Exception {
+    void given_orgFolder_when_someReposMatch_then_eventsAreValidated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2200,7 +2198,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_eventUpdatesABranchToAMatch_then_projectIsCreated() throws Exception {
+    void given_orgFolder_when_eventUpdatesABranchToAMatch_then_projectIsCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2222,7 +2220,7 @@ public class EventsTest {
 
     @Test
     @Issue("JENKINS-48214")
-    public void given_orgFolderWithOnlyDeactivatedChildren_when_eventUpdatesABranchToRestoreAMatch_then_projectIsRestored() throws Exception {
+    void given_orgFolderWithOnlyDeactivatedChildren_when_eventUpdatesABranchToRestoreAMatch_then_projectIsRestored() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2269,7 +2267,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_eventCreatesABranchWithAMatch_then_projectIsCreated() throws Exception {
+    void given_orgFolder_when_eventCreatesABranchWithAMatch_then_projectIsCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2292,7 +2290,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_eventCreatesASlashyBranchWithAMatch_then_projectIsCreated() throws Exception {
+    void given_orgFolder_when_eventCreatesASlashyBranchWithAMatch_then_projectIsCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2315,7 +2313,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_eventCreatesAI18nBranchWithAMatch_then_projectIsCreated() throws Exception {
+    void given_orgFolder_when_eventCreatesAI18nBranchWithAMatch_then_projectIsCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2338,7 +2336,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_eventCreatesARepoWithAMatch_then_projectIsCreated() throws Exception {
+    void given_orgFolder_when_eventCreatesARepoWithAMatch_then_projectIsCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2361,7 +2359,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_eventTouchesADifferentBranchInAnUndiscoveredRepoWithAMatch_then_noProjectIsCreated() throws Exception {
+    void given_orgFolder_when_eventTouchesADifferentBranchInAnUndiscoveredRepoWithAMatch_then_noProjectIsCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2388,7 +2386,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_orgFolder_when_eventCreatesARepoWithoutAMatch_then_noProjectIsCreated() throws Exception {
+    void given_orgFolder_when_eventCreatesARepoWithoutAMatch_then_noProjectIsCreated() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             prj.getSCMNavigators().add(new MockSCMNavigator(c, new MockSCMDiscoverBranches()));
@@ -2406,7 +2404,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_sourcesManipulatedProgrammatically_then_configureTriggersIndex()
+    void given_multibranch_when_sourcesManipulatedProgrammatically_then_configureTriggersIndex()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2428,7 +2426,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesAndDeadBranch_when_eventForBranchResurrection_then_branchIsBuilt()
+    void given_multibranchWithSourcesAndDeadBranch_when_eventForBranchResurrection_then_branchIsBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2462,7 +2460,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWithSourcesCriteriaAndDeadBranch_when_eventForBranchResurrection_then_branchIsBuilt()
+    void given_multibranchWithSourcesCriteriaAndDeadBranch_when_eventForBranchResurrection_then_branchIsBuilt()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2494,7 +2492,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWith2Sources_when_eventForBranchOnHigherSource_then_branchTakeover()
+    void given_multibranchWith2Sources_when_eventForBranchOnHigherSource_then_branchTakeover()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2533,7 +2531,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWith2Sources_when_eventForBranchOnLowerSource_then_eventIgnored()
+    void given_multibranchWith2Sources_when_eventForBranchOnLowerSource_then_eventIgnored()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2572,7 +2570,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWith2Sources_when_eventForBranchOnHigherSourceOpensTakeover_then_branchDeadUntilLowerEvent()
+    void given_multibranchWith2Sources_when_eventForBranchOnHigherSourceOpensTakeover_then_branchDeadUntilLowerEvent()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2617,7 +2615,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWith2SourcesAndCriteria_when_firstSourceDoesntHaveBranchAndSecondSourceHasMatch_then_branchPresent()
+    void given_multibranchWith2SourcesAndCriteria_when_firstSourceDoesntHaveBranchAndSecondSourceHasMatch_then_branchPresent()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2650,7 +2648,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWith2SourcesAndCriteria_when_firstSourceHasBranchWithoutMatchAndSecondSourceHasMatch_then_branchFromSecondSource()
+    void given_multibranchWith2SourcesAndCriteria_when_firstSourceHasBranchWithoutMatchAndSecondSourceHasMatch_then_branchFromSecondSource()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2684,7 +2682,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWith2SourcesAndCriteria_when_eventForBranchOnHigherSource_then_branchTakeover()
+    void given_multibranchWith2SourcesAndCriteria_when_eventForBranchOnHigherSource_then_branchTakeover()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2725,7 +2723,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWith2SourcesAndCriteria_when_eventForBranchOnLowerSource_then_eventIgnored()
+    void given_multibranchWith2SourcesAndCriteria_when_eventForBranchOnLowerSource_then_eventIgnored()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2767,7 +2765,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranchWith2SourcesAndCriteria_when_eventForBranchOnHigherSourceOpensTakeover_then_branchDeadUntilLowerEvent()
+    void given_multibranchWith2SourcesAndCriteria_when_eventForBranchOnHigherSourceOpensTakeover_then_branchDeadUntilLowerEvent()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -2814,7 +2812,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_not_build_is_skipped_then_lastSeenRevision_is_equal_to_lastBuiltRevision() throws Exception {
+    void given_multibranch_when_not_build_is_skipped_then_lastSeenRevision_is_equal_to_lastBuiltRevision() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
@@ -2835,7 +2833,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when_first_build_is_skipped_then_lastSeenRevision_is_different_to_lastBuiltRevision() throws Exception {
+    void given_multibranch_when_first_build_is_skipped_then_lastSeenRevision_is_different_to_lastBuiltRevision() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");
@@ -2880,7 +2878,7 @@ public class EventsTest {
     }
 
     @Test
-    public void given_multibranch_when__build_is_skipped_then_lastBuiltRevision_is_null() throws Exception {
+    void given_multibranch_when__build_is_skipped_then_lastBuiltRevision_is_null() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "my-project");

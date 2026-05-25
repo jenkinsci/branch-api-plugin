@@ -5,7 +5,6 @@ import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public class Extracting<Element, Property> extends TypeSafeDiagnosingMatcher<Iterable<Element>> {
@@ -22,7 +21,7 @@ public class Extracting<Element, Property> extends TypeSafeDiagnosingMatcher<Ite
     protected boolean matchesSafely(Iterable<Element> inColl, Description mismatchDescription) {
         final Iterable<Property> collection = StreamSupport.stream(inColl.spliterator(), false)
                 .map(extractor)
-                .collect(Collectors.toList());
+                .toList();
 
         final boolean matches = nextMatcher.matches(collection);
 

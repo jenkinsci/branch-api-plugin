@@ -24,71 +24,77 @@
 
 package jenkins.branch;
 
-import static org.junit.Assume.assumeFalse;
-
 import hudson.FilePath;
 import hudson.Functions;
 import hudson.model.FreeStyleProject;
 import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.WorkspaceList;
+import jenkins.branch.harness.MultiBranchImpl;
+import jenkins.model.Jenkins;
+import jenkins.scm.impl.SingleSCMSource;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
-import jenkins.branch.harness.MultiBranchImpl;
-import jenkins.model.Jenkins;
-import jenkins.scm.impl.SingleSCMSource;
-import org.junit.After;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.LoggerRule;
-import org.jvnet.hudson.test.WithoutJenkins;
 
-public class WorkspaceLocatorImplTest {
+import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
+@WithJenkins
+class WorkspaceLocatorImplTest {
 
     private static final Logger LOGGER = Logger.getLogger(WorkspaceLocatorImplTest.class.getName());
 
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
-    @Rule
-    public LoggerRule logging = new LoggerRule().record(WorkspaceLocatorImpl.class, Level.FINER);
-    @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    private static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
+
+    @SuppressWarnings("unused")
+    private final LogRecorder logging = new LogRecorder().record(WorkspaceLocatorImpl.class, Level.FINER);
+
+    private JenkinsRule r;
+
+    @TempDir
+    private File tmp;
+
+    private WorkspaceLocatorImpl.Mode origMode;
 
     @SuppressWarnings("deprecation")
-    @Before
-    public void defaultPathMax() {
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        r = rule;
         WorkspaceLocatorImpl.PATH_MAX = WorkspaceLocatorImpl.PATH_MAX_DEFAULT;
-    }
-
-    WorkspaceLocatorImpl.Mode origMode;
-    @Before
-    public void saveMode() {
         origMode = WorkspaceLocatorImpl.MODE;
     }
-    @After
-    public void restoreMode() {
+
+    @AfterEach
+    void restoreMode() {
         WorkspaceLocatorImpl.MODE = origMode;
     }
 
     @WithoutJenkins
     @SuppressWarnings("deprecation")
     @Test
-    public void minimize() {
+    void minimize() {
         assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM57BBNSYVIXGXHCE4KAEVPV5KZYQ", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("a_b_c_d-UMWYJ45JQ6FA3WXMSI3YEOLVQ5P6SFYWN26FRECRSFBUGUD27Y5A", WorkspaceLocatorImpl.minimize("a/b/c/d"));
         assertEquals("stuff_dev_flow-L5GKER67QGVMJ2UD3JCSGKEV2ACON2O4VO4RNUZ27HGUY32SYVXQ", WorkspaceLocatorImpl.minimize("stuff/dev%2Fflow"));
@@ -102,7 +108,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("lahblahblahblahblahblahXYZW-LRVIZHY37BWI3PKRF7WSERGRN3NGPY4T74VWKWNFRMR4IWGXJPQA", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZW"));
         assertEquals("ahblahblahblahblahblahXYZWV-KLYOGWEJODAVXII3MEM2SLNMRPE7HF6IADTBQ5MP66V3RYCL2LAA", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
         assertEquals("hblahblahblahblahblahXYZWVU-OSF24EPB4C42KAUXYHPP66XDQHOHKWPHGKZLIWREKOGZDZ46T2PQ", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
-        
+
         WorkspaceLocatorImpl.PATH_MAX = 40;
         assertEquals("a_b-NX345YSMOYT4QUL4OO7V6EGKM", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("a_b_c_d-UMWYJ45JQ6FA3WXMSI3YEOLVQ", WorkspaceLocatorImpl.minimize("a/b/c/d"));
@@ -117,7 +123,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("ahblahblahXYZW-LRVIZHY37BWI3PKRF7WSERGRN", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZW"));
         assertEquals("hblahblahXYZWV-KLYOGWEJODAVXII3MEM2SLNMR", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
         assertEquals("blahblahXYZWVU-OSF24EPB4C42KAUXYHPP66XDQ", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
-        
+
         WorkspaceLocatorImpl.PATH_MAX = 20;
         assertEquals("a_b-NX345YSMOYT4QUL", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("_c_d-UMWYJ45JQ6FA3WX", WorkspaceLocatorImpl.minimize("a/b/c/d"));
@@ -132,7 +138,7 @@ public class WorkspaceLocatorImplTest {
         assertEquals("XYZW-LRVIZHY37BWI3PK", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZW"));
         assertEquals("YZWV-KLYOGWEJODAVXII", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWV"));
         assertEquals("ZWVU-OSF24EPB4C42KAU", WorkspaceLocatorImpl.minimize("blahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahblahXYZWVU"));
-        
+
         WorkspaceLocatorImpl.PATH_MAX = 1;
         assertEquals("b-NX345YSMOY", WorkspaceLocatorImpl.minimize("a/b"));
         assertEquals("d-UMWYJ45JQ6", WorkspaceLocatorImpl.minimize("a/b/c/d"));
@@ -151,7 +157,7 @@ public class WorkspaceLocatorImplTest {
 
     @Issue({"JENKINS-34564", "JENKINS-38837", "JENKINS-2111"})
     @Test
-    public void locate() throws Exception {
+    void locate() throws Exception {
         assertEquals("${JENKINS_HOME}/workspace/${ITEM_FULL_NAME}", r.jenkins.getRawWorkspaceDir());
         MultiBranchImpl stuff = r.createProject(MultiBranchImpl.class, "stuff");
         stuff.getSourcesList().add(new BranchSource(new SingleSCMSource("dev/flow", new NullSCM())));
@@ -170,15 +176,15 @@ public class WorkspaceLocatorImplTest {
         workspaceDir.setAccessible(true);
         // Poor historical default, and as per JENKINS-21942 even possible after some startup scenarios:
         workspaceDir.set(r.jenkins, "${ITEM_ROOTDIR}/workspace");
-        assertEquals("JENKINS-34564 inactive in this case", new FilePath(master.getRootDir()).child("workspace"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(new FilePath(master.getRootDir()).child("workspace"), r.jenkins.getWorkspaceFor(master), "JENKINS-34564 inactive in this case");
         // JENKINS-38837: customized root.
         workspaceDir.set(r.jenkins, "${JENKINS_HOME}/ws/${ITEM_FULLNAME}");
-        assertEquals("ITEM_FULLNAME interpreted a little differently", r.jenkins.getRootPath().child("ws/stuff_dev_flow"), r.jenkins.getWorkspaceFor(master));
+        assertEquals(r.jenkins.getRootPath().child("ws/stuff_dev_flow"), r.jenkins.getWorkspaceFor(master), "ITEM_FULLNAME interpreted a little differently");
     }
 
     @Issue({"JENKINS-2111", "JENKINS-41068"})
     @Test
-    public void delete() throws Exception {
+    void delete() throws Exception {
         MultiBranchImpl p = r.createProject(MultiBranchImpl.class, "p");
         p.getSourcesList().add(new BranchSource(new SingleSCMSource("master", new NullSCM())));
         BranchSource pr1Source = new BranchSource(new SingleSCMSource("PR-1", new NullSCM()));
@@ -220,15 +226,15 @@ public class WorkspaceLocatorImplTest {
 
     @Issue("JENKINS-2111")
     @Test
-    public void deleteOffline() throws Exception {
-        assumeFalse("TODO observed to fail on Windows https://github.com/jenkinsci/branch-api-plugin/runs/45521728008", Functions.isWindows() && System.getenv("CI") != null);
+    void deleteOffline() throws Exception {
+        assumeFalse(Functions.isWindows() && System.getenv("CI") != null, "TODO observed to fail on Windows https://github.com/jenkinsci/branch-api-plugin/runs/45521728008");
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
         FreeStyleProject p = r.createFreeStyleProject("a'b");
         LOGGER.info("building project on agent");
         DumbSlave s = r.createSlave("remote", null, null);
         p.setAssignedNode(s);
         assertEquals(s, r.buildAndAssertSuccess(p).getBuiltOn());
-        assertEquals(Collections.singletonList("a_b"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+        assertEquals(Collections.singletonList("a_b"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).toList());
         s.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME).copyTo(System.out);
         LOGGER.info("disconnecting agent");
         s.toComputer().disconnect(null).get();
@@ -243,7 +249,7 @@ public class WorkspaceLocatorImplTest {
 
     @Issue({"JENKINS-2111", "JENKINS-58177"})
     @Test
-    public void uniquification() throws Exception {
+    void uniquification() throws Exception {
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
         assertEquals("a_b", r.buildAndAssertSuccess(r.createFreeStyleProject("a'b")).getWorkspace().getName());
         assertEquals("a_b_2", r.buildAndAssertSuccess(r.createFreeStyleProject("a(b")).getWorkspace().getName());
@@ -256,18 +262,18 @@ public class WorkspaceLocatorImplTest {
 
     @Issue("JENKINS-2111")
     @Test
-    public void move() throws Exception {
+    void move() throws Exception {
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
         FreeStyleProject p = r.createFreeStyleProject("old");
         DumbSlave s = r.createSlave("remote", null, null);
         p.setAssignedNode(s);
         FilePath workspace = r.buildAndAssertSuccess(p).getWorkspace();
         assertEquals("old", workspace.getName());
-        assertEquals(Collections.singletonList("old"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+        assertEquals(Collections.singletonList("old"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).toList());
         workspace.child("something").write("", null);
         p.renameTo("new");
         WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
-        assertEquals(Collections.singletonList("new"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).collect(Collectors.toList()));
+        assertEquals(Collections.singletonList("new"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).toList());
         workspace = r.buildAndAssertSuccess(p).getWorkspace();
         assertEquals("new", workspace.getName());
         assertTrue(workspace.child("something").exists());
@@ -278,7 +284,7 @@ public class WorkspaceLocatorImplTest {
 
     @Issue("JENKINS-54640")
     @Test
-    public void collisions() throws Exception {
+    void collisions() throws Exception {
         WorkspaceLocatorImpl.MODE = WorkspaceLocatorImpl.Mode.ENABLED;
         FilePath firstWs = r.buildAndAssertSuccess(r.createFreeStyleProject("first-project-with-a-rather-long-name")).getWorkspace();
         assertEquals("_project-with-a-rather-long-name", firstWs.getName());
@@ -288,20 +294,20 @@ public class WorkspaceLocatorImplTest {
 
     @Issue({"JENKINS-54654", "JENKINS-54968"})
     @Test
-    public void getWorkspaceRoot() throws Exception {
-        File top = tmp.getRoot();
+    void getWorkspaceRoot() throws Exception {
+        File top = tmp;
         Field workspaceDir = Jenkins.class.getDeclaredField("workspaceDir");
         workspaceDir.setAccessible(true);
         workspaceDir.set(r.jenkins, "${ITEM_ROOTDIR}/workspace");
-        assertNull("old default", WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        assertNull(WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "old default");
         workspaceDir.set(r.jenkins, "${JENKINS_HOME}/workspace/${ITEM_FULL_NAME}");
-        assertEquals("new default", r.jenkins.getRootPath().child("workspace"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        assertEquals(r.jenkins.getRootPath().child("workspace"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "new default");
         workspaceDir.set(r.jenkins, "${JENKINS_HOME}/somewhere/else/${ITEM_FULLNAME}");
-        assertEquals("something else using ${JENKINS_HOME} and also deprecated ${ITEM_FULLNAME}", r.jenkins.getRootPath().child("somewhere/else"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        assertEquals(r.jenkins.getRootPath().child("somewhere/else"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "something else using ${JENKINS_HOME} and also deprecated ${ITEM_FULLNAME}");
         workspaceDir.set(r.jenkins, top + File.separator + "${ITEM_FULL_NAME}");
-        assertEquals("different location altogether", new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        assertEquals(new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "different location altogether");
         workspaceDir.set(r.jenkins, top + File.separator + "${ITEM_FULL_NAME}" + File.separator);
-        assertEquals("different location altogether (with slash)", new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins));
+        assertEquals(new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "different location altogether (with slash)");
     }
 
 }

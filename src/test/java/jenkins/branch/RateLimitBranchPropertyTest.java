@@ -39,38 +39,39 @@ import hudson.model.TopLevelItem;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.util.ListBoxModel;
 import integration.harness.BasicMultiBranchProject;
+import jenkins.scm.impl.mock.MockSCMController;
+import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
+import jenkins.scm.impl.mock.MockSCMSource;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LogRecorder;
+import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jenkins.scm.impl.mock.MockSCMController;
-import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
-import jenkins.scm.impl.mock.MockSCMSource;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.LoggerRule;
-import org.jvnet.hudson.test.TestExtension;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class RateLimitBranchPropertyTest {
+@WithJenkins
+class RateLimitBranchPropertyTest {
     /**
      * How long to wait for a build that we expect will start. (Shouldn't affect test execution time)
      */
@@ -84,42 +85,47 @@ public class RateLimitBranchPropertyTest {
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    private static JenkinsRule r;
 
-    @ClassRule
-    public static LoggerRule loggerRule = new LoggerRule().record(RateLimitBranchProperty.class, Level.FINE);
+    @SuppressWarnings("unused")
+    private static final LogRecorder logging = new LogRecorder().record(RateLimitBranchProperty.class, Level.FINE);
     /**
      * Our logger.
      */
     private static Logger LOGGER = Logger.getLogger(RateLimitBranchPropertyTest.class.getName());
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void getCount() throws Exception {
+    void getCount() {
         for (int i = 1; i < 1001; i++) {
             assertThat(new RateLimitBranchProperty(i, "hour", false).getCount(), is(i));
         }
     }
 
     @Test
-    public void getCount_lowerBound() throws Exception {
+    void getCount_lowerBound() {
         assertThat(new RateLimitBranchProperty(0, "hour", false).getCount(), is(1));
     }
 
     @Test
-    public void getCount_upperBound() throws Exception {
+    void getCount_upperBound() {
         assertThat(new RateLimitBranchProperty(1001, "hour", false).getCount(), is(1000));
     }
 
     @Test
-    public void getDurationName() throws Exception {
+    void getDurationName() {
         assertThat(new RateLimitBranchProperty(10, "hour", false).getDurationName(), is("hour"));
         assertThat(new RateLimitBranchProperty(10, "year", false).getDurationName(), is("year"));
         assertThat(new RateLimitBranchProperty(10, "minute", false).getDurationName(), is("minute"));
@@ -127,18 +133,18 @@ public class RateLimitBranchPropertyTest {
     }
 
     @Test
-    public void checkDurationNameExists() throws Exception {
+    void checkDurationNameExists() {
         ListBoxModel items = r.jenkins.getDescriptorByType(RateLimitBranchProperty.JobPropertyImpl.DescriptorImpl.class).doFillDurationNameItems();
-        assertEquals(items.size(), 7);
+        assertEquals(7, items.size());
     }
 
     @Test
-    public void rateLimitsBlockBuilds_maxRate() throws Exception {
+    void rateLimitsBlockBuilds_maxRate() throws Exception {
         rateLimitsBlockBuilds(1000);
     }
 
     @Test
-    public void rateLimitsBlockBuilds_medRate() throws Exception {
+    void rateLimitsBlockBuilds_medRate() throws Exception {
         rateLimitsBlockBuilds(500);
     }
 
@@ -203,19 +209,17 @@ public class RateLimitBranchPropertyTest {
             // it can take more than the requested delay... that's ok, but it should not be
             // more than 500ms longer (i.e. 5 of our Queue.maintain loops above)
             final long delay = (long)(60.f * 60.f / rate * 1000);
-            assumeThat("At least the rate implied delay but no more than 500ms longer",
-                    System.currentTimeMillis() - startTime,
-                    allOf(
-                            greaterThanOrEqualTo(delay - 200L),
-                            lessThanOrEqualTo(delay + 500L)
-                    )
+            assumeTrue(
+                    System.currentTimeMillis() - startTime >= delay - 200L
+                            && System.currentTimeMillis() - startTime <= delay + 500L,
+            "At least the rate implied delay but no more than 500ms longer"
             );
             future.get();
         }
     }
 
     @Test
-    public void rateLimitsConcurrentBuilds() throws Exception {
+    void rateLimitsConcurrentBuilds() throws Exception {
         int rate = 1000;
         try (final MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -294,12 +298,10 @@ public class RateLimitBranchPropertyTest {
             // it can take more than the requested delay... that's ok, but it should not be
             // more than 500ms longer (i.e. 5 of our Queue.maintain loops above)
             final long delay = (long)(60.f * 60.f / rate * 1000);
-            assumeThat("At least the rate implied delay but no more than 500ms longer",
-                    secondBuild.getStartTimeInMillis() - firstBuild.getStartTimeInMillis(),
-                    allOf(
-                            greaterThanOrEqualTo(delay - 200L),
-                            lessThanOrEqualTo(delay + 500L)
-                    )
+            assumeTrue(
+                    secondBuild.getStartTimeInMillis() - firstBuild.getStartTimeInMillis() >= delay - 200L
+                            && secondBuild.getStartTimeInMillis() - firstBuild.getStartTimeInMillis() <= delay + 500L,
+                    "At least the rate implied delay but no more than 500ms longer"
             );
             future.get();
         }
@@ -307,7 +309,7 @@ public class RateLimitBranchPropertyTest {
     }
 
     @Test
-    public void rateLimitsUserBoost() throws Exception {
+    void rateLimitsUserBoost() throws Exception {
         try (final MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -405,7 +407,7 @@ public class RateLimitBranchPropertyTest {
     }
 
     @Test
-    public void configRoundtrip() throws Exception {
+    void configRoundtrip() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");

@@ -30,9 +30,6 @@ import hudson.model.FreeStyleProject;
 import hudson.model.TopLevelItem;
 import hudson.util.LogTaskListener;
 import integration.harness.BasicMultiBranchProject;
-import java.util.Collections;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import jenkins.scm.impl.mock.MockChangeRequestFlags;
 import jenkins.scm.impl.mock.MockRepositoryFlags;
 import jenkins.scm.impl.mock.MockSCMController;
@@ -40,10 +37,15 @@ import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMDiscoverChangeRequests;
 import jenkins.scm.impl.mock.MockSCMDiscoverTags;
 import jenkins.scm.impl.mock.MockSCMSource;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
+import java.util.Collections;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -52,24 +54,30 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
-public class BranchNameContributorTest {
+@WithJenkins
+class BranchNameContributorTest {
     private static final Logger LOGGER = Logger.getLogger(BranchNameContributorTest.class.getName());
+
     /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    private static JenkinsRule r;
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void buildEnvironmentFor() throws Exception {
+    void buildEnvironmentFor() throws Exception {
         BranchNameContributor instance =
                 r.jenkins.getExtensionList(EnvironmentContributor.class).get(BranchNameContributor.class);
         assertThat("The extension is registered", instance, notNullValue());

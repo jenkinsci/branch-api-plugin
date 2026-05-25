@@ -23,38 +23,47 @@
  */
 package jenkins.branch;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.queue.QueueTaskFuture;
-import java.util.Collections;
 import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.plugins.git.junit.jupiter.WithGitSampleRepo;
 import jenkins.plugins.git.traits.BranchDiscoveryTrait;
 import jenkins.scm.impl.SingleSCMNavigator;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class NoTriggerOrganizationFolderPropertyTest {
+import java.util.Collections;
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
-    @Rule
-    public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+@WithJenkins
+@WithGitSampleRepo
+class NoTriggerOrganizationFolderPropertyTest {
+
+    private JenkinsRule r;
+    private GitSampleRepoRule sampleRepo;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule, GitSampleRepoRule repo) {
+        r = rule;
+        sampleRepo = repo;
+    }
 
     @Issue("JENKINS-32396")
     @Test
-    public void smokes() throws Exception {
+    void smokes() throws Exception {
         sampleRepo.init();
         sampleRepo.git("checkout", "-b", "newfeature");
         sampleRepo.write("stuff", "content");
@@ -111,7 +120,7 @@ public class NoTriggerOrganizationFolderPropertyTest {
         assertEquals(1, release.getNextBuildNumber());
         assertEquals(3, newfeature.getNextBuildNumber());
         QueueTaskFuture<FreeStyleBuild> releaseBuild = release.scheduleBuild2(0);
-        assertNotNull("was able to schedule a manual build of the release branch", releaseBuild);
+        assertNotNull(releaseBuild, "was able to schedule a manual build of the release branch");
         assertEquals(1, releaseBuild.get().getNumber());
         assertEquals(2, release.getNextBuildNumber());
     }
