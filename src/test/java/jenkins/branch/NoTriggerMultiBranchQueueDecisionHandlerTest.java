@@ -34,6 +34,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
+import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Action;
 import hudson.model.Cause;
@@ -214,6 +215,47 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         assertThat(result, is(Boolean.TRUE));
     }
 
+    @Test
+    public void scheduleForIndexingCauseWhenComputationTriggeredByEventAndIndexingStrategyIsSet() {
+        List<Cause> computationCauses = Arrays.asList(new BranchEventCause(mock(SCMEvent.class), "event trigger"));
+        JobImpl job = mockMultiBranchJob("test", computationCauses);
+        NoTriggerProperty noTriggerProperty = new NoTriggerPropertyImpl("test", SuppressionStrategy.INDEXING);
+        NoTriggerMultiBranchQueueDecisionHandler handler = createHandler(noTriggerProperty);
+        List<Action> actions = Arrays.asList(mockCauseAction(createCause(BRANCH_INDEXING_CAUSE_ID)));
+
+        boolean result = handler.shouldSchedule(job, actions);
+
+        assertThat(result, is(Boolean.TRUE));
+    }
+
+    @Test
+    public void scheduleForIndexingCauseWhenComputationTriggeredByMultipleCausesAndIndexingStrategyIsSet() {
+        List<Cause> computationCauses = Arrays.asList(
+                new BranchIndexingCause(),
+                new BranchEventCause(mock(SCMEvent.class), "event trigger"));
+        JobImpl job = mockMultiBranchJob("test", computationCauses);
+        NoTriggerProperty noTriggerProperty = new NoTriggerPropertyImpl("test", SuppressionStrategy.INDEXING);
+        NoTriggerMultiBranchQueueDecisionHandler handler = createHandler(noTriggerProperty);
+        List<Action> actions = Arrays.asList(mockCauseAction(createCause(BRANCH_INDEXING_CAUSE_ID)));
+
+        boolean result = handler.shouldSchedule(job, actions);
+
+        assertThat(result, is(Boolean.TRUE));
+    }
+
+    @Test
+    public void suppressForEventCauseEvenWhenComputationTriggeredByEventAndEventsStrategyIsSet() {
+        List<Cause> computationCauses = Arrays.asList(new BranchEventCause(mock(SCMEvent.class), "event trigger"));
+        JobImpl job = mockMultiBranchJob("test", computationCauses);
+        NoTriggerProperty noTriggerProperty = new NoTriggerPropertyImpl("test", SuppressionStrategy.EVENTS);
+        NoTriggerMultiBranchQueueDecisionHandler handler = createHandler(noTriggerProperty);
+        List<Action> actions = Arrays.asList(mockCauseAction(createCause(BRANCH_EVENT_CAUSE_ID)));
+
+        boolean result = handler.shouldSchedule(job, actions);
+
+        assertThat(result, is(Boolean.FALSE));
+    }
+
     private static NoTriggerMultiBranchQueueDecisionHandler createHandler() {
         return new NoTriggerMultiBranchQueueDecisionHandlerImpl(Collections.emptyList());
     }
@@ -223,6 +265,10 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
     }
 
     private static JobImpl mockMultiBranchJob(String branchName) {
+        return mockMultiBranchJob(branchName, Collections.emptyList());
+    }
+
+    private static JobImpl mockMultiBranchJob(String branchName, List<Cause> computationCauses) {
         JobImpl job = mock(JobImpl.class);
         MultiBranchProject project = mock(MultiBranchProject.class);
         when(job.getParent()).thenReturn(project);
@@ -231,6 +277,9 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         Branch branch = mock(Branch.class);
         when(factory.getBranch(job)).thenReturn(branch);
         when(branch.getName()).thenReturn(branchName);
+        FolderComputation computation = mock(FolderComputation.class);
+        when(project.getComputation()).thenReturn(computation);
+        when(computation.getCauses()).thenReturn(computationCauses);
         return job;
     }
 

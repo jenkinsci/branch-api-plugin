@@ -108,7 +108,16 @@ public abstract class NoTriggerMultiBranchQueueDecisionHandler extends Queue.Que
         if (!getBranchNameOf(job).matches(property.getTriggeredBranchesRegex())) {
             return true;
         }
+        if (cause instanceof BranchIndexingCause && isComputationTriggeredByEvent(job)) {
+            return false;
+        }
         return property.getStrategy().shouldSuppress(cause);
+    }
+
+    private static boolean isComputationTriggeredByEvent(Job<?, ?> job) {
+        MultiBranchProject<?, ?> project = (MultiBranchProject<?, ?>) job.getParent();
+        return project.getComputation().getCauses().stream()
+                .anyMatch(BranchEventCause.class::isInstance);
     }
 
     private static String getBranchNameOf(Job<?, ?> job) {
