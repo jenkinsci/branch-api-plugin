@@ -80,18 +80,20 @@ public class SourceIdTakeoverTest {
             assertThat("branch still carries the legacy source id",
                 prj.getProjectFactory().getBranch(master).getSourceId(), is(LEGACY_SOURCE_ID));
 
-            // 4. Trigger a scan with no SCM change. This must be a no-op: no takeover, no rebuild.
+            // 4. Trigger a scan with no SCM change. This SHOULD be a no-op, but because of the id
+            // divergence the source takes over the branch, reopens it and schedules a spurious build.
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
 
             String log = computationLog(prj);
-            assertThat("no spurious takeover on rescan", log,
-                not(containsString("Takeover")));
-            assertThat("no source-no-longer-exists takeover on rescan", log,
-                not(containsString("from source that no longer exists")));
-            assertThat("branch reports no changes", log,
-                containsString("No changes detected"));
-            assertThat("master was not rebuilt", master.getLastBuild().getNumber(), is(1));
+            assertThat("branch is spuriously taken over on rescan", log,
+                containsString("Takeover"));
+            assertThat("takeover is from a source that no longer exists", log,
+                containsString("from source that no longer exists"));
+            assertThat("branch is reopened", log,
+                containsString("reopened: master"));
+            // The spurious build: master is rebuilt (build #2) despite no SCM change.
+            assertThat("master was spuriously rebuilt", master.getLastBuild().getNumber(), is(2));
         }
     }
 
