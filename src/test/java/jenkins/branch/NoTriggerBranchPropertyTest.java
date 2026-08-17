@@ -39,6 +39,7 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import hudson.model.CauseAction;
 import jenkins.branch.harness.MultiBranchImpl;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
@@ -159,6 +160,23 @@ public class NoTriggerBranchPropertyTest {
         }
     }
 
+    @Issue("JENKINS-71144")
+    @Test
+    public void allowIndexingWhenTriggeredByEvent() throws Exception {
+        try (MockSCMController controller = MockSCMController.create()) {
+            ProjectWrapper project = createProject(controller, NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy.INDEXING);
+            assertThat(project.getNextBuildNumber(), is(1));
+            project.triggerIndexing();
+            assertThat(project.getNextBuildNumber(), is(1));
+            project.triggerEventTriggeredIndexing();
+            assertThat(project.getNextBuildNumber(), is(2));
+            project.triggerIndexing();
+            assertThat(project.getNextBuildNumber(), is(2));
+            project.triggerEvent();
+            assertThat(project.getNextBuildNumber(), is(3));
+        }
+    }
+
     @Issue("JENKINS-63673")
     @Test
     public void suppressEvents() throws Exception {
@@ -241,6 +259,17 @@ public class NoTriggerBranchPropertyTest {
         public void triggerIndexing() throws Exception {
             bumpHeadRevision();
             project.scheduleBuild2(0).getFuture().get();
+            jenkinsRule.waitUntilNoActivity();
+            showComputation(project);
+        }
+
+        public void triggerEventTriggeredIndexing() throws Exception {
+            String revision = bumpHeadRevision();
+            MockSCMHeadEvent event = new MockSCMHeadEvent(
+                "test", SCMEvent.Type.UPDATED, controller, repositoryName, BRANCH_NAME, revision);
+            project.scheduleBuild2(0,
+                new CauseAction(new BranchEventCause(event, "test event")))
+                .getFuture().get();
             jenkinsRule.waitUntilNoActivity();
             showComputation(project);
         }
