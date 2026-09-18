@@ -30,7 +30,6 @@ import hudson.model.TopLevelItem;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
 import integration.harness.BasicSCMSourceCriteria;
-import java.util.Collections;
 import jenkins.branch.BranchSource;
 import jenkins.branch.OrganizationFolder;
 import jenkins.scm.api.SCMHead;
@@ -45,33 +44,41 @@ import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMRevision;
 import jenkins.scm.impl.mock.MockSCMSource;
 import jenkins.scm.impl.mock.MockTagSCMHead;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
+import java.util.Collections;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
-public class ScmApiTest {
+@WithJenkins
+class ScmApiTest {
 
     /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    private static JenkinsRule r;
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void given_multibranchJob_when_scmHeadHeadByItemFindHead_then_headReturned() throws Exception {
+    void given_multibranchJob_when_scmHeadHeadByItemFindHead_then_headReturned() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             long timestamp = c.createTag("foo", "master", "1.0");
@@ -91,7 +98,7 @@ public class ScmApiTest {
     }
 
     @Test
-    public void given_multibranch_when_scmHeadHeadByItemFindHead_then_noHeadReturned() throws Exception {
+    void given_multibranch_when_scmHeadHeadByItemFindHead_then_noHeadReturned() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createTag("foo", "master", "1.0");
@@ -107,7 +114,7 @@ public class ScmApiTest {
     }
 
     @Test
-    public void given_orgFolder_when_scmHeadHeadByItemFindHead_then_noHeadReturned() throws Exception {
+    void given_orgFolder_when_scmHeadHeadByItemFindHead_then_noHeadReturned() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
@@ -121,7 +128,7 @@ public class ScmApiTest {
     }
 
     @Test
-    public void given_freestyle_when_scmHeadHeadByItemFindHead_then_noHeadReturned() throws Exception {
+    void given_freestyle_when_scmHeadHeadByItemFindHead_then_noHeadReturned() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             FreeStyleProject prj = r.createFreeStyleProject();

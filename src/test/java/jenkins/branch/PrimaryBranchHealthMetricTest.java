@@ -3,16 +3,16 @@ package jenkins.branch;
 import hudson.model.FreeStyleProject;
 import hudson.model.TopLevelItem;
 import integration.harness.HealthReportingMultiBranchProject;
-
-import java.util.Collections;
-
 import jenkins.scm.impl.mock.MockSCMController;
 import jenkins.scm.impl.mock.MockSCMDiscoverBranches;
 import jenkins.scm.impl.mock.MockSCMSource;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
+import java.util.Collections;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -23,20 +23,29 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
-public class PrimaryBranchHealthMetricTest {
+@WithJenkins
+class PrimaryBranchHealthMetricTest {
 
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    /**
+     * All tests in this class only create items and do not affect other global configuration, thus we trade test
+     * execution time for the restriction on only touching items.
+     */
+    private static JenkinsRule r;
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void given__multibranch_without_primary__when__reporting_health__then__empty() throws Exception {
+    void given__multibranch_without_primary__when__reporting_health__then__empty() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", "stable");
@@ -52,7 +61,7 @@ public class PrimaryBranchHealthMetricTest {
     }
 
     @Test
-    public void given__multibranch_with_primary__when__reporting_health__then__primary_health() throws Exception {
+    void given__multibranch_with_primary__when__reporting_health__then__primary_health() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", "stable");
@@ -74,7 +83,7 @@ public class PrimaryBranchHealthMetricTest {
     }
 
     @Test
-    public void given__multibranch_with_primary__when__reporting_health__then__non_empty() throws Exception {
+    void given__multibranch_with_primary__when__reporting_health__then__non_empty() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", "stable");

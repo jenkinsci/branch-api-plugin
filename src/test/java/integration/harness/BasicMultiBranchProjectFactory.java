@@ -65,8 +65,7 @@ public class BasicMultiBranchProjectFactory extends MultiBranchProjectFactory.By
 
     @Override
     public void updateExistingProject(@NonNull MultiBranchProject<?, ?> project,
-                                      @NonNull Map<String, Object> attributes, @NonNull TaskListener listener)
-            throws IOException, InterruptedException {
+                                      @NonNull Map<String, Object> attributes, @NonNull TaskListener listener) {
         if (project instanceof BasicMultiBranchProject) {
             SCMSourceCriteria criteria = ((BasicMultiBranchProject) project).getCriteria();
             if (!Objects.equals(this.criteria, criteria)) {

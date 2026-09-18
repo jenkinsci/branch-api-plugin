@@ -25,8 +25,6 @@
 
 package integration;
 
-import org.htmlunit.html.HtmlAnchor;
-import org.htmlunit.html.HtmlPage;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Action;
@@ -42,11 +40,6 @@ import hudson.views.StatusColumn;
 import hudson.views.WeatherColumn;
 import integration.harness.BasicMultiBranchProject;
 import integration.harness.BasicMultiBranchProjectFactory;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import jenkins.branch.Branch;
 import jenkins.branch.BranchIndexingCause;
 import jenkins.branch.BranchSource;
@@ -65,11 +58,20 @@ import jenkins.scm.impl.mock.MockSCMLink;
 import jenkins.scm.impl.mock.MockSCMNavigator;
 import jenkins.scm.impl.mock.MockSCMSource;
 import jenkins.scm.impl.mock.MockSCMSourceEvent;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.htmlunit.html.HtmlAnchor;
+import org.htmlunit.html.HtmlPage;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -82,24 +84,29 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
-public class BrandingTest {
+@WithJenkins
+class BrandingTest {
 
     /**
      * All tests in this class only create items and do not affect other global configuration, thus we trade test
      * execution time for the restriction on only touching items.
      */
-    @ClassRule
-    public static JenkinsRule r = new JenkinsRule();
+    private static JenkinsRule r;
 
-    @Before
-    public void cleanOutAllItems() throws Exception {
+    @BeforeAll
+    static void setUp(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @BeforeEach
+    void setUp() throws Exception {
         for (TopLevelItem i : r.getInstance().getItems()) {
             i.delete();
         }
     }
 
     @Test
-    public void given_multibranch_when_noSourcesDefined_then_noSourceBrandingPresent() throws Exception {
+    void given_multibranch_when_noSourcesDefined_then_noSourceBrandingPresent() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
             prj.setCriteria(null);
@@ -108,7 +115,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_multibranch_when_sourceDefined_then_sourceBrandingPresentAfterIndexing()
+    void given_multibranch_when_sourceDefined_then_sourceBrandingPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -123,7 +130,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_multibranch_when_sourceDefined_then_sourceBrandingPresentAfterSourceEvent()
+    void given_multibranch_when_sourceDefined_then_sourceBrandingPresentAfterSourceEvent()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -138,7 +145,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_multibranch_when_branches_then_branchBrandingPresent()
+    void given_multibranch_when_branches_then_branchBrandingPresent()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -152,7 +159,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_multibranch_when_branches_then_runBrandingPresent()
+    void given_multibranch_when_branches_then_runBrandingPresent()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -169,7 +176,7 @@ public class BrandingTest {
 
     @Test
     @Issue("JENKINS-48090")
-    public void given_multibranch_when_runBrandingIncludesAdditionalCauses_then_causesMerged() throws Exception {
+    void given_multibranch_when_runBrandingIncludesAdditionalCauses_then_causesMerged() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "foo");
@@ -188,7 +195,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolder_when_noNavigatorsDefined_then_noNavigatorBrandingPresent() throws Exception {
+    void given_orgFolder_when_noNavigatorsDefined_then_noNavigatorBrandingPresent() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             OrganizationFolder prj = r.jenkins.createProject(OrganizationFolder.class, "foo");
             assertThat(prj.getAction(MockSCMLink.class), nullValue());
@@ -196,7 +203,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_multibranch_when_sourceHasNonSafeNames_then_branchDisplayNameNotMangled() throws Exception {
+    void given_multibranch_when_sourceHasNonSafeNames_then_branchDisplayNameNotMangled() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo", ".");
@@ -258,7 +265,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_multibranch_when_sourceHasI18nNames_then_branchDisplayNameNotMangled() throws Exception {
+    void given_multibranch_when_sourceHasI18nNames_then_branchDisplayNameNotMangled() throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
             c.createBranch("foo","特征/新");
@@ -347,7 +354,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolder_when_navigatorDefined_then_navigatorBrandingPresentAfterIndexing()
+    void given_orgFolder_when_navigatorDefined_then_navigatorBrandingPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -362,7 +369,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolderWithI18nRepos_when_indexing_then_repoNamesEncoded()
+    void given_orgFolderWithI18nRepos_when_indexing_then_repoNamesEncoded()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("England");
@@ -437,7 +444,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolderWithNonSafeRepos_when_indexing_then_repoNamesEncoded()
+    void given_orgFolderWithNonSafeRepos_when_indexing_then_repoNamesEncoded()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("a?");
@@ -482,7 +489,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolder_when_navigatorDefined_then_sourceBrandingPresentAfterIndexing()
+    void given_orgFolder_when_navigatorDefined_then_sourceBrandingPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -497,7 +504,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolder_when_navigatorDefined_then_branchBrandingPresentAfterIndexing()
+    void given_orgFolder_when_navigatorDefined_then_branchBrandingPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -513,7 +520,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolder_when_navigatorDefined_then_revisionBrandingPresentAfterIndexing()
+    void given_orgFolder_when_navigatorDefined_then_revisionBrandingPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -529,7 +536,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_multibranch_when_decoratedSourceDefined_then_descriptionPresentAfterIndexing()
+    void given_multibranch_when_decoratedSourceDefined_then_descriptionPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -545,7 +552,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_multibranch_when_decoratedSourceDefined_then_displayNamePresentAfterIndexing()
+    void given_multibranch_when_decoratedSourceDefined_then_displayNamePresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -564,7 +571,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolder_when_decoratedSourceDefined_then_descriptionLinkPresentAfterIndexing()
+    void given_orgFolder_when_decoratedSourceDefined_then_descriptionLinkPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -588,7 +595,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_multibranch_when_decoratedSourceDefined_then_folderIconPresentAfterIndexing()
+    void given_multibranch_when_decoratedSourceDefined_then_folderIconPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -604,7 +611,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolder_when_decoratedOrganizationDefined_then_folderIconPresentAfterIndexing()
+    void given_orgFolder_when_decoratedOrganizationDefined_then_folderIconPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -620,7 +627,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolder_when_decoratedOrganizationDefined_then_displayNamePresentAfterIndexing()
+    void given_orgFolder_when_decoratedOrganizationDefined_then_displayNamePresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");
@@ -636,7 +643,7 @@ public class BrandingTest {
     }
 
     @Test
-    public void given_orgFolder_when_decoratedOrganizationDefined_then_descriptionLinkPresentAfterIndexing()
+    void given_orgFolder_when_decoratedOrganizationDefined_then_descriptionLinkPresentAfterIndexing()
             throws Exception {
         try (MockSCMController c = MockSCMController.create()) {
             c.createRepository("foo");

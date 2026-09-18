@@ -26,31 +26,33 @@ package jenkins.branch;
 import hudson.model.Action;
 import hudson.model.Items;
 import hudson.scm.NullSCM;
-import java.util.Collections;
 import jenkins.scm.impl.NullSCMSource;
 import jenkins.scm.impl.mock.MockSCMHead;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import java.util.Collections;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 
-public class BranchTest {
+class BranchTest {
 
     @Test
-    public void given_livePre2Branch_when_deserialized_then_objectInvariantsCorrect() throws Exception {
+    void given_livePre2Branch_when_deserialized_then_objectInvariantsCorrect() {
         Branch b = (Branch) Items.XSTREAM2
-                .fromXML("<branch class=\"jenkins.branch.Branch\" >\n"
-                        + "        <sourceId>any-id</sourceId>\n"
-                        + "        <head class=\"jenkins.scm.impl.mock.MockSCMHead\">\n"
-                        + "          <name>quicker</name>\n"
-                        + "        </head>\n"
-                        + "        <scm class=\"hudson.scm.NullSCM\"/>\n"
-                        + "        <properties class=\"java.util.concurrent.CopyOnWriteArrayList\">\n"
-                        + "          <jenkins.branch.NoTriggerBranchProperty/>\n"
-                        + "        </properties>\n"
-                        + "      </branch>");
+                .fromXML("""
+                        <branch class="jenkins.branch.Branch" >
+                          <sourceId>any-id</sourceId>
+                          <head class="jenkins.scm.impl.mock.MockSCMHead">
+                            <name>quicker</name>
+                          </head>
+                          <scm class="hudson.scm.NullSCM"/>
+                          <properties class="java.util.concurrent.CopyOnWriteArrayList">
+                            <jenkins.branch.NoTriggerBranchProperty/>
+                          </properties>
+                        </branch>""");
         assertThat(b.getName(), is("quicker"));
         assertThat(b.getHead(), instanceOf(MockSCMHead.class));
         assertThat(b.getActions(), is(Collections.<Action>emptyList()));
@@ -60,18 +62,19 @@ public class BranchTest {
     }
 
     @Test
-    public void given_deadPre2Branch_when_deserialized_then_objectInvariantsCorrect() throws Exception {
+    void given_deadPre2Branch_when_deserialized_then_objectInvariantsCorrect() {
         Branch b = (Branch) Items.XSTREAM2
-                .fromXML("<branch class=\"jenkins.branch.Branch$Dead\" >\n"
-                        + "        <sourceId>::NullSCMSource::</sourceId>\n"
-                        + "        <head class=\"jenkins.scm.impl.mock.MockSCMHead\">\n"
-                        + "          <name>quicker</name>\n"
-                        + "        </head>\n"
-                        + "        <scm class=\"hudson.scm.NullSCM\"/>\n"
-                        + "        <properties class=\"java.util.concurrent.CopyOnWriteArrayList\">\n"
-                        + "          <jenkins.branch.NoTriggerBranchProperty/>\n"
-                        + "        </properties>\n"
-                        + "      </branch>");
+                .fromXML("""
+                        <branch class="jenkins.branch.Branch$Dead" >
+                          <sourceId>::NullSCMSource::</sourceId>
+                          <head class="jenkins.scm.impl.mock.MockSCMHead">
+                            <name>quicker</name>
+                          </head>
+                          <scm class="hudson.scm.NullSCM"/>
+                          <properties class="java.util.concurrent.CopyOnWriteArrayList">
+                            <jenkins.branch.NoTriggerBranchProperty/>
+                          </properties>
+                        </branch>""");
         assertThat(b.getName(), is("quicker"));
         assertThat(b.getHead(), instanceOf(MockSCMHead.class));
         assertThat(b.getActions(), is(Collections.<Action>emptyList()));

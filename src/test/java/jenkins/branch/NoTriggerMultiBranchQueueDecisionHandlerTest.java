@@ -23,6 +23,27 @@
  */
 package jenkins.branch;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.Action;
+import hudson.model.Cause;
+import hudson.model.CauseAction;
+import hudson.model.ItemGroup;
+import hudson.model.Job;
+import hudson.model.Queue.Task;
+import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.NoTriggerProperty;
+import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy;
+import jenkins.scm.api.SCMEvent;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -33,35 +54,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.cloudbees.hudson.plugins.folder.Folder;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.model.Action;
-import hudson.model.Cause;
-import hudson.model.CauseAction;
-import hudson.model.ItemGroup;
-import hudson.model.Job;
-import hudson.model.Queue.Task;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.NoTriggerProperty;
-import jenkins.branch.NoTriggerMultiBranchQueueDecisionHandler.SuppressionStrategy;
-import jenkins.scm.api.SCMEvent;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-@RunWith(JUnitParamsRunner.class)
-public class NoTriggerMultiBranchQueueDecisionHandlerTest {
+class NoTriggerMultiBranchQueueDecisionHandlerTest {
 
     private static final String BRANCH_INDEXING_CAUSE_ID = "indexing";
     private static final String BRANCH_EVENT_CAUSE_ID = "event";
 
     @Test
-    public void scheduleWhenNoJobIsPassed() {
+    void scheduleWhenNoJobIsPassed() {
         Task task = mock(Task.class);
         List<Action> actions = mock(List.class);
 
@@ -72,7 +71,7 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
     }
 
     @Test
-    public void scheduleWhenNoMultiBranchIsPassed() {
+    void scheduleWhenNoMultiBranchIsPassed() {
         Job job = mock(JobImpl.class);
         Folder folder = mock(Folder.class);
         when(job.getParent()).thenReturn(folder);
@@ -85,7 +84,7 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
     }
 
     @Test
-    public void scheduleWhenNoCauseActionsExist() {
+    void scheduleWhenNoCauseActionsExist() {
         JobImpl job = mockMultiBranchJob();
         NoTriggerMultiBranchQueueDecisionHandler handler = spy(createHandler());
         List<Action> actions = Arrays.asList(mock(Action.class), mock(Action.class));
@@ -96,9 +95,9 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         verify(handler, never()).getBranchProperties((MultiBranchProject) job.getParent(), job);
     }
 
-    @Test
-    @Parameters({BRANCH_INDEXING_CAUSE_ID, BRANCH_EVENT_CAUSE_ID})
-    public void scheduleWhenNoPropertiesAreSet(String causeTypeId) {
+    @ParameterizedTest
+    @ValueSource(strings = {BRANCH_INDEXING_CAUSE_ID, BRANCH_EVENT_CAUSE_ID})
+    void scheduleWhenNoPropertiesAreSet(String causeTypeId) {
         JobImpl job = mockMultiBranchJob();
         NoTriggerMultiBranchQueueDecisionHandler handler = spy(createHandler());
         List<Action> actions = new ArrayList<>();
@@ -115,14 +114,14 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         verify(handler, never()).processAction(job, skippedAction);
     }
 
-    @Test
-    @Parameters({
+    @ParameterizedTest
+    @CsvSource({
         BRANCH_INDEXING_CAUSE_ID + ", true",
         BRANCH_INDEXING_CAUSE_ID + ", false",
         BRANCH_EVENT_CAUSE_ID + ", true",
         BRANCH_EVENT_CAUSE_ID + ", false"
     })
-    public void overrideIndexTriggersJobPropertyTakesPrecedenceOverNoTriggerProperty(String causeTypeId, boolean override) {
+    void overrideIndexTriggersJobPropertyTakesPrecedenceOverNoTriggerProperty(String causeTypeId, boolean override) {
         JobImpl job = mockMultiBranchJob();
         OverrideIndexTriggersJobProperty overrideTriggersProperty = new OverrideIndexTriggersJobProperty(override);
         when(job.getProperty(OverrideIndexTriggersJobProperty.class)).thenReturn(overrideTriggersProperty);
@@ -142,9 +141,9 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         verifyNoInteractions(noTriggerProperty);
     }
 
-    @Test
-    @Parameters({BRANCH_INDEXING_CAUSE_ID, BRANCH_EVENT_CAUSE_ID})
-    public void suppressWhenBranchNameDoesNotMatchTheRegex(String causeTypeId) {
+    @ParameterizedTest
+    @ValueSource(strings = {BRANCH_INDEXING_CAUSE_ID, BRANCH_EVENT_CAUSE_ID})
+    void suppressWhenBranchNameDoesNotMatchTheRegex(String causeTypeId) {
         JobImpl job = mockMultiBranchJob("test/branch-123");
         NoTriggerProperty noTriggerProperty = mock(NoTriggerProperty.class);
         when(noTriggerProperty.getTriggeredBranchesRegex()).thenReturn("^main$");
@@ -160,9 +159,9 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         verify(noTriggerProperty, never()).getStrategy();
     }
 
-    @Test
-    @Parameters({BRANCH_INDEXING_CAUSE_ID, BRANCH_EVENT_CAUSE_ID})
-    public void scheduleWhenBranchNameMatchesTheRegexAndNoneStrategyIsSet(String causeTypeId) {
+    @ParameterizedTest
+    @ValueSource(strings = {BRANCH_INDEXING_CAUSE_ID, BRANCH_EVENT_CAUSE_ID})
+    void scheduleWhenBranchNameMatchesTheRegexAndNoneStrategyIsSet(String causeTypeId) {
         JobImpl job = mockMultiBranchJob("test/branch-123");
         NoTriggerProperty noTriggerProperty = spy(new NoTriggerPropertyImpl(".*", SuppressionStrategy.NONE));
         NoTriggerMultiBranchQueueDecisionHandler handler = createHandler(noTriggerProperty);
@@ -176,9 +175,9 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
         verify(noTriggerProperty).getStrategy();
     }
 
-    @Test
-    @Parameters({BRANCH_INDEXING_CAUSE_ID, BRANCH_EVENT_CAUSE_ID})
-    public void suppressWhenBranchNameMatchesTheRegexAndStrategyShouldSuppressIt(String causeTypeId) {
+    @ParameterizedTest
+    @ValueSource(strings = {BRANCH_INDEXING_CAUSE_ID, BRANCH_EVENT_CAUSE_ID})
+    void suppressWhenBranchNameMatchesTheRegexAndStrategyShouldSuppressIt(String causeTypeId) {
         JobImpl job = mockMultiBranchJob("test");
         SuppressionStrategy strategy = BRANCH_INDEXING_CAUSE_ID.equals(causeTypeId) ? SuppressionStrategy.INDEXING : SuppressionStrategy.EVENTS;
         NoTriggerProperty noTriggerProperty = new NoTriggerPropertyImpl("test", strategy);
@@ -191,7 +190,7 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
     }
 
     @Test
-    public void scheduleForEventCauseWhenBranchNameMatchesAndIndexingStrategyIsSet() {
+    void scheduleForEventCauseWhenBranchNameMatchesAndIndexingStrategyIsSet() {
         JobImpl job = mockMultiBranchJob("indexing");
         NoTriggerProperty noTriggerProperty = new NoTriggerPropertyImpl(".*", SuppressionStrategy.INDEXING);
         NoTriggerMultiBranchQueueDecisionHandler handler = createHandler(noTriggerProperty);
@@ -203,7 +202,7 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
     }
 
     @Test
-    public void scheduleForIndexingCauseWhenBranchNameMatchesAndEventsStrategyIsSet() {
+    void scheduleForIndexingCauseWhenBranchNameMatchesAndEventsStrategyIsSet() {
         JobImpl job = mockMultiBranchJob("event");
         NoTriggerProperty noTriggerProperty = new NoTriggerPropertyImpl(".*", SuppressionStrategy.EVENTS);
         NoTriggerMultiBranchQueueDecisionHandler handler = createHandler(noTriggerProperty);
@@ -243,7 +242,7 @@ public class NoTriggerMultiBranchQueueDecisionHandlerTest {
 
     private static CauseAction mockCauseAction(Cause... causes) {
         CauseAction action = mock(CauseAction.class);
-        when(action.getCauses()).thenReturn(Arrays.stream(causes).collect(Collectors.toList()));
+        when(action.getCauses()).thenReturn(Arrays.stream(causes).toList());
         return action;
     }
 

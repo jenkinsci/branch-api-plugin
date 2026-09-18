@@ -24,15 +24,15 @@
 
 package jenkins.branch;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-public class NameEncoderTest {
+class NameEncoderTest {
 
     @Test
-    public void smokes() throws Exception {
+    void smokes() {
         assertRoundTrip("test");
         assertRoundTrip(".");
         assertRoundTrip("..");
@@ -42,7 +42,7 @@ public class NameEncoderTest {
     }
 
     @Test
-    public void safeNames() {
+    void safeNames() {
         assertRoundTrip("foo");
         assertRoundTrip("foo-bar");
         assertRoundTrip("foo bar");
@@ -51,7 +51,7 @@ public class NameEncoderTest {
     }
 
     @Test
-    public void reservedNames() {
+    void reservedNames() {
         assertRoundTrip(".");
         assertRoundTrip("..");
         assertRoundTrip("con");
@@ -79,7 +79,7 @@ public class NameEncoderTest {
     }
 
     @Test
-    public void slashNames() {
+    void slashNames() {
         assertRoundTrip("foo/bar");
         assertRoundTrip("foo/bar/fu manchu");
         assertRoundTrip("foo/bar/fu manchu/1");
@@ -101,7 +101,7 @@ public class NameEncoderTest {
     }
 
     @Test
-    public void longNames() {
+    void longNames() {
         assertRoundTrip("cafebabedeadbeefcafebabedeadbeef");
         assertRoundTrip("cafebabedeadbeefcafebabedeadbeefcafebabedeadbeef");
         assertRoundTrip("cafebabedeadbeefcafebabeDeadbeefcafebabedeadbeef");
@@ -110,7 +110,7 @@ public class NameEncoderTest {
     }
 
     @Test
-    public void nonSafeNames() {
+    void nonSafeNames() {
         assertRoundTrip("Is maith liom criospaí");
         assertRoundTrip("Ich liebe Fußball");
         assertRoundTrip("我喜欢披萨");
@@ -122,14 +122,14 @@ public class NameEncoderTest {
     }
 
     @Test
-    public void spain() {
+    void spain() {
         assertRoundTrip("Espana");
         assertRoundTrip("España");
         assertRoundTrip("Espa\u006e\u0303a");
     }
 
     @Test
-    public void ireland() {
+    void ireland() {
         assertRoundTrip("Eireann");
         assertRoundTrip("Éireann");
         assertRoundTrip("E\u0301ireann");
