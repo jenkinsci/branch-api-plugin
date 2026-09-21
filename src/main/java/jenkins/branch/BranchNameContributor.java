@@ -30,11 +30,13 @@ import hudson.Extension;
 import hudson.model.EnvironmentContributor;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.Date;
 import jenkins.scm.api.SCMHeadOrigin;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMRevisionAction;
 import jenkins.scm.api.metadata.ContributorMetadataAction;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
@@ -46,6 +48,7 @@ import jenkins.scm.api.mixin.TagSCMHead;
  * Defines the environment variable {@code BRANCH_NAME} and {@code BRANCH_IS_PRIMARY} for multibranch builds.
  * Also defines {@code CHANGE_*} variables for {@link ChangeRequestSCMHead} instances and 
  * {@code TAG_*} variables for {@link TagSCMHead} instances.
+ * For builds (not jobs), also defines {@code SCM_REVISION}.
  */
 @Extension
 public class BranchNameContributor extends EnvironmentContributor {
@@ -96,6 +99,15 @@ public class BranchNameContributor extends EnvironmentContributor {
                     envs.putIfNotNull("TAG_DATE", new Date(((TagSCMHead) head).getTimestamp()).toString());
                 }
             }
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    @Override
+    public void buildEnvironmentFor(Run r, EnvVars envs, TaskListener listener) throws IOException, InterruptedException {
+        var action = r.getAction(SCMRevisionAction.class);
+        if (action != null) {
+            envs.put("SCM_REVISION", action.getRevision().toString());
         }
     }
 
