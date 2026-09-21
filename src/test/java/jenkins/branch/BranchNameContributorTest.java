@@ -107,13 +107,14 @@ class BranchNameContributorTest {
             assertThat("We now have the primary branch", primaryBranch, notNullValue());
             EnvVars env = new EnvVars();
             instance.buildEnvironmentFor(master, env, new LogTaskListener(LOGGER, Level.FINE));
-            assertThat(env.keySet(), contains(is("BRANCH_NAME")));
+            assertThat(env.keySet(), contains(is("BRANCH_NAME"), is("FOLDER_NAME")));
             assertThat(env.get("BRANCH_NAME"), is("master"));
             assertThat(env.keySet(), not(contains(is("BRANCH_IS_PRIMARY"))));
 
             env = new EnvVars();
             instance.buildEnvironmentFor(cr1, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
+                    is("FOLDER_NAME"),
                     is("BRANCH_NAME"),
                     is("CHANGE_ID"),
                     is("CHANGE_TARGET"),
@@ -138,6 +139,7 @@ class BranchNameContributorTest {
             env = new EnvVars();
             instance.buildEnvironmentFor(cr2, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
+                    is("FOLDER_NAME"),
                     is("BRANCH_NAME"),
                     is("CHANGE_ID"),
                     is("CHANGE_TARGET"),
@@ -164,6 +166,7 @@ class BranchNameContributorTest {
             env = new EnvVars();
             instance.buildEnvironmentFor(tag, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
+                    is("FOLDER_NAME"),
                     is("BRANCH_NAME"),
                     is("TAG_NAME"),
                     is("TAG_TIMESTAMP"),
@@ -180,6 +183,7 @@ class BranchNameContributorTest {
             env = new EnvVars();
             instance.buildEnvironmentFor(primaryBranch, env, new LogTaskListener(LOGGER, Level.FINE));
             assertThat(env.keySet(), containsInAnyOrder(
+                    is("FOLDER_NAME"),
                     is("BRANCH_NAME"),
                     is("BRANCH_IS_PRIMARY")
             ));

@@ -85,6 +85,7 @@ class EnvironmentTest {
             prj.scheduleBuild2(0).getFuture().get();
             r.waitUntilNoActivity();
             assertThat(r.getLog(prj.getItem("master").getBuildByNumber(1)), containsString("BRANCH_NAME=master"));
+            assertThat(r.getLog(prj.getItem("master").getBuildByNumber(1)), containsString("FOLDER_NAME=foo"));
         }
     }
 
