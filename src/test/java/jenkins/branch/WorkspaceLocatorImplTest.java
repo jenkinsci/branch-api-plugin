@@ -31,7 +31,6 @@ import hudson.scm.NullSCM;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.WorkspaceList;
 import jenkins.branch.harness.MultiBranchImpl;
-import jenkins.model.Jenkins;
 import jenkins.scm.impl.SingleSCMSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +45,6 @@ import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -55,7 +53,6 @@ import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -171,15 +168,6 @@ class WorkspaceLocatorImplTest {
         assertEquals(slave.getWorkspaceRoot().child("stuff_dev_flow"), slave.getWorkspaceFor(master));
         FreeStyleProject unrelated = r.createFreeStyleProject("100's of problems");
         assertEquals(r.jenkins.getRootPath().child("workspace/100's of problems"), r.jenkins.getWorkspaceFor(unrelated));
-        // Checking other values of workspaceDir.
-        Field workspaceDir = Jenkins.class.getDeclaredField("workspaceDir"); // currently settable only by Jenkins.doConfigSubmit
-        workspaceDir.setAccessible(true);
-        // Poor historical default, and as per JENKINS-21942 even possible after some startup scenarios:
-        workspaceDir.set(r.jenkins, "${ITEM_ROOTDIR}/workspace");
-        assertEquals(new FilePath(master.getRootDir()).child("workspace"), r.jenkins.getWorkspaceFor(master), "JENKINS-34564 inactive in this case");
-        // JENKINS-38837: customized root.
-        workspaceDir.set(r.jenkins, "${JENKINS_HOME}/ws/${ITEM_FULLNAME}");
-        assertEquals(r.jenkins.getRootPath().child("ws/stuff_dev_flow"), r.jenkins.getWorkspaceFor(master), "ITEM_FULLNAME interpreted a little differently");
     }
 
     @Issue({"JENKINS-2111", "JENKINS-41068"})
@@ -290,24 +278,6 @@ class WorkspaceLocatorImplTest {
         assertEquals("_project-with-a-rather-long-name", firstWs.getName());
         firstWs.deleteRecursive();
         assertEquals("roject-with-a-rather-long-name_2", r.buildAndAssertSuccess(r.createFreeStyleProject("second-project-with-a-rather-long-name")).getWorkspace().getName());
-    }
-
-    @Issue({"JENKINS-54654", "JENKINS-54968"})
-    @Test
-    void getWorkspaceRoot() throws Exception {
-        File top = tmp;
-        Field workspaceDir = Jenkins.class.getDeclaredField("workspaceDir");
-        workspaceDir.setAccessible(true);
-        workspaceDir.set(r.jenkins, "${ITEM_ROOTDIR}/workspace");
-        assertNull(WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "old default");
-        workspaceDir.set(r.jenkins, "${JENKINS_HOME}/workspace/${ITEM_FULL_NAME}");
-        assertEquals(r.jenkins.getRootPath().child("workspace"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "new default");
-        workspaceDir.set(r.jenkins, "${JENKINS_HOME}/somewhere/else/${ITEM_FULLNAME}");
-        assertEquals(r.jenkins.getRootPath().child("somewhere/else"), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "something else using ${JENKINS_HOME} and also deprecated ${ITEM_FULLNAME}");
-        workspaceDir.set(r.jenkins, top + File.separator + "${ITEM_FULL_NAME}");
-        assertEquals(new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "different location altogether");
-        workspaceDir.set(r.jenkins, top + File.separator + "${ITEM_FULL_NAME}" + File.separator);
-        assertEquals(new FilePath(top), WorkspaceLocatorImpl.getWorkspaceRoot(r.jenkins), "different location altogether (with slash)");
     }
 
 }

@@ -331,7 +331,7 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
             if (m.matches()) {
                 return new FilePath(new File(m.group(1).replace("${JENKINS_HOME}", ((Jenkins) node).getRootDir().getAbsolutePath())));
             } else {
-                LOGGER.fine(() -> "JENKINS-2111 path sanitization ineffective when using Workspace Root Directory " + rawWorkspaceDir + "; switch to ${JENKINS_HOME}/workspace/${ITEM_FULL_NAME} as in JENKINS-8446 / JENKINS-21942");
+                LOGGER.fine(() -> "JENKINS-2111 path sanitization ineffective when using Workspace Root Directory " + rawWorkspaceDir + "; stop overriding workspacesDir");
                 return null;
             }
         } else if (node instanceof Slave) {
