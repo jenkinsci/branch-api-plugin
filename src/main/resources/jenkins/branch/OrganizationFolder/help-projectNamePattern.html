@@ -1,0 +1,37 @@
+<div>
+  Regular expression pattern used to extract project name suffix from Jenkinsfile path.
+  
+  <p>
+    The pattern is applied to the Jenkinsfile path, and the first capture group
+    (if any) is appended to the base repository name to create the final project name.
+  </p>
+  
+  <h3>Default Pattern</h3>
+  <p>
+    <code>.*?(-[^.]+).*</code>
+  </p>
+  <p>
+    This pattern captures everything after the last hyphen and before the final dot.
+  </p>
+  
+  <h3>Examples</h3>
+  <table border="1" cellpadding="3" cellspacing="0">
+    <tr><th>Pattern</th><th>Jenkinsfile</th><th>Resulting Project</th></tr>
+    <tr>
+      <td><code>.*?(-[^.]+).*</code></td>
+      <td><code>Jenkinsfile-win</code></td>
+      <td><code>myproject-win</code></td>
+    </tr>
+    <tr>
+      <td><code>.*?(-[^.]+).*</code></td>
+      <td><code>Jenkinsfile</code></td>
+      <td><code>myproject</code></td>
+    </tr>
+  </table>
+  
+  <h3>Pattern Tips</h3>
+  <ul>
+    <li>The first capture group's content is used as the suffix</li>
+    <li>If no match is found, the original repository name is used</li>
+  </ul>
+</div>
