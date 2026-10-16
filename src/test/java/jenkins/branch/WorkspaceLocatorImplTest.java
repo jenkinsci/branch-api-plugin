@@ -45,6 +45,7 @@ import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,6 +54,7 @@ import static jenkins.branch.NoTriggerBranchPropertyTest.showComputation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -205,7 +207,7 @@ class WorkspaceLocatorImplTest {
         p.scheduleBuild2(0).getFuture().get();
         r.waitUntilNoActivity();
         showComputation(p);
-        WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
+        assertTimeoutPreemptively(Duration.ofSeconds(120), WorkspaceLocatorImpl.Deleter::waitForTasksToFinish);
         assertEquals(Collections.singletonList(master), r.jenkins.getAllItems(FreeStyleProject.class));
         assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master")), r.jenkins.getRootPath().child("workspace").listDirectories());
         assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master")), slave.getWorkspaceRoot().listDirectories());
@@ -260,7 +262,7 @@ class WorkspaceLocatorImplTest {
         assertEquals(Collections.singletonList("old"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).toList());
         workspace.child("something").write("", null);
         p.renameTo("new");
-        WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
+        assertTimeoutPreemptively(Duration.ofSeconds(120), WorkspaceLocatorImpl.Deleter::waitForTasksToFinish);
         assertEquals(Collections.singletonList("new"), s.getWorkspaceRoot().listDirectories().stream().map(FilePath::getName).toList());
         workspace = r.buildAndAssertSuccess(p).getWorkspace();
         assertEquals("new", workspace.getName());
