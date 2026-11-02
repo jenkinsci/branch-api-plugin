@@ -39,7 +39,6 @@ import jenkins.scm.api.metadata.ContributorMetadataAction;
 import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
 import jenkins.scm.api.mixin.ChangeRequestSCMHead;
-import jenkins.scm.api.mixin.ChangeRequestSCMHead2;
 import jenkins.scm.api.mixin.TagSCMHead;
 
 /**
@@ -66,13 +65,11 @@ public class BranchNameContributor extends EnvironmentContributor {
                 if (branch.getAction(PrimaryInstanceMetadataAction.class) != null) {
                     envs.put("BRANCH_IS_PRIMARY", "true");
                 }
-                if (head instanceof ChangeRequestSCMHead) {
-                    envs.putIfNotNull("CHANGE_ID", ((ChangeRequestSCMHead) head).getId());
-                    SCMHead target = ((ChangeRequestSCMHead) head).getTarget();
+                if (head instanceof ChangeRequestSCMHead crHead) {
+                    envs.putIfNotNull("CHANGE_ID", crHead.getId());
+                    SCMHead target = crHead.getTarget();
                     envs.putIfNotNull("CHANGE_TARGET", target.getName());
-                    if (head instanceof ChangeRequestSCMHead2) {
-                        envs.putIfNotNull("CHANGE_BRANCH", ((ChangeRequestSCMHead2) head).getOriginName());
-                    }
+                    envs.putIfNotNull("CHANGE_BRANCH", crHead.getOriginName());
                     SCMHeadOrigin origin = head.getOrigin();
                     if (origin instanceof SCMHeadOrigin.Fork) {
                         envs.putIfNotNull("CHANGE_FORK", ((SCMHeadOrigin.Fork) origin).getName());
