@@ -1074,6 +1074,55 @@ class EventsTest {
         }
     }
 
+    /**
+     * When several {@link jenkins.branch.MultiBranchProject}s watch the same repository, a single event is applied
+     * to all of them at once and every project picks up the change.
+     */
+    @Test
+    public void given_multipleMultibranchSharingARepository_when_event_then_allFetchedConcurrently()
+            throws Exception {
+        int projectCount = 3;
+        AtomicBoolean armed = new AtomicBoolean();
+        // Counted down once per project from inside the SCM; each caller then waits for the count to reach zero,
+        // which can only happen if all three fetches are in flight at the same time. If the event were applied to
+        // the projects one after another, the first caller would wait here until it timed out.
+        CountDownLatch fetching = new CountDownLatch(projectCount);
+        try (MockSCMController c = MockSCMController.create().withLatency(new MockLatency() {
+            @Override
+            public void apply() throws InterruptedException {
+                if (!armed.get()) {
+                    return;
+                }
+                fetching.countDown();
+                if (!fetching.await(15, TimeUnit.SECONDS)) {
+                    throw new AssertionError("the event was applied to the projects sequentially");
+                }
+            }
+        })) {
+            c.createRepository("foo");
+            List<BasicMultiBranchProject> projects = new ArrayList<>();
+            for (int i = 0; i < projectCount; i++) {
+                BasicMultiBranchProject prj = r.jenkins.createProject(BasicMultiBranchProject.class, "prj-" + i);
+                prj.setCriteria(null);
+                prj.getSourcesList()
+                        .add(new BranchSource(new MockSCMSource(c, "foo", new MockSCMDiscoverBranches())));
+                prj.scheduleBuild2(0).getFuture().get();
+                projects.add(prj);
+            }
+            r.waitUntilNoActivity();
+
+            c.createBranch("foo", "feature");
+            // resolve the revision before arming the latch, so it only counts the event being applied
+            String revision = c.getRevision("foo", "feature");
+            armed.set(true);
+            fire(new MockSCMHeadEvent(SCMEvent.Type.CREATED, c, "foo", "feature", revision));
+
+            for (BasicMultiBranchProject prj : projects) {
+                assertThat(prj.getFullName() + " picked up the new branch", prj.getItem("feature"), notNullValue());
+            }
+        }
+    }
+
     public static class BuildRevisionStrategyImpl extends BranchBuildStrategy {
         private final Set<String> approved;
 

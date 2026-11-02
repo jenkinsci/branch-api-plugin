@@ -59,6 +59,10 @@ import hudson.model.listeners.SaveableListener;
 import hudson.scm.PollingResult;
 import hudson.security.ACL;
 import hudson.security.Permission;
+import hudson.util.ClassLoaderSanityThreadFactory;
+import hudson.util.DaemonThreadFactory;
+import hudson.util.ExceptionCatchingThreadFactory;
+import hudson.util.NamingThreadFactory;
 import hudson.util.PersistedList;
 import hudson.util.StreamTaskListener;
 import hudson.util.XStream2;
@@ -80,6 +84,12 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -103,7 +113,9 @@ import jenkins.scm.api.metadata.ObjectMetadataAction;
 import jenkins.scm.api.mixin.TagSCMHead;
 import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.impl.NullSCMSource;
+import jenkins.security.ImpersonatingExecutorService;
 import jenkins.triggers.SCMTriggerItem;
+import jenkins.util.ContextResettingExecutorService;
 import jenkins.util.SystemProperties;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.FileUtils;
@@ -134,9 +146,54 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
         SystemProperties.getBoolean(MultiBranchProject.class.getName() + ".fireSCMSourceBuildsAfterSave", true);
 
     /**
+     * How many {@link MultiBranchProject} instances a single {@link SCMHeadEvent} may be applied to at the same
+     * time, set via the system property
+     * {@code jenkins.branch.MultiBranchProject$SCMEventListenerImpl.EVENT_THREAD_LIMIT}.
+     * <p>
+     * The default is {@code 10}, matching {@link SCMEvent}'s own dispatcher pool, so the number of SCM round trips
+     * in flight at once stays the same as when each event was applied to every project one at a time. Set it to
+     * {@code 1} to get that sequential behaviour back. Values below {@code 1} are treated as {@code 1}. Read only
+     * once, when the shared thread pool is first created.
+     */
+    private static /* not final */ int EVENT_THREAD_LIMIT = Math.max(1, SystemProperties.getInteger(
+            SCMEventListenerImpl.class.getName() + ".EVENT_THREAD_LIMIT", 10));
+
+    /**
+     * The lazily created pool used to apply a single {@link SCMHeadEvent} to multiple {@link MultiBranchProject}
+     * instances concurrently. This is deliberately <strong>not</strong> {@link SCMEvent}'s own pool: the thread that
+     * dispatched the event blocks until every task completes, and a pool thread blocking on other tasks in the same
+     * pool can deadlock it.
+     */
+    private static ExecutorService eventProcessingExecutorService;
+
+    /**
      * Our logger.
      */
     private static final Logger LOGGER = Logger.getLogger(MultiBranchProject.class.getName());
+
+    /**
+     * Returns the shared pool used to apply a single {@link SCMHeadEvent} to multiple projects concurrently. The
+     * pool is bounded by {@link #EVENT_THREAD_LIMIT} and uses daemon threads that time out when idle. Callers
+     * should impersonate on submission so that each task runs as whoever dispatched the event.
+     *
+     * @return the shared pool.
+     */
+    private static synchronized ExecutorService eventProcessingExecutorService() {
+        if (eventProcessingExecutorService == null) {
+            // core == max plus allowCoreThreadTimeOut, because a ThreadPoolExecutor with an unbounded queue
+            // never grows past its core size
+            ThreadPoolExecutor delegate = new ThreadPoolExecutor(EVENT_THREAD_LIMIT, EVENT_THREAD_LIMIT, 10L,
+                    TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+                    new ExceptionCatchingThreadFactory(
+                            new NamingThreadFactory(
+                                    new ClassLoaderSanityThreadFactory(new DaemonThreadFactory()),
+                                    "MultiBranchProject.SCMEventListenerImpl")));
+            delegate.allowCoreThreadTimeOut(true);
+            // tasks run arbitrary SCMSource code, so restore the thread name and context class loader afterwards.
+            eventProcessingExecutorService = new ContextResettingExecutorService(delegate);
+        }
+        return eventProcessingExecutorService;
+    }
 
     /**
      * The user supplied branch sources.
@@ -1282,6 +1339,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                                       String eventType, String eventOrigin, long eventTimestamp, int matchCount)
             throws IOException, InterruptedException {
             Set<String> sourceIds = new HashSet<>();
+            List<EventTask> tasks = new ArrayList<>();
             for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
                 if (!p.isBuildable()) {
@@ -1403,51 +1461,78 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                     sourceIds.add(source.getId());
                 }
                 if (haveMatch) {
-                    long start = System.currentTimeMillis();
-                    try (StreamTaskListener listener = p.getComputation().createEventsListener();
-                         ChildObserver childObserver = p.openEventsChildObserver()) {
-                        try {
-                            listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                start, eventDescription, eventType, eventOrigin, eventTimestamp);
-                            for (SCMSource source : p.getSCMSources()) {
-                                if (event.isMatch(source)) {
-                                    source.fetch(
-                                        p.getSCMSourceCriteria(source),
-                                        p.new SCMHeadObserverImpl(
-                                            source,
-                                            childObserver,
-                                            listener,
-                                            _factory,
-                                            new EventCauseFactory(event),
-                                            event),
-                                        event,
-                                        listener
-                                    );
-                                }
-                            }
-                        } catch (IOException e) {
-                            printStackTrace(e, listener.error(e.getMessage()));
-                        } catch (InterruptedException e) {
-                            listener.error(e.getMessage());
-                            throw e;
-                        } finally {
-                            long end = System.currentTimeMillis();
-                            listener.getLogger()
-                                .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                    end, eventDescription, eventType, eventOrigin, eventTimestamp,
-                                    Util.getTimeSpanString(end - start));
-                        }
-                    } catch (IOException e) {
-                        printStackTrace(e, global.error("[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
-                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp));
-                    } catch (InterruptedException e) {
-                        global.error("[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
-                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType, eventOrigin, eventTimestamp);
-                        throw e;
-                    }
+                    tasks.add(() -> fetchNewHeads(p, _factory, event, global, eventDescription, eventType,
+                        eventOrigin, eventTimestamp));
                 }
             }
+            runEventTasks(tasks, global, eventDescription, eventType, eventOrigin, eventTimestamp);
             return matchCount;
+        }
+
+        /**
+         * Applies a {@link SCMEvent.Type#CREATED} event to one project that the serial matching phase has already
+         * matched. This is the slow part of {@link #processHeadCreate}: it makes the blocking
+         * {@link SCMSource#fetch} calls, so it runs through {@link #runEventTasks} instead of inline.
+         *
+         * @param p                the project.
+         * @param _factory         the project's {@link BranchProjectFactory}.
+         * @param event            the event.
+         * @param global           the global event listener.
+         * @param eventDescription the event description.
+         * @param eventType        the event type.
+         * @param eventOrigin      the event origin.
+         * @param eventTimestamp   the event timestamp.
+         * @throws InterruptedException if interrupted.
+         */
+        @SuppressWarnings("rawtypes")
+        private void fetchNewHeads(MultiBranchProject<?, ?> p, BranchProjectFactory _factory, SCMHeadEvent<?> event,
+                                   TaskListener global, String eventDescription, String eventType, String eventOrigin,
+                                   long eventTimestamp) throws InterruptedException {
+            long start = System.currentTimeMillis();
+            try (StreamTaskListener listener = p.getComputation().createEventsListener();
+                 ChildObserver childObserver = p.openEventsChildObserver()) {
+                try {
+                    listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                        start, eventDescription, eventType, eventOrigin, eventTimestamp);
+                    for (SCMSource source : p.getSCMSources()) {
+                        if (event.isMatch(source)) {
+                            source.fetch(
+                                p.getSCMSourceCriteria(source),
+                                p.new SCMHeadObserverImpl(
+                                    source,
+                                    childObserver,
+                                    listener,
+                                    _factory,
+                                    new EventCauseFactory(event),
+                                    event),
+                                event,
+                                listener
+                            );
+                        }
+                    }
+                } catch (IOException e) {
+                    printStackTrace(e, listener.error(e.getMessage()));
+                } catch (InterruptedException e) {
+                    listener.error(e.getMessage());
+                    throw e;
+                } finally {
+                    long end = System.currentTimeMillis();
+                    listener.getLogger()
+                        .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                            end, eventDescription, eventType, eventOrigin, eventTimestamp,
+                            Util.getTimeSpanString(end - start));
+                }
+            } catch (IOException e) {
+                printStackTrace(e, global.error(
+                    "[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
+                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                    eventOrigin, eventTimestamp));
+            } catch (InterruptedException e) {
+                global.error("[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
+                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                    eventOrigin, eventTimestamp);
+                throw e;
+            }
         }
 
         private int processHeadUpdate(SCMHeadEvent<?> event, TaskListener global, String eventDescription,
@@ -1457,6 +1542,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
             Set<String> candidateNames = new HashSet<>();
             Map<SCMSource, Map<SCMHead, SCMRevision>> revisionMaps = new IdentityHashMap<>();
             Set<Job<?, ?>> jobs = new HashSet<>();
+            List<EventTask> tasks = new ArrayList<>();
             for (MultiBranchProject<?, ?> p : Jenkins.get().getAllItems(MultiBranchProject.class)) {
                 String pFullName = p.getFullName();
                 if (!p.isBuildable()) {
@@ -1643,75 +1729,11 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 if (!matches.isEmpty()) {
                     matchCount++;
                     global.getLogger().format("Found match against %s%n", pFullName);
-                    long start = System.currentTimeMillis();
-                    try (StreamTaskListener listener = p.getComputation().createEventsListener();
-                         ChildObserver childObserver = p.openEventsChildObserver()) {
-                        try {
-                            listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                start, eventDescription, eventType, eventOrigin, eventTimestamp);
-                            for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
-                                m.getKey().fetch(
-                                    p.getSCMSourceCriteria(m.getKey()),
-                                    p.new SCMHeadObserverImpl(
-                                        m.getKey(),
-                                        childObserver,
-                                        listener,
-                                        _factory,
-                                        new EventCauseFactory(event),
-                                        event),
-                                    event,
-                                    listener
-                                );
-                            }
-                            // now dis-associate branches that no-longer exist
-                            Set<String> names = childObserver.observed();
-                            for (Job<?, ?> j : jobs) {
-                                if (names.contains(j.getName())) {
-                                    // observed, so not dead
-                                    continue;
-                                }
-                                Branch branch = _factory.getBranch(j);
-                                String sourceId = branch.getSourceId();
-                                boolean foundSource = false;
-                                for (SCMSource s : matches.keySet()) {
-                                    if (sourceId.equals(s.getId())) {
-                                        foundSource = true;
-                                    }
-                                }
-                                if (!foundSource) {
-                                    // not safe to switch to a dead branch
-                                    continue;
-                                }
-                                _factory.decorate(_factory.setBranch(
-                                    j,
-                                    new Branch.Dead(branch)
-                                ));
-                                j.save();
-                            }
-                        } catch (IOException e) {
-                            printStackTrace(e, listener.error(e.getMessage()));
-                        } catch (InterruptedException e) {
-                            listener.error(e.getMessage());
-                            throw e;
-                        } finally {
-                            long end = System.currentTimeMillis();
-                            listener.getLogger()
-                                .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                    end, eventDescription, eventType, eventOrigin, eventTimestamp,
-                                    Util.getTimeSpanString(end - start));
-                        }
-                    } catch (IOException e) {
-                        printStackTrace(e, global.error(
-                            "[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
-                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                            eventOrigin, eventTimestamp));
-                    } catch (InterruptedException e) {
-                        global.error(
-                            "[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
-                            System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                            eventOrigin, eventTimestamp);
-                        throw e;
-                    }
+                    // the scratch collections get cleared and reused on the next iteration, so snapshot them here
+                    Map<SCMSource, SCMHead> matchesSnapshot = new IdentityHashMap<>(matches);
+                    Set<Job<?, ?>> jobsSnapshot = new HashSet<>(jobs);
+                    tasks.add(() -> fetchUpdatedHeads(p, _factory, matchesSnapshot, jobsSnapshot, event, global,
+                        eventDescription, eventType, eventOrigin, eventTimestamp));
                 } else {
                     // didn't match an existing branch, maybe the criteria now match against an updated branch
                     boolean haveMatch = false;
@@ -1733,59 +1755,280 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                         }
                     }
                     if (haveMatch) {
-                        long start = System.currentTimeMillis();
-                        try (StreamTaskListener listener = p.getComputation().createEventsListener();
-                             ChildObserver childObserver = p.openEventsChildObserver()) {
-                            listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
-                                start, eventDescription, eventType, eventOrigin, eventTimestamp);
-                            try {
-                                for (SCMSource source : p.getSCMSources()) {
-                                    if (event.isMatch(source)) {
-                                        source.fetch(
-                                            p.getSCMSourceCriteria(source),
-                                            p.new SCMHeadObserverImpl(
-                                                source,
-                                                childObserver,
-                                                listener,
-                                                _factory,
-                                                new EventCauseFactory(event),
-                                                event
-                                            ),
-                                            event,
-                                            listener
-                                        );
-                                    }
-                                }
-                            } catch (IOException e) {
-                                printStackTrace(e, listener.error(e.getMessage()));
-                            } catch (InterruptedException e) {
-                                listener.error(e.getMessage());
-                                throw e;
-                            } finally {
-                                long end = System.currentTimeMillis();
-                                listener.getLogger().format(
-                                    "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
-                                    end, eventDescription, eventType, eventOrigin, eventTimestamp,
-                                    Util.getTimeSpanString(end - start));
-                            }
-                        } catch (IOException e) {
-                            printStackTrace(e, global.error(
-                                "[%tc] %s encountered an error while processing %s %s event from %s with "
-                                    + "timestamp %tc",
-                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                                eventOrigin, eventTimestamp));
-                        } catch (InterruptedException e) {
-                            global.error(
-                                "[%tc] %s was interrupted while processing %s %s event from %s with "
-                                    + "timestamp %tc",
-                                System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
-                                eventOrigin, eventTimestamp);
-                            throw e;
-                        }
+                        tasks.add(() -> fetchNewlyMatchingHeads(p, _factory, event, global, eventDescription,
+                            eventType, eventOrigin, eventTimestamp));
                     }
                 }
             }
+            runEventTasks(tasks, global, eventDescription, eventType, eventOrigin, eventTimestamp);
             return matchCount;
+        }
+
+        /**
+         * Applies an {@link SCMEvent.Type#UPDATED} or {@link SCMEvent.Type#REMOVED} event to one project whose
+         * existing branches matched during the serial matching phase. This is the slow part of
+         * {@link #processHeadUpdate}: it makes the blocking {@link SCMSource#fetch} calls, so it runs through
+         * {@link #runEventTasks} instead of inline.
+         *
+         * @param p                the project.
+         * @param _factory         the project's {@link BranchProjectFactory}.
+         * @param matches          the matching sources and heads found by the matching phase.
+         * @param jobs             the matching jobs found by the matching phase.
+         * @param event            the event.
+         * @param global           the global event listener.
+         * @param eventDescription the event description.
+         * @param eventType        the event type.
+         * @param eventOrigin      the event origin.
+         * @param eventTimestamp   the event timestamp.
+         * @throws InterruptedException if interrupted.
+         */
+        @SuppressWarnings("rawtypes")
+        private void fetchUpdatedHeads(MultiBranchProject<?, ?> p, BranchProjectFactory _factory,
+                                       Map<SCMSource, SCMHead> matches, Set<Job<?, ?>> jobs, SCMHeadEvent<?> event,
+                                       TaskListener global, String eventDescription, String eventType,
+                                       String eventOrigin, long eventTimestamp) throws InterruptedException {
+            long start = System.currentTimeMillis();
+            try (StreamTaskListener listener = p.getComputation().createEventsListener();
+                 ChildObserver childObserver = p.openEventsChildObserver()) {
+                try {
+                    listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                        start, eventDescription, eventType, eventOrigin, eventTimestamp);
+                    for (Map.Entry<SCMSource, SCMHead> m : matches.entrySet()) {
+                        m.getKey().fetch(
+                            p.getSCMSourceCriteria(m.getKey()),
+                            p.new SCMHeadObserverImpl(
+                                m.getKey(),
+                                childObserver,
+                                listener,
+                                _factory,
+                                new EventCauseFactory(event),
+                                event),
+                            event,
+                            listener
+                        );
+                    }
+                    // now dis-associate branches that no-longer exist
+                    Set<String> names = childObserver.observed();
+                    for (Job<?, ?> j : jobs) {
+                        if (names.contains(j.getName())) {
+                            // observed, so not dead
+                            continue;
+                        }
+                        Branch branch = _factory.getBranch(j);
+                        String sourceId = branch.getSourceId();
+                        boolean foundSource = false;
+                        for (SCMSource s : matches.keySet()) {
+                            if (sourceId.equals(s.getId())) {
+                                foundSource = true;
+                            }
+                        }
+                        if (!foundSource) {
+                            // not safe to switch to a dead branch
+                            continue;
+                        }
+                        _factory.decorate(_factory.setBranch(
+                            j,
+                            new Branch.Dead(branch)
+                        ));
+                        j.save();
+                    }
+                } catch (IOException e) {
+                    printStackTrace(e, listener.error(e.getMessage()));
+                } catch (InterruptedException e) {
+                    listener.error(e.getMessage());
+                    throw e;
+                } finally {
+                    long end = System.currentTimeMillis();
+                    listener.getLogger()
+                        .format("[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                            end, eventDescription, eventType, eventOrigin, eventTimestamp,
+                            Util.getTimeSpanString(end - start));
+                }
+            } catch (IOException e) {
+                printStackTrace(e, global.error(
+                    "[%tc] %s encountered an error while processing %s %s event from %s with timestamp %tc",
+                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                    eventOrigin, eventTimestamp));
+            } catch (InterruptedException e) {
+                global.error(
+                    "[%tc] %s was interrupted while processing %s %s event from %s with timestamp %tc",
+                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                    eventOrigin, eventTimestamp);
+                throw e;
+            }
+        }
+
+        /**
+         * Applies an {@link SCMEvent.Type#UPDATED} or {@link SCMEvent.Type#REMOVED} event to one project that has
+         * no matching branch yet, where the updated head may now satisfy the source criteria. This is the slow part
+         * of {@link #processHeadUpdate}'s no-existing-branch path, so it runs through {@link #runEventTasks}
+         * instead of inline.
+         *
+         * @param p                the project.
+         * @param _factory         the project's {@link BranchProjectFactory}.
+         * @param event            the event.
+         * @param global           the global event listener.
+         * @param eventDescription the event description.
+         * @param eventType        the event type.
+         * @param eventOrigin      the event origin.
+         * @param eventTimestamp   the event timestamp.
+         * @throws InterruptedException if interrupted.
+         */
+        @SuppressWarnings("rawtypes")
+        private void fetchNewlyMatchingHeads(MultiBranchProject<?, ?> p, BranchProjectFactory _factory,
+                                             SCMHeadEvent<?> event, TaskListener global, String eventDescription,
+                                             String eventType, String eventOrigin, long eventTimestamp)
+            throws InterruptedException {
+            long start = System.currentTimeMillis();
+            try (StreamTaskListener listener = p.getComputation().createEventsListener();
+                 ChildObserver childObserver = p.openEventsChildObserver()) {
+                listener.getLogger().format("[%tc] Received %s %s event from %s with timestamp %tc%n",
+                    start, eventDescription, eventType, eventOrigin, eventTimestamp);
+                try {
+                    for (SCMSource source : p.getSCMSources()) {
+                        if (event.isMatch(source)) {
+                            source.fetch(
+                                p.getSCMSourceCriteria(source),
+                                p.new SCMHeadObserverImpl(
+                                    source,
+                                    childObserver,
+                                    listener,
+                                    _factory,
+                                    new EventCauseFactory(event),
+                                    event
+                                ),
+                                event,
+                                listener
+                            );
+                        }
+                    }
+                } catch (IOException e) {
+                    printStackTrace(e, listener.error(e.getMessage()));
+                } catch (InterruptedException e) {
+                    listener.error(e.getMessage());
+                    throw e;
+                } finally {
+                    long end = System.currentTimeMillis();
+                    listener.getLogger().format(
+                        "[%tc] %s %s event from %s with timestamp %tc processed in %s%n",
+                        end, eventDescription, eventType, eventOrigin, eventTimestamp,
+                        Util.getTimeSpanString(end - start));
+                }
+            } catch (IOException e) {
+                printStackTrace(e, global.error(
+                    "[%tc] %s encountered an error while processing %s %s event from %s with "
+                        + "timestamp %tc",
+                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                    eventOrigin, eventTimestamp));
+            } catch (InterruptedException e) {
+                global.error(
+                    "[%tc] %s was interrupted while processing %s %s event from %s with "
+                        + "timestamp %tc",
+                    System.currentTimeMillis(), ModelHyperlinkNote.encodeTo(p), eventDescription, eventType,
+                    eventOrigin, eventTimestamp);
+                throw e;
+            }
+        }
+
+        /**
+         * The per-project work of applying a {@link SCMHeadEvent}, deferred so that it can run on the shared pool.
+         */
+        @FunctionalInterface
+        private interface EventTask {
+            /**
+             * Applies the event to one project.
+             *
+             * @throws IOException          if something goes wrong.
+             * @throws InterruptedException if interrupted.
+             */
+            void run() throws IOException, InterruptedException;
+        }
+
+        /**
+         * Runs the per-project tasks collected during the serial matching phase, concurrently unless
+         * {@link #EVENT_THREAD_LIMIT} is {@code 1}. Tasks are submitted in project iteration order and all of them
+         * are waited on. An {@link IOException} from one task is logged and does not stop the others; an
+         * {@link InterruptedException} cancels any tasks that have not finished and is re-thrown.
+         *
+         * @param tasks            the tasks.
+         * @param global           the global event listener.
+         * @param eventDescription the event description.
+         * @param eventType        the event type.
+         * @param eventOrigin      the event origin.
+         * @param eventTimestamp   the event timestamp.
+         * @throws InterruptedException if interrupted.
+         */
+        private void runEventTasks(List<EventTask> tasks, TaskListener global, String eventDescription,
+                                   String eventType, String eventOrigin, long eventTimestamp)
+            throws InterruptedException {
+            if (tasks.isEmpty()) {
+                return;
+            }
+            if (tasks.size() == 1 || EVENT_THREAD_LIMIT <= 1) {
+                for (EventTask task : tasks) {
+                    runEventTask(task, global, eventDescription, eventType, eventOrigin, eventTimestamp);
+                }
+                return;
+            }
+            // impersonate at submission time rather than when the pool is created, so each task runs as whoever
+            // dispatched the event instead of a hard-coded identity
+            ExecutorService service = new ImpersonatingExecutorService(eventProcessingExecutorService(),
+                Jenkins.getAuthentication2());
+            List<Future<?>> futures = new ArrayList<>(tasks.size());
+            for (EventTask task : tasks) {
+                futures.add(service.submit(() -> {
+                    runEventTask(task, global, eventDescription, eventType, eventOrigin, eventTimestamp);
+                    return null;
+                }));
+            }
+            InterruptedException interrupted = null;
+            for (Future<?> future : futures) {
+                if (interrupted != null) {
+                    future.cancel(true);
+                    continue;
+                }
+                try {
+                    future.get();
+                } catch (CancellationException e) {
+                    // cannot happen, we are the only ones who cancel and we stop waiting once we do
+                } catch (InterruptedException e) {
+                    interrupted = e;
+                } catch (ExecutionException e) {
+                    Throwable cause = e.getCause();
+                    if (cause instanceof InterruptedException) {
+                        interrupted = (InterruptedException) cause;
+                    } else {
+                        LOGGER.log(Level.WARNING, "Unexpected failure while processing " + eventDescription + " "
+                            + eventType + " event from " + eventOrigin, cause);
+                    }
+                }
+            }
+            if (interrupted != null) {
+                throw interrupted;
+            }
+        }
+
+        /**
+         * Runs a single {@link EventTask}, logging any {@link IOException} so that one project's failure does not
+         * stop the rest.
+         *
+         * @param task             the task.
+         * @param global           the global event listener.
+         * @param eventDescription the event description.
+         * @param eventType        the event type.
+         * @param eventOrigin      the event origin.
+         * @param eventTimestamp   the event timestamp.
+         * @throws InterruptedException if interrupted.
+         */
+        private void runEventTask(EventTask task, TaskListener global, String eventDescription, String eventType,
+                                  String eventOrigin, long eventTimestamp) throws InterruptedException {
+            try {
+                task.run();
+            } catch (IOException e) {
+                printStackTrace(e, global.error(
+                    "[%tc] Encountered an error while processing %s %s event from %s with timestamp %tc",
+                    System.currentTimeMillis(), eventDescription, eventType, eventOrigin, eventTimestamp));
+            }
         }
 
         /**
