@@ -70,4 +70,7 @@ THE SOFTWARE.
     <t:buildEnvVar name="TAG_DATE">
         <j:out value="${%blurb.TAG_DATE}"/>
     </t:buildEnvVar>
+    <t:buildEnvVar name="SCM_REVISION">
+        <j:out value="${%blurb.SCM_REVISION}"/>
+    </t:buildEnvVar>
 </j:jelly>
