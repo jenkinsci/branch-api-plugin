@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+The MIT License
+
+Copyright 2026 Jan Faracik
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout" xmlns:x="jelly:xml">
+    <j:set var="url" value="${it.indexingUrl}" />
+    <j:choose>
+        <j:when test="${it.origin != null}">
+            <j:set var="tooltip" value="${%tooltipWithOrigin(it.timestamp, it.origin)}" />
+        </j:when>
+        <j:otherwise>
+            <j:set var="tooltip" value="${%tooltip(it.timestamp)}" />
+        </j:otherwise>
+    </j:choose>
+    <x:element name="${url != null ? 'a' : 'div'}">
+        <x:attribute name="class">jenkins-details__item</x:attribute>
+        <j:if test="${url != null}">
+            <x:attribute name="href">${rootURL}/${url}events</x:attribute>
+        </j:if>
+        <x:attribute name="tooltip">${tooltip}</x:attribute>
+        <div class="jenkins-details__item__icon">
+            <l:icon src="symbol-cause" />
+        </div>
+        <div>
+            ${it.shortDescription}
+        </div>
+    </x:element>
+</j:jelly>
