@@ -689,6 +689,43 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
                 }
             }
             for (final SCMSource source : scmSources) {
+                String scriptPathFetched = "";
+                try {
+                    scriptPathFetched = (String) _factory.getClass().getMethod("getScriptPath").invoke(_factory);
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "getScriptPath error: {0}", e.getMessage());
+                }
+
+                if (scriptPathFetched != null && scriptPathFetched != "") {
+                    final String scriptPath = scriptPathFetched;
+                    LOGGER.log(Level.INFO, "scriptPath: {0}", scriptPath);
+                    try {
+                        SCMSourceCriteria criteria = (probe, l) -> {
+                            boolean exists = probe.stat(scriptPath).exists();
+                            if (exists) {
+                                l.getLogger().format("      '%s' found%n", scriptPath);
+                            } else {
+                                l.getLogger().format("      '%s' not found%n", scriptPath);
+                            }
+
+                            return exists;
+                        };
+
+                        source.fetch(criteria, new SCMHeadObserverImpl(source, observer, listener, _factory,
+                                new IndexingCauseFactory(), null), listener);
+
+                        observer.observed().forEach((branchName) -> {
+                            LOGGER.log(Level.INFO, "Observed scriptPath: {0}, branch: {1}",
+                                    new Object[]{scriptPath, branchName});
+                        });
+                    } catch (IOException | InterruptedException | RuntimeException e) {
+                        listener.error("[%tc] Could not fetch branches from source %s",
+                                System.currentTimeMillis(), source.getId());
+                        throw e;
+                    }
+                    continue;
+                }
+
                 try {
                     source.fetch(new SCMHeadObserverImpl(source, observer, listener, _factory,
                         new IndexingCauseFactory(), null), listener);
@@ -2360,7 +2397,7 @@ public abstract class MultiBranchProject<P extends Job<P, R> & TopLevelItem,
     }
 
     /**
-     * Adds the {@link MultiBranchProject.State#sourceActions} to
+     * Adds the {@link State#sourceActions} to
      * {@link MultiBranchProject#getAllActions()}.
      *
      * @since 2.0
