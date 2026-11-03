@@ -70,4 +70,7 @@ THE SOFTWARE.
     <t:buildEnvVar name="TAG_DATE">
         <j:out value="${%blurb.TAG_DATE}"/>
     </t:buildEnvVar>
+    <t:buildEnvVar name="FOLDER_NAME">
+        <j:out value="${%blurb.FOLDER_NAME}"/>
+    </t:buildEnvVar>
 </j:jelly>
