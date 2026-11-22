@@ -7,6 +7,8 @@ import hudson.model.ViewGroup;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import java.io.IOException;
+import jenkins.management.Badge;
+import jenkins.model.experimentalflags.UserExperimentalFlag;
 import jenkins.scm.api.SCMCategory;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -27,7 +29,25 @@ public abstract class BaseView<T extends SCMCategory<?>> extends ListView {
      */
     @Override
     public String getDisplayName() {
-        return category.getDisplayName() + " (" + getItems().size() + ")";
+        String name = category.getDisplayName().toString();
+        if (isNewDashboardPage()) {
+            return name;
+        }
+        return name + " (" + getItems().size() + ")";
+    }
+
+    public String getIconFileName() {
+        return category.getIconFileName();
+    }
+
+    public Badge getBadge() {
+        int count = getItems().size();
+        return new Badge(String.valueOf(count), Messages.BaseView_BadgeTooltip(count), Badge.Severity.INFO);
+    }
+
+    private static boolean isNewDashboardPage() {
+        return Boolean.TRUE.equals(UserExperimentalFlag.getFlagValueForCurrentUser(
+                "jenkins.model.experimentalflags.NewDashboardPageUserExperimentalFlag"));
     }
 
     /**
