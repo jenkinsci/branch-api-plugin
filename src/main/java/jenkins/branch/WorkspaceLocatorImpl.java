@@ -69,6 +69,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -319,8 +320,49 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
         // Could use anything but hoping that a future JVM enhances thread dumps to display monitors of type String
         return new StringBuilder("WorkspaceLocatorImpl lock for ").append(node.getNodeName()).toString();
     });
-    private static Object lockFor(Node node) {
+    // Visible for testing
+    static Object lockFor(Node node) {
         return ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).nodeLocks.get(node);
+    }
+
+    /** For each node, whether {@link #saveLater} has scheduled a write of the index which has not started yet. */
+    private final LoadingCache<Node, AtomicBoolean> pendingSaves =
+            Caffeine.newBuilder().weakKeys().build(node -> new AtomicBoolean());
+
+    /**
+     * Writes the index of a node in the background, soon.
+     * {@link #save} rewrites the whole file, so when many items are deleted at once, writing it after each one
+     * dominates the time taken to clean up.
+     * A call made while a write is already waiting for the lock is covered by that write.
+     * Entries which are not written before Jenkins stops are removed by {@link Collector}
+     * when the node next comes online.
+     * Callers must have already changed the index returned by {@link #load}.
+     * Package-private for testing.
+     */
+    static void saveLater(Node node) {
+        AtomicBoolean pending = ExtensionList.lookupSingleton(WorkspaceLocatorImpl.class).pendingSaves.get(node);
+        if (pending.compareAndSet(false, true)) {
+            Deleter.taskStarted();
+            Computer.threadPoolForRemoting.submit(() -> {
+                try {
+                    FilePath workspace = getWorkspaceRoot(node);
+                    if (workspace != null) {
+                        synchronized (lockFor(node)) {
+                            // Cleared under the lock, so any entry removed before this point is written by this call.
+                            pending.set(false);
+                            save(load(workspace), workspace);
+                        }
+                    } else {
+                        pending.set(false);
+                    }
+                } catch (IOException | InterruptedException | RuntimeException x) {
+                    pending.set(false);
+                    LOGGER.log(Level.WARNING, "could not save workspace index on " + node.getNodeName(), x);
+                } finally {
+                    Deleter.taskFinished();
+                }
+            });
+        }
     }
 
     private static final Pattern GOOD_RAW_WORKSPACE_DIR = Pattern.compile("(.+)[/\\\\][$][{]ITEM_FULL_?NAME[}][/\\\\]?");
@@ -508,10 +550,9 @@ public class WorkspaceLocatorImpl extends WorkspaceLocator {
                         FilePath workspace = getWorkspaceRoot(node);
                         if (workspace != null) {
                             synchronized (lockFor(node)) {
-                                Map<String, String> index = load(workspace);
-                                index.remove(tli.getFullName());
-                                save(index, workspace);
+                                load(workspace).remove(tli.getFullName());
                             }
+                            saveLater(node);
                         }
                     } catch (IOException | InterruptedException x) {
                         LOGGER.log(Level.WARNING, "could not clean up workspace directory for " + tli.getFullName() + " on " + nodeName, x);
