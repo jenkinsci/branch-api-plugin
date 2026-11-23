@@ -66,7 +66,7 @@ class WorkspaceLocatorImplTest {
     private static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
 
     @SuppressWarnings("unused")
-    private final LogRecorder logging = new LogRecorder().record(WorkspaceLocatorImpl.class, Level.FINER);
+    private final LogRecorder logging = new LogRecorder().record(WorkspaceLocatorImpl.class, Level.FINER).capture(1000);
 
     private JenkinsRule r;
 
@@ -200,6 +200,10 @@ class WorkspaceLocatorImplTest {
         }
         File pr1Root = pr1.getRootDir();
         assertTrue(pr1Root.isDirectory());
+        FilePath controllerIndex = r.jenkins.getRootPath().child("workspace/" + WorkspaceLocatorImpl.INDEX_FILE_NAME);
+        FilePath agentIndex = slave.getWorkspaceRoot().child(WorkspaceLocatorImpl.INDEX_FILE_NAME);
+        assertTrue(controllerIndex.readToString().contains("p/PR-1"));
+        assertTrue(agentIndex.readToString().contains("p/PR-1"));
         // Now delete PR-1 and make sure its workspaces are deleted too.
         p.getSourcesList().remove(pr1Source);
         p.scheduleBuild2(0).getFuture().get();
@@ -210,6 +214,30 @@ class WorkspaceLocatorImplTest {
         assertEquals(Collections.singletonList(r.jenkins.getRootPath().child("workspace/p_master")), r.jenkins.getRootPath().child("workspace").listDirectories());
         assertEquals(Collections.singletonList(slave.getWorkspaceRoot().child("p_master")), slave.getWorkspaceRoot().listDirectories());
         assertFalse(pr1Root.isDirectory());
+        assertFalse(controllerIndex.readToString().contains("p/PR-1"));
+        assertFalse(agentIndex.readToString().contains("p/PR-1"));
+        assertTrue(controllerIndex.readToString().contains("p/master"));
+        assertTrue(agentIndex.readToString().contains("p/master"));
+    }
+
+    @Test
+    void saveLaterCoalesces() throws Exception {
+        r.jenkins.getRootPath().child("workspace").mkdirs();
+        long before = indexWrites();
+        synchronized (WorkspaceLocatorImpl.lockFor(r.jenkins)) {
+            for (int i = 0; i < 100; i++) {
+                WorkspaceLocatorImpl.saveLater(r.jenkins);
+            }
+        }
+        WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
+        assertEquals(1, indexWrites() - before);
+        WorkspaceLocatorImpl.saveLater(r.jenkins);
+        WorkspaceLocatorImpl.Deleter.waitForTasksToFinish();
+        assertEquals(2, indexWrites() - before);
+    }
+
+    private long indexWrites() {
+        return logging.getMessages().stream().filter(message -> message.startsWith("cache update on ")).count();
     }
 
     @Issue("JENKINS-2111")
